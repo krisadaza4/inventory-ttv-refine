@@ -9,8 +9,8 @@
 - [x] T1.1 สร้างโปรเจกต์ Vite + React (JavaScript) ใน `inventory-ttv` โดยไม่ทับเอกสาร
 - [x] T1.2 ติดตั้ง Vitest, oxlint, supabase-js เพิ่มสคริปต์ `test`, `lint` และสร้าง `src/components`, `src/lib`
 - [x] T1.3 `.gitignore` (กัน `.env.local`, `dist`), `.gitattributes`, `.env.example`
-- [ ] T1.4 git init + สร้าง repo บน GitHub (ผ่าน git-manager) ➡️ แนะนำ private
-- [ ] T1.5 (ผู้ใช้) สร้างโปรเจกต์ Supabase ใหม่, ปิด "Allow new users to sign up", ใส่ค่าใน `.env.local`
+- [x] T1.4 git init + สร้าง repo บน GitHub (ผ่าน git-manager) ➡️ แนะนำ private — repo private `nutcharat123/inventory-ttv` commit `0b380df`
+- [x] T1.5 (ผู้ใช้) สร้างโปรเจกต์ Supabase ใหม่, ปิด "Allow new users to sign up", ใส่ค่าใน `.env.local`
 
 - **เสร็จเมื่อ:** `npm run dev`, `npm test`, `npm run lint` รันได้
 
