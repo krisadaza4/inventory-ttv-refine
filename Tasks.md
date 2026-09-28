@@ -16,12 +16,12 @@
 
 ## เฟส 2: ฐานข้อมูล
 
-- [ ] T2.1 `supabase/schema.sql`: ตาราง `profiles`, `products`, `stock_movements` พร้อม check/unique/index
-- [ ] T2.2 view `product_stock` และฟังก์ชัน `current_role()`
-- [ ] T2.3 ฟังก์ชัน `record_movement(...)` ตามกติกาใน design.md ข้อ 5
-- [ ] T2.4 RLS + grant ตาม design.md ข้อ 6 (revoke ทั้งหมดก่อนแล้ว grant เฉพาะที่ต้องใช้)
-- [ ] T2.5 (ผู้ใช้) รัน `schema.sql` ใน SQL Editor, สร้างบัญชี admin 1 + staff 1 และแถว `profiles`
-- [ ] T2.6 ตรวจ RLS ด้วยมือตาม design.md ข้อ 9
+- [x] T2.1 `supabase/schema.sql`: ตาราง `profiles`, `products`, `stock_movements` พร้อม check/unique/index
+- [x] T2.2 view `product_stock` และฟังก์ชัน `current_app_role()`
+- [x] T2.3 ฟังก์ชัน `record_movement(...)` ตามกติกาใน design.md ข้อ 5
+- [x] T2.4 RLS + grant ตาม design.md ข้อ 6 (revoke ทั้งหมดก่อนแล้ว grant เฉพาะที่ต้องใช้)
+- [x] T2.5 (ผู้ใช้) รัน `schema.sql` ใน SQL Editor, สร้างบัญชี admin 1 + staff 1 และแถว `profiles`
+- [x] T2.6 ตรวจ RLS ด้วยมือตาม design.md ข้อ 9
 
 - **เสร็จเมื่อ:** staff บันทึกรับ/เบิกได้, เพิ่มสินค้า/ปรับยอดไม่ได้, เบิกเกินคงเหลือถูกปฏิเสธ
 

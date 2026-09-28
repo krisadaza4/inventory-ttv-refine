@@ -81,7 +81,7 @@
 
 ## 6. การยืนยันตัวตนและสิทธิ์ (RLS)
 - ปิด "Allow new users to sign up" เจ้าของร้านสร้างบัญชีใน Dashboard แล้ว insert แถว `profiles` ด้วย SQL
-- ฟังก์ชันช่วย `current_role()` คืนบทบาทของผู้เรียก (null ถ้าไม่มี profile)
+- ฟังก์ชันช่วย `current_app_role()` คืนบทบาทของผู้เรียก (null ถ้าไม่มี profile)
 - `anon`: ไม่มีสิทธิ์ใด ๆ ทุกตาราง
 - `authenticated` ที่มี profile:
   - `profiles`: select ทุกแถว (ใช้แสดงชื่อผู้บันทึก) ห้าม insert/update/delete ผ่านหน้าเว็บ
