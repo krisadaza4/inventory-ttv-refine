@@ -130,3 +130,10 @@ export function countByStockStatus(products) {
 export function listCategories(products) {
   return [...new Set(products.map((p) => p.category))].sort((a, b) => a.localeCompare(b, 'th'))
 }
+
+// คงเหลือหลังบันทึก สำหรับแสดงก่อนกดบันทึก จำนวนหรือประเภทยังไม่ถูกต้อง คืน null
+export function quantityAfter(onHand, type, quantity) {
+  const amount = parseAmount(quantity)
+  if (amount === null || !Object.values(MOVEMENT_TYPE).includes(type)) return null
+  return toAmount(toAmount(onHand) + signedQuantity(type, amount))
+}

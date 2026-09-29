@@ -7,6 +7,7 @@ import {
   countByStockStatus,
   filterByCategory,
   listCategories,
+  quantityAfter,
   searchProducts,
   signedQuantity,
   sortByStockStatus,
@@ -309,5 +310,29 @@ describe('listCategories', () => {
 
   it('ไม่มีสินค้า', () => {
     expect(listCategories([])).toEqual([])
+  })
+})
+
+describe('quantityAfter', () => {
+  it('คำนวณคงเหลือหลังบันทึกตามประเภท', () => {
+    expect(quantityAfter(4, MOVEMENT_TYPE.IN, '3')).toBe(7)
+    expect(quantityAfter(4, MOVEMENT_TYPE.OUT, '3')).toBe(1)
+    expect(quantityAfter(4, MOVEMENT_TYPE.ADJUST, '-1.5')).toBe(2.5)
+  })
+
+  it('ปัดทศนิยม 2 ตำแหน่ง (0.3 - 0.1 - 0.2 = 0)', () => {
+    expect(quantityAfter(0.3, MOVEMENT_TYPE.OUT, '0.3')).toBe(0)
+    expect(quantityAfter(0.1 + 0.2, MOVEMENT_TYPE.OUT, '0.3')).toBe(0)
+  })
+
+  it('ติดลบได้ (ให้หน้าจอเตือน)', () => {
+    expect(quantityAfter(1, MOVEMENT_TYPE.OUT, '2')).toBe(-1)
+  })
+
+  it('จำนวนยังไม่ถูกต้อง คืน null', () => {
+    expect(quantityAfter(4, MOVEMENT_TYPE.IN, '')).toBeNull()
+    expect(quantityAfter(4, MOVEMENT_TYPE.IN, 'abc')).toBeNull()
+    expect(quantityAfter(4, MOVEMENT_TYPE.IN, '1.255')).toBeNull()
+    expect(quantityAfter(4, 'transfer', '1')).toBeNull()
   })
 })

@@ -500,6 +500,150 @@ td.actions .btn + .btn {
   white-space: nowrap;
 }
 
+/* ฟอร์มแบบป้ายซ้าย-ช่องขวา */
+.form-grid {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 12px 14px;
+  align-items: start;
+  max-width: 680px;
+}
+
+.form-row {
+  display: contents;
+}
+
+.form-grid.compact {
+  grid-template-columns: 110px minmax(0, 1fr);
+}
+
+.form-grid.compact input {
+  width: 100%;
+}
+
+.plain {
+  padding-top: 6px;
+  color: var(--text-h);
+}
+
+.form-grid > label,
+.form-grid > .label,
+.form-row > label,
+.form-row > .label {
+  color: var(--text-h);
+  font-weight: 600;
+  text-align: right;
+  padding-top: 6px;
+}
+
+.form-grid .req::after {
+  content: ' *';
+  color: var(--out);
+}
+
+.form-grid textarea {
+  width: 100%;
+}
+
+.form-grid .short {
+  width: 160px;
+}
+
+.stack {
+  display: grid;
+  gap: 6px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.err {
+  font-size: 12px;
+  color: var(--out);
+  margin-top: 2px;
+}
+
+[aria-invalid='true'] {
+  border-color: var(--out-border);
+}
+
+.radio {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 6px;
+}
+
+.preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.preview b {
+  font-size: 18px;
+  color: var(--text-h);
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.push-left {
+  margin-right: auto;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 12px;
+  align-items: start;
+}
+
+.check {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+tbody tr.selected {
+  background: var(--row-hover);
+  box-shadow: inset 3px 0 0 var(--primary-2);
+}
+
+.badge.off {
+  color: var(--muted);
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.form-alert {
+  margin: 12px 14px 0;
+}
+
+.notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--ok-border);
+  background: var(--ok-bg);
+  color: var(--ok);
+  border-radius: var(--radius);
+}
+
 /* หน้าเข้าสู่ระบบ และหน้าที่ยังไม่เข้าโปรแกรม (ตรวจ session, ไม่มี profile) */
 .gate {
   min-height: 100vh;
@@ -627,6 +771,28 @@ td.actions .btn + .btn {
 
   .stats {
     gap: 8px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .form-grid.compact {
+    grid-template-columns: 1fr;
+  }
+
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid > label,
+  .form-grid > .label,
+  .form-row > label,
+  .form-row > .label {
+    text-align: left;
+    margin-top: 8px;
+    padding-top: 0;
   }
 
   .stat {

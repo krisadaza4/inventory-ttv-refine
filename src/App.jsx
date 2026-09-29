@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import AppShell from './components/AppShell.jsx'
 import LoginForm from './components/LoginForm.jsx'
+import ManagePage from './components/ManagePage.jsx'
+import MovementPage from './components/MovementPage.jsx'
 import PageHead from './components/PageHead.jsx'
 import ProductsPage from './components/ProductsPage.jsx'
 import Sidebar from './components/Sidebar.jsx'
@@ -222,7 +224,8 @@ function SignedIn({ userId, repository, gateProps, theme, onToggleTheme, signing
 // หน้าโปรแกรมหลัก: โหลดสินค้าครั้งเดียวแล้วใช้ร่วมกันทุกหน้า
 function Workspace({ profile, repository, theme, onToggleTheme, signingOut, signOutError, onSignOut }) {
   const [page, setPage] = useState(PAGE.PRODUCTS)
-  const [products, setProducts] = useState([])
+  // รวมสินค้าที่ปิดใช้งาน (ใช้ในหน้าจัดการสินค้า) หน้าอื่นใช้เฉพาะที่เปิดใช้งาน
+  const [allProducts, setAllProducts] = useState([])
   // 'loading' | 'ready' | 'error'
   const [loadState, setLoadState] = useState('loading')
   const [loadError, setLoadError] = useState(null)
@@ -232,13 +235,13 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
 
   useEffect(() => {
     let active = true
-    repository.listProducts().then(({ products: loaded, error }) => {
+    repository.listProducts({ includeInactive: true }).then(({ products: loaded, error }) => {
       if (!active) return
       if (error) {
         setLoadError(error)
         setLoadState('error')
       } else {
-        setProducts(loaded)
+        setAllProducts(loaded)
         setLoadState('ready')
       }
     })
@@ -253,13 +256,16 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
   }
 
   const handleMove = (product, type) => {
-    setMoveIntent({ productId: product.id, type })
+    // seq ทำให้กดซ้ำสินค้าเดิมแล้วฟอร์มเริ่มใหม่
+    setMoveIntent((current) => ({ productId: product.id, type, seq: (current?.seq ?? 0) + 1 }))
     setPage(PAGE.MOVE)
   }
 
   // หน้าที่บทบาทนี้เปิดไม่ได้ (เช่น staff) กลับไปหน้าแรก
   const allowed = getMenu(profile.role).some((group) => group.items.some((item) => item.page === page))
   const currentPage = allowed ? page : PAGE.PRODUCTS
+  const products = allProducts.filter((p) => p.active)
+  const today = toIsoDate(new Date())
 
   return (
     <AppShell
@@ -268,7 +274,7 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
       statusBar={{
         connected: loadState !== 'error',
         productCount: loadState === 'ready' ? products.length : null,
-        today: toIsoDate(new Date()),
+        today,
       }}
     >
       {signOutError && (
@@ -276,7 +282,7 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
           {signOutError}
         </p>
       )}
-      {currentPage === PAGE.PRODUCTS ? (
+      {currentPage === PAGE.PRODUCTS && (
         <ProductsPage
           products={products}
           loadState={loadState}
@@ -284,15 +290,35 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
           onRetry={reloadProducts}
           onMove={handleMove}
         />
-      ) : (
+      )}
+      {currentPage === PAGE.MOVE && (
+        <MovementPage
+          key={moveIntent?.seq ?? 0}
+          products={products}
+          loadState={loadState}
+          role={profile.role}
+          today={today}
+          intent={moveIntent}
+          repository={repository}
+          onSaved={reloadProducts}
+        />
+      )}
+      {currentPage === PAGE.MANAGE && (
+        <ManagePage
+          allProducts={allProducts}
+          loadState={loadState}
+          loadError={loadError}
+          onRetry={reloadProducts}
+          repository={repository}
+          onChanged={reloadProducts}
+        />
+      )}
+      {currentPage === PAGE.HISTORY && (
         <>
-          {/* T4.4–T4.6 แทนที่ส่วนนี้ด้วยหน้าจริง */}
+          {/* T4.5 แทนที่ส่วนนี้ด้วยหน้าจริง */}
           <PageHead page={currentPage} />
           <div className="panel">
-            <div className="panel-body dim">
-              หน้านี้กำลังพัฒนา
-              {currentPage === PAGE.MOVE && moveIntent && ` (เลือกไว้: ${moveIntent.type})`}
-            </div>
+            <div className="panel-body dim">หน้านี้กำลังพัฒนา</div>
           </div>
         </>
       )}
