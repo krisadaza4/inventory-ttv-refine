@@ -4,7 +4,9 @@ import {
   MOVEMENT_TYPE,
   STOCK_STATUS,
   getStockStatus,
+  countByStockStatus,
   filterByCategory,
+  listCategories,
   searchProducts,
   signedQuantity,
   sortByStockStatus,
@@ -280,5 +282,32 @@ describe('filterByCategory', () => {
 
   it('หมวดหมู่ที่ไม่มี คืน array ว่าง', () => {
     expect(filterByCategory(products, 'ของใช้')).toEqual([])
+  })
+})
+
+describe('countByStockStatus', () => {
+  it('นับทั้งหมดและแยกตามสถานะ', () => {
+    const products = [
+      { onHand: 0, reorderPoint: 5 },
+      { onHand: 3, reorderPoint: 5 },
+      { onHand: 5, reorderPoint: 5 },
+      { onHand: 9, reorderPoint: 5 },
+    ]
+    expect(countByStockStatus(products)).toEqual({ total: 4, out: 1, low: 2, ok: 1 })
+  })
+
+  it('ไม่มีสินค้า', () => {
+    expect(countByStockStatus([])).toEqual({ total: 0, out: 0, low: 0, ok: 0 })
+  })
+})
+
+describe('listCategories', () => {
+  it('หมวดหมู่ไม่ซ้ำ เรียงตามภาษาไทย', () => {
+    const products = [{ category: 'อาหาร' }, { category: 'เครื่องดื่ม' }, { category: 'อาหาร' }, { category: 'ของใช้' }]
+    expect(listCategories(products)).toEqual(['ของใช้', 'เครื่องดื่ม', 'อาหาร'])
+  })
+
+  it('ไม่มีสินค้า', () => {
+    expect(listCategories([])).toEqual([])
   })
 })

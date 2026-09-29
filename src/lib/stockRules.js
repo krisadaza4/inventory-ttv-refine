@@ -118,3 +118,15 @@ export function filterByCategory(products, category) {
   if (!category) return products
   return products.filter((p) => p.category === category)
 }
+
+// ตัวเลขในกล่องสรุป: ทั้งหมด / หมด / ใกล้หมด / ปกติ
+export function countByStockStatus(products) {
+  const counts = { total: products.length, [STOCK_STATUS.OUT]: 0, [STOCK_STATUS.LOW]: 0, [STOCK_STATUS.OK]: 0 }
+  for (const p of products) counts[getStockStatus(p.onHand, p.reorderPoint)] += 1
+  return counts
+}
+
+// ตัวเลือกของตัวกรองหมวดหมู่
+export function listCategories(products) {
+  return [...new Set(products.map((p) => p.category))].sort((a, b) => a.localeCompare(b, 'th'))
+}

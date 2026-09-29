@@ -9,13 +9,13 @@
 - **เฟส 1 (ตั้งโปรเจกต์):** เสร็จ
 - **เฟส 2 (ฐานข้อมูล):** เสร็จ รัน `supabase/schema.sql` ใน Supabase แล้ว มีบัญชี admin 1 + staff 1 พร้อม `profiles` และ `supabase/rls_check.sql` ผ่านทั้ง 25 ข้อ
 - **เฟส 3 (ตรรกะ):** เสร็จและ push แล้ว (ล่าสุด `dfd8026`) เทสต์ 122 ข้อผ่าน
-- **เฟส 4 (UI):** หน้าตาตาม `docs/mockup.html` (commit `6e67fb1`) T4.1 เสร็จ (`src/index.css`, `App.jsx`, `components/LoginForm`, `TitleBar` (+`ThemeToggle`), `StatusBar`, `AppShell`) build/lint ผ่าน ผู้ใช้สั่ง commit แล้ว แต่ยังไม่ได้ยืนยันผลทดสอบเข้าสู่ระบบจริง (admin/staff, โหมดมืด, รีเฟรช, รหัสผิด) (commit `840230f`); T4.2 เสร็จ (`lib/menu.js` + เทสต์, `Sidebar`, `PageHead` บนมือถือเป็นแถบล่าง, staff เปิดหน้าจัดการสินค้าไม่ได้) เทสต์ 126 ข้อผ่าน commit แล้ว
+- **เฟส 4 (UI):** หน้าตาตาม `docs/mockup.html` (commit `6e67fb1`) T4.1 เสร็จ (`src/index.css`, `App.jsx`, `components/LoginForm`, `TitleBar` (+`ThemeToggle`), `StatusBar`, `AppShell`) build/lint ผ่าน ผู้ใช้สั่ง commit แล้ว แต่ยังไม่ได้ยืนยันผลทดสอบเข้าสู่ระบบจริง (admin/staff, โหมดมืด, รีเฟรช, รหัสผิด) (commit `840230f`); T4.2 เสร็จ (`lib/menu.js` + เทสต์, `Sidebar`, `PageHead` บนมือถือเป็นแถบล่าง, staff เปิดหน้าจัดการสินค้าไม่ได้) commit แล้ว; T4.3 เสร็จ (`ProductsPage`, `ProductTable`, `StockBadge`, `lib/numberFormat.js`, `countByStockStatus`, `listCategories` + เทสต์; `App.jsx` แยก `Workspace` โหลดสินค้าครั้งเดียวใช้ร่วมทุกหน้า และเก็บ `moveIntent` ให้ T4.4) เทสต์ 134 ข้อผ่าน ยังไม่ได้ commit
 - **ยังไม่ได้ทดสอบกับ Supabase จริง:** `MOVEMENT_COLUMNS` ใช้ embed `product:products(...)` และ `recorder:profiles(display_name)` ผ่าน FK `product_id`/`created_by` ต้องลองจริงตอน T4.5 ส่วน `getMyProfile(userId)` รับ id จาก session (ใช้ `maybeSingle` ไม่มี profile ได้ `null`)
 
 ## งานถัดไป
 
 1. ยืนยันกับผู้ใช้ว่าทดสอบเข้าสู่ระบบจริงผ่าน (T4.1–T4.2 commit แล้ว)
-2. T4.3 หน้าสินค้าคงคลัง: กล่องสรุป, ค้นหา, กรองหมวดหมู่, `ProductTable`
+2. commit T4.3 แล้วทำ T4.4 หน้ารับเข้า / เบิกออก (`MovementForm` ใช้ `moveIntent`, `validateMovement`, `recordMovement` แล้ว `reloadProducts`)
 3. push ขึ้น GitHub เมื่อผู้ใช้สั่ง
 4. เฟส 6 (หลัง deploy): นำเข้า/ส่งออก Excel เพื่อใช้กับโปรแกรมบัญชี Express ผ่านไฟล์ (Express เก็บข้อมูลเป็น `.DBF` ไม่มี API) เริ่มจาก T6.1 ให้ผู้ใช้ตัดสินใจก่อน
 

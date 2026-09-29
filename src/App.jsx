@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import AppShell from './components/AppShell.jsx'
 import LoginForm from './components/LoginForm.jsx'
 import PageHead from './components/PageHead.jsx'
+import ProductsPage from './components/ProductsPage.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import { APP_NAME, APP_SUBTITLE, ThemeToggle } from './components/TitleBar.jsx'
 import { toIsoDate } from './lib/dateFormat.js'
@@ -138,7 +139,6 @@ function SignedIn({ userId, repository, gateProps, theme, onToggleTheme, signing
   const [profile, setProfile] = useState(undefined)
   const [loadError, setLoadError] = useState(null)
   const [attempt, setAttempt] = useState(0)
-  const [page, setPage] = useState(PAGE.PRODUCTS)
 
   // ไม่ใช้ผลที่มาช้าหลังออกจากระบบหรือกดลองใหม่ไปแล้ว
   useEffect(() => {
@@ -206,6 +206,57 @@ function SignedIn({ userId, repository, gateProps, theme, onToggleTheme, signing
     )
   }
 
+  return (
+    <Workspace
+      profile={profile}
+      repository={repository}
+      theme={theme}
+      onToggleTheme={onToggleTheme}
+      signingOut={signingOut}
+      signOutError={signOutError}
+      onSignOut={onSignOut}
+    />
+  )
+}
+
+// หน้าโปรแกรมหลัก: โหลดสินค้าครั้งเดียวแล้วใช้ร่วมกันทุกหน้า
+function Workspace({ profile, repository, theme, onToggleTheme, signingOut, signOutError, onSignOut }) {
+  const [page, setPage] = useState(PAGE.PRODUCTS)
+  const [products, setProducts] = useState([])
+  // 'loading' | 'ready' | 'error'
+  const [loadState, setLoadState] = useState('loading')
+  const [loadError, setLoadError] = useState(null)
+  const [attempt, setAttempt] = useState(0)
+  // กดรับเข้า/เบิกออกจากตารางสินค้า: หน้ารับเข้า / เบิกออก (T4.4) เลือกสินค้าและประเภทไว้ให้
+  const [moveIntent, setMoveIntent] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    repository.listProducts().then(({ products: loaded, error }) => {
+      if (!active) return
+      if (error) {
+        setLoadError(error)
+        setLoadState('error')
+      } else {
+        setProducts(loaded)
+        setLoadState('ready')
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [repository, attempt])
+
+  const reloadProducts = () => {
+    setLoadState('loading')
+    setAttempt((n) => n + 1)
+  }
+
+  const handleMove = (product, type) => {
+    setMoveIntent({ productId: product.id, type })
+    setPage(PAGE.MOVE)
+  }
+
   // หน้าที่บทบาทนี้เปิดไม่ได้ (เช่น staff) กลับไปหน้าแรก
   const allowed = getMenu(profile.role).some((group) => group.items.some((item) => item.page === page))
   const currentPage = allowed ? page : PAGE.PRODUCTS
@@ -214,18 +265,37 @@ function SignedIn({ userId, repository, gateProps, theme, onToggleTheme, signing
     <AppShell
       titleBar={{ profile, theme, onToggleTheme, signingOut, onSignOut }}
       sidebar={<Sidebar role={profile.role} page={currentPage} onChange={setPage} />}
-      statusBar={{ connected: true, today: toIsoDate(new Date()) }}
+      statusBar={{
+        connected: loadState !== 'error',
+        productCount: loadState === 'ready' ? products.length : null,
+        today: toIsoDate(new Date()),
+      }}
     >
       {signOutError && (
         <p className="alert" role="alert">
           {signOutError}
         </p>
       )}
-      {/* T4.3–T4.6 แทนที่ส่วนนี้ด้วยหน้าจริง */}
-      <PageHead page={currentPage} />
-      <div className="panel">
-        <div className="panel-body dim">หน้านี้กำลังพัฒนา</div>
-      </div>
+      {currentPage === PAGE.PRODUCTS ? (
+        <ProductsPage
+          products={products}
+          loadState={loadState}
+          loadError={loadError}
+          onRetry={reloadProducts}
+          onMove={handleMove}
+        />
+      ) : (
+        <>
+          {/* T4.4–T4.6 แทนที่ส่วนนี้ด้วยหน้าจริง */}
+          <PageHead page={currentPage} />
+          <div className="panel">
+            <div className="panel-body dim">
+              หน้านี้กำลังพัฒนา
+              {currentPage === PAGE.MOVE && moveIntent && ` (เลือกไว้: ${moveIntent.type})`}
+            </div>
+          </div>
+        </>
+      )}
     </AppShell>
   )
 }
