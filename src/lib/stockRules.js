@@ -1,3 +1,5 @@
+import { toIsoDate } from './dateFormat.js'
+
 export const MOVEMENT_TYPE = {
   IN: 'in',
   OUT: 'out',
@@ -40,4 +42,63 @@ export function getStockStatus(onHand, reorderPoint) {
 export function sortByStockStatus(products) {
   const rank = (p) => STATUS_ORDER.indexOf(getStockStatus(p.onHand, p.reorderPoint))
   return [...products].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'th'))
+}
+
+// ตัวเลขทศนิยมไม่เกิน 2 ตำแหน่ง ตาม numeric(12,2)
+const DECIMAL_2 = /^-?(\d+(\.\d{1,2})?|\.\d{1,2})$/
+const MAX_AMOUNT = 9999999999.99
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+const isBlank = (value) => String(value ?? '').trim() === ''
+
+// คืนตัวเลข หรือ null ถ้าไม่ใช่ตัวเลขทศนิยม ≤ 2 ตำแหน่ง
+function parseAmount(value) {
+  const text = String(value ?? '').trim()
+  if (!DECIMAL_2.test(text)) return null
+  const amount = Number(text)
+  return Math.abs(amount) <= MAX_AMOUNT ? amount : null
+}
+
+// คืน error เป็น { ชื่อช่อง: ข้อความ } ถ้าไม่มี error คืน {}
+export function validateProduct(product) {
+  const errors = {}
+  if (isBlank(product.sku)) errors.sku = 'กรุณากรอกรหัสสินค้า'
+  if (isBlank(product.name)) errors.name = 'กรุณากรอกชื่อสินค้า'
+  if (isBlank(product.category)) errors.category = 'กรุณากรอกหมวดหมู่'
+  if (isBlank(product.unit)) errors.unit = 'กรุณากรอกหน่วย'
+
+  if (!isBlank(product.reorderPoint)) {
+    const reorderPoint = parseAmount(product.reorderPoint)
+    if (reorderPoint === null) errors.reorderPoint = 'จุดสั่งซื้อต้องเป็นตัวเลข ทศนิยมไม่เกิน 2 ตำแหน่ง'
+    else if (reorderPoint < 0) errors.reorderPoint = 'จุดสั่งซื้อต้องไม่ติดลบ'
+  }
+  return errors
+}
+
+// ตรวจก่อนส่ง record_movement (ฐานข้อมูลตรวจซ้ำอีกชั้น) today เป็น 'YYYY-MM-DD'
+export function validateMovement(movement, onHand, role, today = toIsoDate(new Date())) {
+  const errors = {}
+  const { type } = movement
+
+  if (!Object.values(MOVEMENT_TYPE).includes(type)) {
+    errors.type = 'ประเภทรายการไม่ถูกต้อง'
+  } else if (type === MOVEMENT_TYPE.ADJUST && role !== 'admin') { // T3.5 เปลี่ยนเป็น canAdjust(role)
+    errors.type = 'ปรับยอดได้เฉพาะเจ้าของร้าน'
+  }
+
+  const quantity = parseAmount(movement.quantity)
+  if (quantity === null) {
+    errors.quantity = 'จำนวนต้องเป็นตัวเลข ทศนิยมไม่เกิน 2 ตำแหน่ง'
+  } else if (type === MOVEMENT_TYPE.ADJUST ? quantity === 0 : quantity <= 0) {
+    errors.quantity = type === MOVEMENT_TYPE.ADJUST ? 'จำนวนปรับยอดต้องไม่เป็น 0' : 'จำนวนต้องมากกว่า 0'
+  } else if (!errors.type && toAmount(toAmount(onHand) + signedQuantity(type, quantity)) < 0) {
+    errors.quantity = `คงเหลือไม่พอ (คงเหลือ ${toAmount(onHand)})`
+  }
+
+  const date = movement.movementDate ?? ''
+  if (!ISO_DATE.test(date)) errors.movementDate = 'กรุณาเลือกวันที่'
+  else if (date > today) errors.movementDate = 'วันที่ต้องไม่เป็นวันในอนาคต'
+
+  if (type === MOVEMENT_TYPE.ADJUST && isBlank(movement.note)) errors.note = 'ปรับยอดต้องระบุหมายเหตุ'
+  return errors
 }

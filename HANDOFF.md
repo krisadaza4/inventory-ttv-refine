@@ -8,18 +8,18 @@
 
 - **เฟส 1 (ตั้งโปรเจกต์):** เสร็จ
 - **เฟส 2 (ฐานข้อมูล):** เสร็จ รัน `supabase/schema.sql` ใน Supabase แล้ว มีบัญชี admin 1 + staff 1 พร้อม `profiles` และ `supabase/rls_check.sql` ผ่านทั้ง 25 ข้อ
-- **เฟส 3 (ตรรกะ):** T3.1 เสร็จ commit `3598f29` แล้ว; T3.2 เสร็จ (`stockRules.js`: `MOVEMENT_TYPE`, `STOCK_STATUS`, `signedQuantity`, `getStockStatus`, `sortByStockStatus` ปัดทศนิยม 2 ตำแหน่งก่อนเทียบ) เทสต์รวม 35 ข้อผ่าน ยังไม่ได้ commit
+- **เฟส 3 (ตรรกะ):** T3.1 (`3598f29`), T3.2 (`3418ed6`) commit แล้ว; T3.3 เสร็จ (`validateProduct`, `validateMovement` คืน `{ ชื่อช่อง: ข้อความไทย }` ว่าง = ผ่าน, ยังใช้ `'admin'` ตรง ๆ รอ T3.5 เปลี่ยนเป็น `canAdjust`) เทสต์รวม 56 ข้อผ่าน ยังไม่ได้ commit
 
 ## งานถัดไป
 
-1. commit T3.2 (`src/lib/stockRules*.js`, `Tasks.md`, `HANDOFF.md`) ผ่าน git-manager
-2. T3.3 `validateProduct`, `validateMovement` ใน `stockRules.js` (เขียนเทสต์ก่อน)
+1. commit T3.3 (`src/lib/stockRules*.js`, `Tasks.md`, `HANDOFF.md`) ผ่าน git-manager
+2. T3.4 `searchProducts`, `filterByCategory` ใน `stockRules.js` (เขียนเทสต์ก่อน)
 3. push ขึ้น GitHub เมื่อผู้ใช้สั่ง (ตอนนี้ `main` นำหน้า `origin/main`)
 
 ## Git
 
 - repo private `nutcharat123/inventory-ttv` branch `main`
-- commit ล่าสุด: `3598f29` (T3.1), `43c89ef` (เฟส 2), `87d7bf2` (ติ๊ก T1.x)
+- commit ล่าสุด: `26c7410` (docs/reference), `3418ed6` (T3.2), `3598f29` (T3.1)
 - งาน git ทำผ่าน agent git-manager เท่านั้น
 
 ## สิ่งที่ต้องรู้
