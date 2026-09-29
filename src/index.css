@@ -447,6 +447,27 @@ td.actions .btn + .btn {
   margin-left: 4px;
 }
 
+.table-foot.spread {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.plus {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.minus {
+  color: var(--out);
+  font-weight: 600;
+}
+
 .table-foot {
   padding: 8px 14px;
   font-size: 12px;
@@ -767,6 +788,10 @@ tbody tr.selected {
 
   .show-sm {
     display: inline;
+  }
+
+  div.show-sm {
+    display: block;
   }
 
   .stats {

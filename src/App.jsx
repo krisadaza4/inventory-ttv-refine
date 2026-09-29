@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import AppShell from './components/AppShell.jsx'
+import HistoryPage from './components/HistoryPage.jsx'
 import LoginForm from './components/LoginForm.jsx'
 import ManagePage from './components/ManagePage.jsx'
 import MovementPage from './components/MovementPage.jsx'
-import PageHead from './components/PageHead.jsx'
 import ProductsPage from './components/ProductsPage.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import { APP_NAME, APP_SUBTITLE, ThemeToggle } from './components/TitleBar.jsx'
@@ -313,15 +313,7 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
           onChanged={reloadProducts}
         />
       )}
-      {currentPage === PAGE.HISTORY && (
-        <>
-          {/* T4.5 แทนที่ส่วนนี้ด้วยหน้าจริง */}
-          <PageHead page={currentPage} />
-          <div className="panel">
-            <div className="panel-body dim">หน้านี้กำลังพัฒนา</div>
-          </div>
-        </>
-      )}
+      {currentPage === PAGE.HISTORY && <HistoryPage allProducts={allProducts} repository={repository} />}
     </AppShell>
   )
 }
