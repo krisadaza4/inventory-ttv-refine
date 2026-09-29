@@ -1,0 +1,35 @@
+import { describe, expect, it } from 'vitest'
+import { CONFIG_ERROR, SECRET_KEY_ERROR, getSupabase, readSupabaseConfig } from './supabaseClient.js'
+
+const URL = 'https://abc.supabase.co'
+
+describe('readSupabaseConfig', () => {
+  it('ตั้งค่าครบ คืน url และ key ที่ตัดช่องว่างแล้ว', () => {
+    const env = { VITE_SUPABASE_URL: ` ${URL} `, VITE_SUPABASE_PUBLISHABLE_KEY: ' sb_publishable_x ' }
+    expect(readSupabaseConfig(env)).toEqual({ config: { url: URL, key: 'sb_publishable_x' }, error: null })
+  })
+
+  it('ไม่มี url', () => {
+    expect(readSupabaseConfig({ VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_x' })).toEqual({
+      config: null,
+      error: CONFIG_ERROR,
+    })
+  })
+
+  it('key ว่าง', () => {
+    expect(readSupabaseConfig({ VITE_SUPABASE_URL: URL, VITE_SUPABASE_PUBLISHABLE_KEY: '  ' }).error).toBe(CONFIG_ERROR)
+  })
+
+  it('ใส่ secret key ผิดช่อง ปฏิเสธ ไม่ให้ key หลุดไปหน้าเว็บ', () => {
+    expect(readSupabaseConfig({ VITE_SUPABASE_URL: URL, VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_secret_x' })).toEqual({
+      config: null,
+      error: SECRET_KEY_ERROR,
+    })
+  })
+})
+
+describe('getSupabase', () => {
+  it('ตั้งค่าไม่ครบ คืน error ไม่โยนข้อผิดพลาด', () => {
+    expect(getSupabase({})).toEqual({ client: null, error: CONFIG_ERROR })
+  })
+})
