@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventory TTV Mockup</title>
+<style>
+:root {
+  --text: #334155; --text-h: #0f172a; --muted: #64748b;
+  --bg: #eef1f5; --surface: #fff; --surface-2: #f8fafc; --border: #d5dbe3; --row-hover: #f1f5f9;
+  --primary: #1e3a5f; --primary-2: #2b4c7e; --primary-text: #fff;
+  --sidebar: #1e293b; --sidebar-text: #cbd5e1; --sidebar-active: #334155;
+  --titlebar: #0f172a;
+  --out: #b42318; --out-bg: #fef3f2; --out-border: #fda29b;
+  --low: #b54708; --low-bg: #fffaeb; --low-border: #fec84b;
+  --ok: #067647; --ok-bg: #ecfdf3; --ok-border: #75e0a7;
+  --radius: 6px;
+  --sans: 'Segoe UI', 'Noto Sans Thai', system-ui, Roboto, sans-serif;
+  font: 14px/1.5 var(--sans); color: var(--text); color-scheme: light;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --text: #cbd5e1; --text-h: #f1f5f9; --muted: #94a3b8;
+  --bg: #0b1220; --surface: #111a2b; --surface-2: #162134; --border: #26334a; --row-hover: #1a263b;
+  --primary: #3b6ea8; --primary-2: #4a7fbc; --primary-text: #fff;
+  --sidebar: #0d1526; --sidebar-text: #94a3b8; --sidebar-active: #1c2a42;
+  --titlebar: #070c17;
+  --out: #fda29b; --out-bg: #3a1411; --out-border: #912018;
+  --low: #fec84b; --low-bg: #3a2a0a; --low-border: #93370d;
+  --ok: #75e0a7; --ok-bg: #0b2a1c; --ok-border: #085d3a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); }
+h1, h2, h3 { color: var(--text-h); margin: 0; line-height: 1.3; }
+button, input, select, textarea { font: inherit; }
+
+/* แถบควบคุม mockup (ไม่ใช่ส่วนของแอป) */
+.mock-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center;
+  padding: 6px 16px; background: #fde68a; color: #111; font-size: 12px; }
+.mock-bar button { background: #fff; border: 1px solid #999; border-radius: 4px; padding: 2px 10px; cursor: pointer; }
+.mock-bar button.on { background: #111; color: #fff; }
+
+/* โครงหน้าแบบโปรแกรม: title bar / sidebar / เนื้อหา / status bar */
+.app { display: grid; grid-template: 'title title' 44px 'side main' 1fr 'status status' 26px / 210px 1fr; height: calc(100vh - 30px); }
+.titlebar { grid-area: title; background: var(--titlebar); color: #e2e8f0; display: flex; align-items: center; gap: 12px; padding: 0 14px; }
+.titlebar .brand { font-weight: 700; letter-spacing: .3px; flex: 1; }
+.titlebar .brand small { font-weight: 400; color: #94a3b8; margin-left: 8px; }
+.titlebar .who { font-size: 13px; text-align: right; line-height: 1.25; }
+.titlebar .who small { display: block; color: #94a3b8; font-size: 11px; }
+.tb-btn { background: transparent; color: #e2e8f0; border: 1px solid #334155; border-radius: var(--radius); padding: 3px 10px; cursor: pointer; }
+.tb-btn:hover { background: #1e293b; }
+
+.sidebar { grid-area: side; background: var(--sidebar); padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; }
+.sidebar .group { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; padding: 10px 10px 4px; }
+.sidebar button { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; background: none; border: 0;
+  color: var(--sidebar-text); padding: 8px 10px; border-radius: var(--radius); cursor: pointer; }
+.sidebar button:hover { background: var(--sidebar-active); }
+.sidebar button.on { background: var(--sidebar-active); color: #fff; box-shadow: inset 3px 0 0 #60a5fa; }
+.sidebar .ico { width: 18px; text-align: center; }
+
+main { grid-area: main; overflow: auto; padding: 16px 20px; }
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.page-head h1 { font-size: 20px; }
+.crumb { font-size: 12px; color: var(--muted); }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.panel-head { padding: 10px 14px; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--text-h); background: var(--surface-2);
+  border-radius: var(--radius) var(--radius) 0 0; display: flex; justify-content: space-between; align-items: center; }
+.panel-body { padding: 14px; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
+.stat { padding: 10px 14px; border-left: 4px solid var(--primary); }
+.stat.low { border-left-color: var(--low-border); } .stat.out { border-left-color: var(--out-border); }
+.stat span { font-size: 12px; color: var(--muted); }
+.stat b { display: block; font-size: 22px; color: var(--text-h); }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.toolbar .grow { flex: 1; min-width: 180px; }
+input, select, textarea { padding: 6px 10px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text-h); }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-2); outline-offset: -1px; }
+.btn { border: 1px solid var(--border); background: var(--surface); color: var(--text-h); border-radius: var(--radius); padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--row-hover); }
+.btn.primary { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
+.btn.primary:hover { background: var(--primary-2); }
+.btn.sm { padding: 2px 8px; font-size: 12px; }
+
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface-2); padding: 8px 12px;
+  border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text-h); }
+tbody tr:hover { background: var(--row-hover); }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.mono { font-family: Consolas, 'Cascadia Mono', monospace; font-size: 13px; }
+.dim { color: var(--muted); }
+.badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 0 8px; border-radius: 4px; border: 1px solid; }
+.badge.ok { color: var(--ok); background: var(--ok-bg); border-color: var(--ok-border); }
+.badge.low { color: var(--low); background: var(--low-bg); border-color: var(--low-border); }
+.badge.out { color: var(--out); background: var(--out-bg); border-color: var(--out-border); }
+.badge.off { color: var(--muted); background: var(--surface-2); border-color: var(--border); }
+.plus { color: var(--ok); font-weight: 600; } .minus { color: var(--out); font-weight: 600; }
+.table-foot { padding: 8px 14px; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+
+.form-grid { display: grid; grid-template-columns: 140px 1fr; gap: 10px 14px; align-items: center; max-width: 620px; }
+.form-grid label { color: var(--text-h); font-weight: 600; text-align: right; }
+.form-grid .req::after { content: ' *'; color: var(--out); }
+.form-grid .hint { font-size: 12px; color: var(--muted); }
+.form-grid .err { font-size: 12px; color: var(--out); }
+.radio { display: flex; gap: 16px; }
+.radio label { font-weight: 400; text-align: left; }
+.preview { display: flex; gap: 18px; align-items: center; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); }
+.preview b { font-size: 18px; color: var(--text-h); }
+.form-actions { display: flex; gap: 8px; justify-content: flex-end; padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface-2); }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 12px; align-items: start; }
+
+.statusbar { grid-area: status; background: var(--primary); color: #e2e8f0; font-size: 12px; display: flex; gap: 18px; align-items: center; padding: 0 14px; }
+.statusbar .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #4ade80; margin-right: 6px; }
+.statusbar .right { margin-left: auto; }
+
+/* หน้าเข้าสู่ระบบ */
+.login-wrap { min-height: calc(100vh - 30px); display: grid; place-items: center; padding: 16px;
+  background: linear-gradient(180deg, var(--titlebar) 0 38%, var(--bg) 38% 100%); }
+.login { width: min(380px, 100%); }
+.login .brand { color: #e2e8f0; text-align: center; margin-bottom: 14px; }
+.login .brand h1 { color: #fff; font-size: 22px; }
+.login .brand p { margin: 2px 0 0; color: #94a3b8; font-size: 13px; }
+.login .field { display: grid; gap: 4px; margin-bottom: 12px; }
+.login .field span { font-weight: 600; color: var(--text-h); }
+.login .btn.primary { width: 100%; padding: 8px; }
+.hidden { display: none !important; }
+
+/* มือถือ: sidebar กลายเป็นแถบเมนูล่าง ตารางซ่อนคอลัมน์รอง */
+@media (max-width: 760px) {
+  .app { grid-template: 'title' 44px 'main' 1fr 'side' 58px / 1fr; }
+  .statusbar, .sidebar .group, .titlebar .brand small, .crumb { display: none; }
+  .sidebar { flex-direction: row; padding: 4px; gap: 2px; }
+  .sidebar button { flex-direction: column; gap: 0; font-size: 11px; padding: 4px; justify-content: center; }
+  .sidebar button.on { box-shadow: inset 0 3px 0 #60a5fa; }
+  main { padding: 12px; }
+  .hide-sm { display: none; }
+  .split { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; gap: 4px; }
+  .form-grid label { text-align: left; margin-top: 8px; }
+  .stats { gap: 8px; } .stat { padding: 8px 10px; }
+}
+</style>
+</head>
+<body>
+<div class="mock-bar">
+  <b>MOCKUP</b> หน้า:
+  <button data-screen="login">เข้าสู่ระบบ</button>
+  <button data-screen="app" class="on">โปรแกรม</button>
+  | บทบาท:
+  <button data-role="admin" class="on">admin</button>
+  <button data-role="staff">staff</button>
+</div>
+
+<!-- หน้าเข้าสู่ระบบ -->
+<div id="login" class="login-wrap hidden">
+  <div class="login">
+    <div class="brand"><h1>Inventory TTV</h1><p>ระบบบริหารสต็อกสินค้า</p></div>
+    <div class="panel">
+      <div class="panel-head">เข้าสู่ระบบ</div>
+      <div class="panel-body">
+        <label class="field"><span>อีเมล</span><input type="email" placeholder="name@example.com"></label>
+        <label class="field"><span>รหัสผ่าน</span><input type="password"></label>
+        <button class="btn primary">เข้าสู่ระบบ</button>
+        <p class="dim" style="font-size:12px;text-align:center;margin:10px 0 0">บัญชีผู้ใช้สร้างโดยเจ้าของร้านเท่านั้น</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- โปรแกรม -->
+<div id="app" class="app">
+  <header class="titlebar">
+    <div class="brand">Inventory TTV <small>ระบบบริหารสต็อกสินค้า</small></div>
+    <div class="who">สมชาย ใจดี<small id="roleLabel">เจ้าของร้าน (admin)</small></div>
+    <button class="tb-btn" id="themeBtn" title="สลับธีม">โหมดมืด</button>
+    <button class="tb-btn">ออกจากระบบ</button>
+  </header>
+
+  <nav class="sidebar">
+    <div class="group">งานประจำวัน</div>
+    <button data-go="products" class="on"><span class="ico">▦</span>สินค้าคงคลัง</button>
+    <button data-go="move"><span class="ico">⇄</span>รับเข้า / เบิกออก</button>
+    <button data-go="history"><span class="ico">☰</span>ประวัติการเคลื่อนไหว</button>
+    <div class="group admin-only">ผู้ดูแล</div>
+    <button data-go="manage" class="admin-only"><span class="ico">✎</span>จัดการสินค้า</button>
+  </nav>
+
+  <main>
+    <!-- สินค้าคงคลัง -->
+    <section data-tab="products">
+      <div class="page-head"><div><div class="crumb">งานประจำวัน / สินค้าคงคลัง</div><h1>สินค้าคงคลัง</h1></div></div>
+      <div class="stats">
+        <div class="panel stat"><span>สินค้าทั้งหมด</span><b>6</b></div>
+        <div class="panel stat low"><span>ใกล้หมด</span><b>2</b></div>
+        <div class="panel stat out"><span>หมด</span><b>1</b></div>
+      </div>
+      <div class="panel">
+        <div class="toolbar">
+          <input class="grow" placeholder="ค้นหาชื่อ / รหัส / บาร์โค้ด">
+          <select><option>ทุกหมวดหมู่</option><option>เครื่องดื่ม</option><option>อาหาร</option><option>ของใช้</option></select>
+        </div>
+        <table>
+          <thead><tr><th>รหัส</th><th>ชื่อสินค้า</th><th class="hide-sm">หมวดหมู่</th><th class="num">คงเหลือ</th><th class="hide-sm">หน่วย</th><th class="num hide-sm">จุดสั่งซื้อ</th><th>สถานะ</th><th class="hide-sm"></th></tr></thead>
+          <tbody id="productRows"></tbody>
+        </table>
+        <div class="table-foot"><span>แสดง 6 รายการ เรียงตาม หมด → ใกล้หมด → ปกติ</span></div>
+      </div>
+    </section>
+
+    <!-- รับเข้า / เบิกออก -->
+    <section data-tab="move" class="hidden">
+      <div class="page-head"><div><div class="crumb">งานประจำวัน / รับเข้า / เบิกออก</div><h1>บันทึกรับเข้า / เบิกออก</h1></div></div>
+      <div class="panel">
+        <div class="panel-head">รายละเอียดรายการ</div>
+        <div class="panel-body form-grid">
+          <label class="req">สินค้า</label>
+          <select><option>DR-001 · น้ำดื่ม 600 มล. (คงเหลือ 4 ขวด)</option></select>
+          <label class="req">ประเภท</label>
+          <div class="radio">
+            <label><input type="radio" name="t"> รับเข้า</label>
+            <label><input type="radio" name="t" checked> เบิกออก</label>
+            <label class="admin-only"><input type="radio" name="t"> ปรับยอด</label>
+          </div>
+          <label class="req">จำนวน</label>
+          <div><input value="3" style="width:140px" inputmode="decimal"> <span class="dim">ขวด</span></div>
+          <label class="req">วันที่</label>
+          <div><input value="29/09/2569" style="width:140px"> <span class="hint">ห้ามเลือกวันในอนาคต</span></div>
+          <label>หมายเหตุ</label>
+          <textarea rows="2" placeholder="การปรับยอดต้องระบุหมายเหตุ"></textarea>
+          <label>ผลลัพธ์</label>
+          <div class="preview"><span>คงเหลือตอนนี้ <b>4</b></span><span>→</span><span>หลังบันทึก <b>1</b> ขวด</span><span class="badge low">ใกล้หมด</span></div>
+        </div>
+        <div class="form-actions"><button class="btn">ล้างข้อมูล</button><button class="btn primary">บันทึกรายการ</button></div>
+      </div>
+    </section>
+
+    <!-- ประวัติ -->
+    <section data-tab="history" class="hidden">
+      <div class="page-head"><div><div class="crumb">งานประจำวัน / ประวัติการเคลื่อนไหว</div><h1>ประวัติการเคลื่อนไหว</h1></div></div>
+      <div class="panel">
+        <div class="toolbar">
+          <select class="grow"><option>ทุกสินค้า</option></select>
+          <select><option>ทุกประเภท</option><option>รับเข้า</option><option>เบิกออก</option><option>ปรับยอด</option></select>
+        </div>
+        <table>
+          <thead><tr><th>วันที่</th><th>สินค้า</th><th class="hide-sm">ประเภท</th><th class="num">จำนวน</th><th class="hide-sm">ผู้บันทึก</th><th class="hide-sm">หมายเหตุ</th></tr></thead>
+          <tbody>
+            <tr><td>29 ก.ย. 2569</td><td>น้ำดื่ม 600 มล.</td><td class="hide-sm">เบิกออก</td><td class="num minus">−3 ขวด</td><td class="hide-sm">มานี</td><td class="hide-sm dim">ขายหน้าร้าน</td></tr>
+            <tr><td>28 ก.ย. 2569</td><td>กาแฟกระป๋อง</td><td class="hide-sm">รับเข้า</td><td class="num plus">+24 กระป๋อง</td><td class="hide-sm">สมชาย</td><td class="hide-sm dim">—</td></tr>
+            <tr><td>28 ก.ย. 2569</td><td>ข้าวสาร 5 กก.</td><td class="hide-sm">ปรับยอด</td><td class="num minus">−1 ถุง</td><td class="hide-sm">สมชาย</td><td class="hide-sm dim">นับสต็อกแล้วขาด</td></tr>
+            <tr><td>27 ก.ย. 2569</td><td>น้ำตาลทราย</td><td class="hide-sm">เบิกออก</td><td class="num minus">−2.5 กก.</td><td class="hide-sm">มานี</td><td class="hide-sm dim">—</td></tr>
+          </tbody>
+        </table>
+        <div class="table-foot"><span>แสดงล่าสุด 4 รายการ (ทีละ 50)</span><button class="btn sm">โหลดเพิ่ม</button></div>
+      </div>
+    </section>
+
+    <!-- จัดการสินค้า (admin) -->
+    <section data-tab="manage" class="hidden">
+      <div class="page-head"><div><div class="crumb">ผู้ดูแล / จัดการสินค้า</div><h1>จัดการสินค้า</h1></div><button class="btn primary">+ เพิ่มสินค้าใหม่</button></div>
+      <div class="split">
+        <div class="panel">
+          <div class="toolbar"><input class="grow" placeholder="ค้นหาสินค้า"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox"> แสดงที่ปิดใช้งาน</label></div>
+          <table>
+            <thead><tr><th>รหัส</th><th>ชื่อสินค้า</th><th>สถานะ</th><th></th></tr></thead>
+            <tbody>
+              <tr><td class="mono">DR-001</td><td>น้ำดื่ม 600 มล.</td><td><span class="badge ok">ใช้งาน</span></td><td class="num"><button class="btn sm">แก้ไข</button></td></tr>
+              <tr><td class="mono">DR-003</td><td>กาแฟกระป๋อง</td><td><span class="badge ok">ใช้งาน</span></td><td class="num"><button class="btn sm">แก้ไข</button></td></tr>
+              <tr><td class="mono">FD-099</td><td class="dim">ขนมปังแถว</td><td><span class="badge off">ปิดใช้งาน</span></td><td class="num"><button class="btn sm">เปิดใช้งาน</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <div class="panel-head">แก้ไขสินค้า <span class="mono dim">DR-001</span></div>
+          <div class="panel-body form-grid" style="grid-template-columns:110px 1fr">
+            <label class="req">รหัสสินค้า</label><input value="DR-001">
+            <label>บาร์โค้ด</label><input value="8851234567890">
+            <label class="req">ชื่อสินค้า</label><input value="น้ำดื่ม 600 มล.">
+            <label class="req">หมวดหมู่</label><input value="เครื่องดื่ม">
+            <label class="req">หน่วย</label><input value="ขวด">
+            <label>จุดสั่งซื้อ</label><div><input value="10" inputmode="decimal"><div class="err">ตัวอย่าง: รหัสสินค้านี้มีอยู่แล้ว กรุณาใช้รหัสอื่น</div></div>
+          </div>
+          <div class="form-actions"><button class="btn">ปิดใช้งาน</button><button class="btn">ยกเลิก</button><button class="btn primary">บันทึก</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span><span class="dot"></span>เชื่อมต่อฐานข้อมูลแล้ว</span>
+    <span>สินค้า 6 รายการ</span>
+    <span class="right">วันนี้ 29 ก.ย. 2569</span>
+  </footer>
+</div>
+
+<script>
+const products = [
+  { name: 'กาแฟกระป๋อง', sku: 'DR-003', cat: 'เครื่องดื่ม', qty: 0, unit: 'กระป๋อง', rp: 12 },
+  { name: 'น้ำดื่ม 600 มล.', sku: 'DR-001', cat: 'เครื่องดื่ม', qty: 4, unit: 'ขวด', rp: 10 },
+  { name: 'น้ำตาลทราย', sku: 'FD-020', cat: 'อาหาร', qty: 2.5, unit: 'กก.', rp: 3 },
+  { name: 'ข้าวสาร 5 กก.', sku: 'FD-001', cat: 'อาหาร', qty: 15, unit: 'ถุง', rp: 5 },
+  { name: 'ถุงพลาสติก', sku: 'US-010', cat: 'ของใช้', qty: 120, unit: 'แพ็ก', rp: 20 },
+  { name: 'สบู่ก้อน', sku: 'US-002', cat: 'ของใช้', qty: 36, unit: 'ก้อน', rp: 10 },
+]
+const status = (p) => (p.qty <= 0 ? ['out', 'หมด'] : p.qty <= p.rp ? ['low', 'ใกล้หมด'] : ['ok', 'ปกติ'])
+document.getElementById('productRows').innerHTML = products.map((p) => {
+  const [cls, label] = status(p)
+  return `<tr><td class="mono">${p.sku}</td><td>${p.name}</td><td class="hide-sm dim">${p.cat}</td>
+    <td class="num"><b>${p.qty}</b></td><td class="hide-sm">${p.unit}</td><td class="num hide-sm dim">${p.rp}</td>
+    <td><span class="badge ${cls}">${label}</span></td>
+    <td class="num hide-sm"><button class="btn sm">รับเข้า</button> <button class="btn sm">เบิกออก</button></td></tr>`
+}).join('')
+
+const $$ = (s) => document.querySelectorAll(s)
+const pick = (group, btn) => { $$(group).forEach((b) => b.classList.remove('on')); btn.classList.add('on') }
+$$('[data-go]').forEach((b) => b.onclick = () => {
+  pick('[data-go]', b)
+  $$('[data-tab]').forEach((s) => s.classList.toggle('hidden', s.dataset.tab !== b.dataset.go))
+})
+$$('[data-screen]').forEach((b) => b.onclick = () => {
+  pick('[data-screen]', b)
+  document.getElementById('login').classList.toggle('hidden', b.dataset.screen !== 'login')
+  document.getElementById('app').classList.toggle('hidden', b.dataset.screen !== 'app')
+})
+$$('[data-role]').forEach((b) => b.onclick = () => {
+  pick('[data-role]', b)
+  const admin = b.dataset.role === 'admin'
+  $$('.admin-only').forEach((el) => el.classList.toggle('hidden', !admin))
+  document.getElementById('roleLabel').textContent = admin ? 'เจ้าของร้าน (admin)' : 'พนักงาน (staff)'
+  if (!admin && document.querySelector('[data-go="manage"]').classList.contains('on')) document.querySelector('[data-go="products"]').click()
+})
+document.getElementById('themeBtn').onclick = (e) => {
+  const dark = document.documentElement.dataset.theme !== 'dark'
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+  e.target.textContent = dark ? 'โหมดสว่าง' : 'โหมดมืด'
+}
+</script>
+</body>
+</html>
