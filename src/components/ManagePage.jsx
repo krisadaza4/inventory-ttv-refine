@@ -33,10 +33,11 @@ export default function ManagePage({ allProducts, loadState, loadError, onRetry,
     setNotice(null)
   }
 
+  // ไม่เริ่มฟอร์มใหม่ที่นี่: สินค้ายังเป็นค่าเก่าจนกว่าโหลดใหม่เสร็จ ฟอร์มจะแสดงค่าเก่าแล้วบันทึกทับได้
+  // ฟอร์มแก้ไขคงค่าที่เพิ่งบันทึกไว้ ส่วนสินค้าใหม่ key เปลี่ยนเองเมื่อสินค้าโผล่ในรายการ
   const handleSaved = (id, message) => {
     setNotice(message)
     setEditingId(id)
-    setFormSeq((n) => n + 1)
     onChanged()
   }
 
