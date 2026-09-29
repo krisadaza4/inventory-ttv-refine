@@ -1,14 +1,382 @@
+/* สีและสไตล์ตาม docs/mockup.html (design.md ข้อ 7) */
 :root {
-  font: 16px/1.6 system-ui, 'Segoe UI', 'Noto Sans Thai', Roboto, sans-serif;
-  color-scheme: light dark;
+  --text: #334155;
+  --text-h: #0f172a;
+  --muted: #64748b;
+  --bg: #eef1f5;
+  --surface: #fff;
+  --surface-2: #f8fafc;
+  --border: #d5dbe3;
+  --row-hover: #f1f5f9;
+  --primary: #1e3a5f;
+  --primary-2: #2b4c7e;
+  --primary-text: #fff;
+  --sidebar: #1e293b;
+  --sidebar-text: #cbd5e1;
+  --sidebar-active: #334155;
+  --titlebar: #0f172a;
+
+  /* สถานะ: ใช้คู่กับข้อความเสมอ ไม่พึ่งสีอย่างเดียว */
+  --out: #b42318;
+  --out-bg: #fef3f2;
+  --out-border: #fda29b;
+  --low: #b54708;
+  --low-bg: #fffaeb;
+  --low-border: #fec84b;
+  --ok: #067647;
+  --ok-bg: #ecfdf3;
+  --ok-border: #75e0a7;
+
+  --radius: 6px;
+  --sans: 'Segoe UI', 'Noto Sans Thai', system-ui, Roboto, sans-serif;
+
+  font: 14px/1.5 var(--sans);
+  color: var(--text);
+  color-scheme: light;
+}
+
+/* ธีมควบคุมด้วย data-theme บน <html> (ตั้งโดย App.jsx) */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --text: #cbd5e1;
+  --text-h: #f1f5f9;
+  --muted: #94a3b8;
+  --bg: #0b1220;
+  --surface: #111a2b;
+  --surface-2: #162134;
+  --border: #26334a;
+  --row-hover: #1a263b;
+  --primary: #3b6ea8;
+  --primary-2: #4a7fbc;
+  --sidebar: #0d1526;
+  --sidebar-text: #94a3b8;
+  --sidebar-active: #1c2a42;
+  --titlebar: #070c17;
+  --out: #fda29b;
+  --out-bg: #3a1411;
+  --out-border: #912018;
+  --low: #fec84b;
+  --low-bg: #3a2a0a;
+  --low-border: #93370d;
+  --ok: #75e0a7;
+  --ok-bg: #0b2a1c;
+  --ok-border: #085d3a;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  background: var(--bg);
 }
 
-main {
-  max-width: 720px;
-  margin: 0 auto;
+h1,
+h2,
+h3 {
+  color: var(--text-h);
+  margin: 0;
+  line-height: 1.3;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-h);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--primary-2);
+  outline-offset: 1px;
+}
+
+.btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-h);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--row-hover);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn.primary {
+  background: var(--primary);
+  color: var(--primary-text);
+  border-color: var(--primary);
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: var(--primary-2);
+}
+
+.btn.sm {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.alert {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--out-border);
+  background: var(--out-bg);
+  color: var(--out);
+  border-radius: var(--radius);
+}
+
+.dim {
+  color: var(--muted);
+}
+
+/* panel */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.panel-head {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  color: var(--text-h);
+  background: var(--surface-2);
+  border-radius: var(--radius) var(--radius) 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-body {
+  padding: 14px;
+}
+
+/* โครงหน้าแบบโปรแกรม: title bar / sidebar / เนื้อหา / status bar */
+.app {
+  display: grid;
+  grid-template:
+    'title title' 44px
+    'side main' 1fr
+    'status status' 26px
+    / 210px 1fr;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.titlebar {
+  grid-area: title;
+  background: var(--titlebar);
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+}
+
+.titlebar .brand {
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  flex: 1;
+  white-space: nowrap;
+}
+
+.titlebar .brand small {
+  font-weight: 400;
+  color: #94a3b8;
+  margin-left: 8px;
+}
+
+.titlebar .who {
+  font-size: 13px;
+  text-align: right;
+  line-height: 1.25;
+}
+
+.titlebar .who small {
+  display: block;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.tb-btn {
+  background: transparent;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: var(--radius);
+  padding: 3px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tb-btn:hover:not(:disabled) {
+  background: #1e293b;
+}
+
+.sidebar {
+  grid-area: side;
+  background: var(--sidebar);
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-main {
+  grid-area: main;
+  overflow: auto;
+  padding: 16px 20px;
+}
+
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.page-head h1 {
+  font-size: 20px;
+}
+
+.crumb {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.statusbar {
+  grid-area: status;
+  background: var(--primary);
+  color: #e2e8f0;
+  font-size: 12px;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 0 14px;
+}
+
+.statusbar .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  margin-right: 6px;
+}
+
+.statusbar .dot.off {
+  background: #f87171;
+}
+
+.statusbar .right {
+  margin-left: auto;
+}
+
+/* หน้าเข้าสู่ระบบ และหน้าที่ยังไม่เข้าโปรแกรม (ตรวจ session, ไม่มี profile) */
+.gate {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
   padding: 16px;
+  background: linear-gradient(180deg, var(--titlebar) 0 38%, var(--bg) 38% 100%);
+}
+
+.gate-box {
+  width: min(380px, 100%);
+}
+
+.gate-brand {
+  color: #e2e8f0;
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.gate-brand h1 {
+  color: #fff;
+  font-size: 22px;
+}
+
+.gate-brand p {
+  margin: 2px 0 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.field span {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.gate .btn.primary {
+  width: 100%;
+  padding: 8px;
+}
+
+.gate-note {
+  font-size: 12px;
+  text-align: center;
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
+/* มือถือ: sidebar กลายเป็นแถบเมนูล่าง */
+@media (max-width: 760px) {
+  .app {
+    grid-template:
+      'title' 44px
+      'main' 1fr
+      'side' 58px
+      / 1fr;
+  }
+
+  .statusbar,
+  .titlebar .brand small,
+  .crumb {
+    display: none;
+  }
+
+  .titlebar {
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .sidebar {
+    flex-direction: row;
+    padding: 4px;
+  }
+
+  .app-main {
+    padding: 12px;
+  }
 }

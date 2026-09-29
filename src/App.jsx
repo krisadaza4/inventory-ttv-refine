@@ -1,10 +1,228 @@
-// หน้าชั่วคราวของเฟส 1 จะแทนด้วยหน้าจริงในเฟส 4
-function App() {
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import AppShell from './components/AppShell.jsx'
+import LoginForm from './components/LoginForm.jsx'
+import { APP_NAME, APP_SUBTITLE, ThemeToggle } from './components/TitleBar.jsx'
+import { toIsoDate } from './lib/dateFormat.js'
+import { createRepository } from './lib/repositories.js'
+import { getSupabase } from './lib/supabaseClient.js'
+import { ERROR_MESSAGE, toThaiError } from './lib/supabaseErrors.js'
+import { getInitialTheme, saveTheme, toggleTheme } from './lib/theme.js'
+
+// หน้าก่อนเข้าโปรแกรม: เข้าสู่ระบบ, กำลังตรวจ, ตั้งค่าไม่ครบ, ไม่มี profile
+function Gate({ children, theme, onToggleTheme }) {
   return (
-    <main>
-      <h1>Inventory TTV</h1>
-      <p>ตั้งโปรเจกต์เรียบร้อย</p>
-    </main>
+    <div className="gate">
+      <div className="gate-box">
+        <div className="gate-brand">
+          <h1>{APP_NAME}</h1>
+          <p>{APP_SUBTITLE}</p>
+        </div>
+        {children}
+        <p className="gate-note">
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function GateMessage({ title, children }) {
+  return (
+    <div className="panel">
+      <div className="panel-head">{title}</div>
+      <div className="panel-body">{children}</div>
+    </div>
+  )
+}
+
+function App() {
+  const { client, error: configError } = getSupabase()
+  const repository = useMemo(() => (client ? createRepository(client) : null), [client])
+  // undefined = กำลังตรวจ session, null = ยังไม่เข้าสู่ระบบ
+  const [session, setSession] = useState(client ? undefined : null)
+  const [theme, setTheme] = useState(() =>
+    getInitialTheme(undefined, window.matchMedia('(prefers-color-scheme: dark)').matches),
+  )
+  const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState(null)
+
+  // ตั้งธีมให้ <html> ก่อนวาดหน้าจอ เพื่อไม่ให้จอกะพริบ
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
+
+  // ติดตาม session (INITIAL_SESSION ทำให้รีเฟรชแล้วยังเข้าสู่ระบบอยู่)
+  // ห้ามเรียกฟังก์ชัน async ของ Supabase ใน callback นี้ ตามคำแนะนำของ supabase-js
+  useEffect(() => {
+    if (!client) return undefined
+    const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession)
+    })
+    return () => data.subscription.unsubscribe()
+  }, [client])
+
+  const handleToggleTheme = () => {
+    const next = toggleTheme(theme)
+    setTheme(next)
+    saveTheme(next)
+  }
+
+  // ออกจากระบบเฉพาะเบราว์เซอร์นี้ ล้าง session ทันทีเพื่อล้างข้อมูลออกจาก state
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    setSignOutError(null)
+    try {
+      const { error } = await client.auth.signOut({ scope: 'local' })
+      if (error) setSignOutError(toThaiError(error))
+      else setSession(null)
+    } catch (thrown) {
+      setSignOutError(toThaiError(thrown))
+    }
+    setSigningOut(false)
+  }
+
+  const gateProps = { theme, onToggleTheme: handleToggleTheme }
+
+  if (configError) {
+    return (
+      <Gate {...gateProps}>
+        <GateMessage title="ตั้งค่าไม่ครบ">
+          <p className="alert" role="alert">
+            {configError}
+          </p>
+        </GateMessage>
+      </Gate>
+    )
+  }
+
+  if (session === undefined) {
+    return (
+      <Gate {...gateProps}>
+        <GateMessage title="กรุณารอสักครู่">
+          <p role="status">กำลังตรวจสอบการเข้าสู่ระบบ…</p>
+        </GateMessage>
+      </Gate>
+    )
+  }
+
+  if (session === null) {
+    return (
+      <Gate {...gateProps}>
+        <LoginForm auth={client.auth} />
+      </Gate>
+    )
+  }
+
+  // key ตามผู้ใช้: เปลี่ยนบัญชีหรือออกจากระบบแล้ว state เดิมถูกล้างทั้งหมด
+  return (
+    <SignedIn
+      key={session.user.id}
+      userId={session.user.id}
+      repository={repository}
+      gateProps={gateProps}
+      theme={theme}
+      onToggleTheme={handleToggleTheme}
+      signingOut={signingOut}
+      signOutError={signOutError}
+      onSignOut={handleSignOut}
+    />
+  )
+}
+
+// เข้าสู่ระบบแล้ว: โหลด profile ก่อน ไม่มี profile = ยังไม่ได้กำหนดบทบาท
+function SignedIn({ userId, repository, gateProps, theme, onToggleTheme, signingOut, signOutError, onSignOut }) {
+  // undefined = กำลังโหลด
+  const [profile, setProfile] = useState(undefined)
+  const [loadError, setLoadError] = useState(null)
+  const [attempt, setAttempt] = useState(0)
+
+  // ไม่ใช้ผลที่มาช้าหลังออกจากระบบหรือกดลองใหม่ไปแล้ว
+  useEffect(() => {
+    let active = true
+    repository.getMyProfile(userId).then(({ profile: loaded, error }) => {
+      if (!active) return
+      setLoadError(error)
+      setProfile(error ? undefined : loaded)
+    })
+    return () => {
+      active = false
+    }
+  }, [repository, userId, attempt])
+
+  const retry = () => {
+    setLoadError(null)
+    setAttempt((n) => n + 1)
+  }
+
+  const signOutButton = (
+    <button type="button" className="btn" onClick={onSignOut} disabled={signingOut}>
+      {signingOut ? 'กำลังออก…' : 'ออกจากระบบ'}
+    </button>
+  )
+
+  if (loadError) {
+    return (
+      <Gate {...gateProps}>
+        <GateMessage title="โหลดข้อมูลผู้ใช้ไม่สำเร็จ">
+          <p className="alert" role="alert">
+            {loadError}
+          </p>
+          <button type="button" className="btn primary" onClick={retry}>
+            ลองใหม่
+          </button>{' '}
+          {signOutButton}
+        </GateMessage>
+      </Gate>
+    )
+  }
+
+  if (profile === undefined) {
+    return (
+      <Gate {...gateProps}>
+        <GateMessage title="กรุณารอสักครู่">
+          <p role="status">กำลังโหลดข้อมูลผู้ใช้…</p>
+        </GateMessage>
+      </Gate>
+    )
+  }
+
+  if (profile === null) {
+    return (
+      <Gate {...gateProps}>
+        <GateMessage title="ยังเข้าใช้งานไม่ได้">
+          {signOutError && (
+            <p className="alert" role="alert">
+              {signOutError}
+            </p>
+          )}
+          <p>{ERROR_MESSAGE.NO_PROFILE}</p>
+          {signOutButton}
+        </GateMessage>
+      </Gate>
+    )
+  }
+
+  return (
+    <AppShell
+      titleBar={{ profile, theme, onToggleTheme, signingOut, onSignOut }}
+      statusBar={{ connected: true, today: toIsoDate(new Date()) }}
+    >
+      {signOutError && (
+        <p className="alert" role="alert">
+          {signOutError}
+        </p>
+      )}
+      {/* T4.2–T4.6 แทนที่ส่วนนี้ด้วยหน้าตามเมนู */}
+      <div className="page-head">
+        <div>
+          <div className="crumb">งานประจำวัน / สินค้าคงคลัง</div>
+          <h1>สินค้าคงคลัง</h1>
+        </div>
+      </div>
+      <div className="panel">
+        <div className="panel-body dim">หน้านี้จะทำใน T4.3</div>
+      </div>
+    </AppShell>
   )
 }
 

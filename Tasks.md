@@ -39,7 +39,7 @@
 
 ## เฟส 4: UI
 
-- [ ] T4.1 `LoginForm`, โครงหน้า (`AppShell`, `TitleBar`, `StatusBar`), โหมดมืด/สว่าง, จัดการ session และกรณีไม่มี profile
+- [x] T4.1 `LoginForm`, โครงหน้า (`AppShell`, `TitleBar`, `StatusBar`), โหมดมืด/สว่าง, จัดการ session และกรณีไม่มี profile
 - [ ] T4.2 `Sidebar` แสดงเมนูตามบทบาท (มือถือเป็นแถบล่าง)
 - [ ] T4.3 หน้าสินค้าคงคลัง: กล่องสรุป, ค้นหา, กรองหมวดหมู่, `ProductTable`
 - [ ] T4.4 Tab รับ/เบิก: `MovementForm` พร้อมแสดงคงเหลือก่อน/หลัง

@@ -9,19 +9,19 @@
 - **เฟส 1 (ตั้งโปรเจกต์):** เสร็จ
 - **เฟส 2 (ฐานข้อมูล):** เสร็จ รัน `supabase/schema.sql` ใน Supabase แล้ว มีบัญชี admin 1 + staff 1 พร้อม `profiles` และ `supabase/rls_check.sql` ผ่านทั้ง 25 ข้อ
 - **เฟส 3 (ตรรกะ):** เสร็จและ push แล้ว (ล่าสุด `dfd8026`) เทสต์ 122 ข้อผ่าน
-- **เฟส 4 (UI):** ตกลงหน้าตาแล้วตาม `docs/mockup.html` (แก้ `design.md` ข้อ 7 และ T4.x) ยังไม่ได้ commit ยังไม่เริ่มเขียน component
+- **เฟส 4 (UI):** หน้าตาตาม `docs/mockup.html` (commit `6e67fb1`) T4.1 เสร็จ (`src/index.css`, `App.jsx`, `components/LoginForm`, `TitleBar` (+`ThemeToggle`), `StatusBar`, `AppShell`) build/lint ผ่าน ผู้ใช้สั่ง commit แล้ว แต่ยังไม่ได้ยืนยันผลทดสอบเข้าสู่ระบบจริง (admin/staff, โหมดมืด, รีเฟรช, รหัสผิด) ให้ถามอีกครั้งตอนทำ T4.2
 - **ยังไม่ได้ทดสอบกับ Supabase จริง:** `MOVEMENT_COLUMNS` ใช้ embed `product:products(...)` และ `recorder:profiles(display_name)` ผ่าน FK `product_id`/`created_by` ต้องลองจริงตอน T4.5 ส่วน `getMyProfile(userId)` รับ id จาก session (ใช้ `maybeSingle` ไม่มี profile ได้ `null`)
 
 ## งานถัดไป
 
-1. commit `docs/mockup.html`, `design.md`, `Tasks.md`, `HANDOFF.md` ผ่าน git-manager
-2. T4.1 `LoginForm`, `AppShell`, `TitleBar`, `StatusBar`, โหมดมืด/สว่าง, session และกรณีไม่มี profile
+1. ยืนยันกับผู้ใช้ว่าทดสอบ T4.1 ผ่าน (ดูข้อสถานะเฟส 4)
+2. T4.2 `Sidebar` เมนูตามบทบาท (มือถือเป็นแถบล่าง)
 3. push ขึ้น GitHub เมื่อผู้ใช้สั่ง
 
 ## Git
 
 - repo private `nutcharat123/inventory-ttv` branch `main`
-- commit ล่าสุด: `dfd8026` (T3.7, push แล้ว), `03966a1` (T3.6), `457054f` (T3.5)
+- commit ล่าสุด: `6e67fb1` (mockup/design), `dfd8026` (T3.7, push แล้ว)
 - งาน git ทำผ่าน agent git-manager เท่านั้น
 
 ## สิ่งที่ต้องรู้
