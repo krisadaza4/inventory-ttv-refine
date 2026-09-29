@@ -14,14 +14,14 @@
 
 ## งานถัดไป
 
-1. เฟส 5 (แก้บั๊ก "แก้ไขจุดสั่งซื้อไม่ได้" แล้ว: `ManagePage.handleSaved` เคยเริ่มฟอร์มใหม่ก่อนโหลดเสร็จ) (T5.1 lint/test/build, T5.2–T5.4 ผู้ใช้ทดลอง, T5.5 ตรวจ secret, T5.6 deploy Vercel + ลองบนมือถือจริง)
+1. เฟส 5: T5.1 ผ่าน (lint 0 เตือน, เทสต์ 10 ไฟล์ 138 ข้อ, build ผ่าน) และ T5.5 ผ่าน (ไม่มี `.env` ใน git นอกจาก `.env.example`, ไม่มี `sb_secret_` ยาว/JWT/service_role ในไฟล์และประวัติ git, `dist` มีแค่ publishable key ซึ่งตั้งใจให้เปิดเผยได้และ `dist` ถูก ignore) เหลือ T5.2–T5.4 ผู้ใช้ทดลอง และ T5.6 deploy Vercel (ไม่มี vercel CLI ใช้ Dashboard import จาก GitHub ใส่ env 2 ตัว)
 2. push ขึ้น GitHub เมื่อผู้ใช้สั่ง
 3. เฟส 6 (หลัง deploy): นำเข้า/ส่งออก Excel เพื่อใช้กับโปรแกรมบัญชี Express ผ่านไฟล์ (Express เก็บข้อมูลเป็น `.DBF` ไม่มี API) เริ่มจาก T6.1 ให้ผู้ใช้ตัดสินใจก่อน
 
 ## Git
 
 - repo private `nutcharat123/inventory-ttv` branch `main`
-- commit ล่าสุด: `ccc1d1d` (T4.5), `18a2db8` (T4.4+T4.6), push ล่าสุดที่ `dfd8026`
+- commit ล่าสุด: `82720f2` (แก้ฟอร์มสินค้า ยังไม่ push), `d86ee43` (T4.7, push แล้ว)
 - งาน git ทำผ่าน agent git-manager เท่านั้น
 
 ## สิ่งที่ต้องรู้
