@@ -45,3 +45,8 @@ coverage/
 # Misc
 .env.local
 .env.*.local
+
+# ไฟล์ข้อมูลจริงจากร้าน (เช่นไฟล์ส่งออกจาก Express) ห้ามเข้า git
+docs/*.xlsx
+docs/*.xls
+docs/*.csv

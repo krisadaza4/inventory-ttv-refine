@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MOVEMENT_COLUMNS, PRODUCT_COLUMNS, PROFILE_COLUMNS } from './mappers.js'
-import { EXPORT_PAGE_SIZE, PAGE_SIZE, createRepository } from './repositories.js'
+import { EXPORT_PAGE_SIZE, IMPORT_BATCH_SIZE, PAGE_SIZE, createRepository } from './repositories.js'
 import { ERROR_MESSAGE } from './supabaseErrors.js'
 
 // supabase client จำลอง: บันทึกทุกการเรียกในโซ่คำสั่ง แล้วคืนผลที่กำหนด
@@ -76,6 +76,7 @@ describe('createRepository', () => {
     const repo = createRepository(fakeClient({ data: [], error: null }))
     expect(Object.keys(repo).sort()).toEqual([
       'getMyProfile',
+      'insertProducts',
       'listAllMovements',
       'listMovements',
       'listProducts',
@@ -109,6 +110,8 @@ describe('listProducts', () => {
       ['select', PRODUCT_COLUMNS],
       ['eq', 'active', true],
       ['order', 'name', { ascending: true }],
+      ['order', 'id', { ascending: true }],
+      ['range', 0, EXPORT_PAGE_SIZE - 1],
     ])
   })
 
@@ -324,5 +327,62 @@ describe('listAllMovements', () => {
       movements: [],
       error: ERROR_MESSAGE.SESSION_EXPIRED,
     })
+  })
+})
+
+describe('insertProducts', () => {
+  const products = Array.from({ length: IMPORT_BATCH_SIZE + 1 }, (_, i) => ({ ...newProduct, sku: `SKU-${i}` }))
+
+  it('insert เป็นชุดละ IMPORT_BATCH_SIZE เฉพาะคอลัมน์ที่ grant', async () => {
+    const client = fakeClient({ data: null, error: null })
+    expect(await createRepository(client).insertProducts(products)).toEqual({ inserted: IMPORT_BATCH_SIZE + 1, error: null })
+    const inserts = client.calls.filter(([m]) => m === 'insert')
+    expect(inserts.map(([, rows]) => rows.length)).toEqual([IMPORT_BATCH_SIZE, 1])
+    expect(Object.keys(inserts[0][1][0]).sort()).toEqual(['barcode', 'category', 'name', 'reorder_point', 'sku', 'unit'])
+    expect(client.calls.filter(([m]) => m === 'from').every(([, t]) => t === 'products')).toBe(true)
+  })
+
+  it('ชุดไหนผิดพลาด หยุดทันที และบอกว่าบันทึกไปแล้วกี่รายการ', async () => {
+    let call = 0
+    const client = fakeClient(null)
+    const builder = client.from('products')
+    client.calls.length = 0
+    builder.then = (resolve, reject) => {
+      const result = call === 0 ? { data: null, error: null } : { data: null, error: { code: '42501' } }
+      call += 1
+      return Promise.resolve(result).then(resolve, reject)
+    }
+    expect(await createRepository(client).insertProducts(products)).toEqual({
+      inserted: IMPORT_BATCH_SIZE,
+      error: ERROR_MESSAGE.FORBIDDEN,
+    })
+  })
+
+  it('ไม่มีรายการ ไม่เรียกฐานข้อมูล', async () => {
+    const client = fakeClient({ data: null, error: null })
+    expect(await createRepository(client).insertProducts([])).toEqual({ inserted: 0, error: null })
+    expect(client.calls).toEqual([])
+  })
+})
+
+describe('listProducts หลายหน้า', () => {
+  it('สินค้าเกิน 1000 รายการ (ขีดจำกัดต่อครั้งของ Supabase) ดึงต่อจนครบ', async () => {
+    const full = Array.from({ length: EXPORT_PAGE_SIZE }, (_, i) => ({ ...productRow, id: `p${i}` }))
+    let call = 0
+    const client = fakeClient(null)
+    const builder = client.from('product_stock')
+    client.calls.length = 0
+    builder.then = (resolve, reject) => {
+      const result = call === 0 ? { data: full, error: null } : { data: [productRow], error: null }
+      call += 1
+      return Promise.resolve(result).then(resolve, reject)
+    }
+    const { products, error } = await createRepository(client).listProducts({ includeInactive: true })
+    expect(error).toBeNull()
+    expect(products).toHaveLength(EXPORT_PAGE_SIZE + 1)
+    expect(client.calls.filter(([m]) => m === 'range')).toEqual([
+      ['range', 0, EXPORT_PAGE_SIZE - 1],
+      ['range', EXPORT_PAGE_SIZE, 2 * EXPORT_PAGE_SIZE - 1],
+    ])
   })
 })

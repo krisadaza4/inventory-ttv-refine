@@ -13,6 +13,8 @@ export const PAGE_SIZE = 50
 // ส่งออก Excel: ดึงทีละ 1000 แถว (ค่าสูงสุดต่อครั้งของ Supabase) กันไฟล์ใหญ่เกินด้วย EXPORT_MAX_ROWS
 export const EXPORT_PAGE_SIZE = 1000
 export const EXPORT_MAX_ROWS = 50000
+// นำเข้าสินค้าจาก Excel: บันทึกทีละชุด ไม่ส่งทีละรายการ
+export const IMPORT_BATCH_SIZE = 500
 
 // รันคำสั่ง Supabase แล้วคืน { data, error } เสมอ error เป็นข้อความไทย ไม่โยนต่อ
 async function run(buildQuery) {
@@ -28,13 +30,23 @@ async function run(buildQuery) {
 // ตั้งใจไม่มีฟังก์ชันลบ และบันทึกรายการเคลื่อนไหวผ่าน record_movement เท่านั้น
 export function createRepository(client) {
   return {
+    // ดึงทีละ EXPORT_PAGE_SIZE เพราะ Supabase คืนได้สูงสุด 1000 แถวต่อครั้ง (เรียงด้วย id ด้วยให้แบ่งหน้าได้แน่นอน)
     async listProducts({ includeInactive = false } = {}) {
-      const { data, error } = await run(() => {
-        let query = client.from('product_stock').select(PRODUCT_COLUMNS)
-        if (!includeInactive) query = query.eq('active', true)
-        return query.order('name', { ascending: true })
-      })
-      return { products: error ? [] : data.map(toProduct), error }
+      const all = []
+      for (let from = 0; from < EXPORT_MAX_ROWS; from += EXPORT_PAGE_SIZE) {
+        const { data, error } = await run(() => {
+          let query = client.from('product_stock').select(PRODUCT_COLUMNS)
+          if (!includeInactive) query = query.eq('active', true)
+          return query
+            .order('name', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, from + EXPORT_PAGE_SIZE - 1)
+        })
+        if (error) return { products: [], error }
+        all.push(...data.map(toProduct))
+        if (data.length < EXPORT_PAGE_SIZE) break
+      }
+      return { products: all, error: null }
     },
 
     // ไม่มี id = เพิ่มใหม่, มี id = แก้ไข คืน id ของสินค้า (หน้าจอโหลดรายการใหม่เพื่อได้คงเหลือ)
@@ -46,6 +58,19 @@ export function createRepository(client) {
         return query.select('id').single()
       })
       return { id: error ? null : data.id, error }
+    },
+
+    // เพิ่มสินค้าหลายรายการ (นำเข้าจาก Excel) ชุดไหนผิดพลาดหยุดทันที ชุดก่อนหน้าบันทึกไปแล้ว
+    // นำเข้าซ้ำได้: หน้าจอกรองรหัสที่มีอยู่แล้วออกก่อนเสมอ
+    async insertProducts(products) {
+      let inserted = 0
+      for (let i = 0; i < products.length; i += IMPORT_BATCH_SIZE) {
+        const batch = products.slice(i, i + IMPORT_BATCH_SIZE)
+        const { error } = await run(() => client.from('products').insert(batch.map(toProductRow)))
+        if (error) return { inserted, error }
+        inserted += batch.length
+      }
+      return { inserted, error: null }
     },
 
     async setProductActive(id, active) {

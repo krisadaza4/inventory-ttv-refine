@@ -3,6 +3,7 @@ import { PAGE } from '../lib/menu.js'
 import { listCategories, searchProducts } from '../lib/stockRules.js'
 import PageHead from './PageHead.jsx'
 import ProductForm from './ProductForm.jsx'
+import ProductImport from './ProductImport.jsx'
 
 // หน้าจัดการสินค้า (admin): ซ้ายตารางสินค้า ขวาฟอร์มเพิ่ม/แก้ไข (design.md ข้อ 7)
 // allProducts รวมสินค้าที่ปิดใช้งานแล้ว
@@ -14,6 +15,7 @@ export default function ManagePage({ allProducts, loadState, loadError, onRetry,
   // ใช้เป็น key ให้ฟอร์มเริ่มใหม่หลังบันทึกหรือกดเพิ่มใหม่
   const [formSeq, setFormSeq] = useState(0)
   const [notice, setNotice] = useState(null)
+  const [importing, setImporting] = useState(false)
 
   const editing = allProducts.find((p) => p.id === editingId) ?? null
   const visible = searchProducts(
@@ -46,9 +48,14 @@ export default function ManagePage({ allProducts, loadState, loadError, onRetry,
       <PageHead
         page={PAGE.MANAGE}
         actions={
-          <button type="button" className="btn primary" onClick={startNew}>
-            + เพิ่มสินค้าใหม่
-          </button>
+          <div className="head-actions">
+            <button type="button" className="btn" onClick={() => setImporting(true)} disabled={importing}>
+              นำเข้าจาก Excel
+            </button>
+            <button type="button" className="btn primary" onClick={startNew}>
+              + เพิ่มสินค้าใหม่
+            </button>
+          </div>
         }
       />
 
@@ -56,6 +63,21 @@ export default function ManagePage({ allProducts, loadState, loadError, onRetry,
         <p className="notice" role="status">
           {notice}
         </p>
+      )}
+
+      {importing && (
+        <ProductImport
+          allProducts={allProducts}
+          repository={repository}
+          onImported={(message) => {
+            if (message) {
+              setNotice(message)
+              setImporting(false)
+            }
+            onChanged()
+          }}
+          onClose={() => setImporting(false)}
+        />
       )}
 
       <div className="split">
