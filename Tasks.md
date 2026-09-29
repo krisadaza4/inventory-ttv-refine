@@ -31,7 +31,7 @@
 - [x] T3.2 `stockRules.js`: `signedQuantity`, `getStockStatus(onHand, reorderPoint)`, `sortByStockStatus` + เทสต์ขอบ (0, = จุดสั่งซื้อ, ทศนิยม)
 - [x] T3.3 `stockRules.js`: `validateProduct` (ช่องห้ามว่าง, จุดสั่งซื้อ ≥ 0, ทศนิยม ≤ 2) และ `validateMovement(movement, onHand, role)` (จำนวน, ห้ามติดลบ, adjust ต้อง admin + หมายเหตุ, ห้ามวันในอนาคต) + เทสต์
 - [x] T3.4 `stockRules.js`: `searchProducts(products, query)` (ชื่อ/รหัส/บาร์โค้ด ไม่สนตัวพิมพ์เล็กใหญ่) และ `filterByCategory` + เทสต์
-- [ ] T3.5 `roles.js`: `ROLE`, `canManageProducts`, `canAdjust` + เทสต์
+- [x] T3.5 `roles.js`: `ROLE`, `canManageProducts`, `canAdjust` + เทสต์
 - [ ] T3.6 `supabaseClient.js`, `supabaseErrors.js` (รวมข้อความไทยของ SKU/บาร์โค้ดซ้ำ, คงเหลือไม่พอ, ไม่มีสิทธิ์) + เทสต์
 - [ ] T3.7 `mappers.js`, `repositories.js` (`listProducts`, `saveProduct`, `setProductActive`, `recordMovement`, `listMovements`, `getMyProfile`) + เทสต์ด้วย client จำลอง
 

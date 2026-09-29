@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ROLE } from './roles.js'
 import {
   MOVEMENT_TYPE,
   STOCK_STATUS,
@@ -159,73 +160,73 @@ describe('validateMovement', () => {
   const base = { type: MOVEMENT_TYPE.IN, quantity: '5', movementDate: today, note: '' }
 
   it('รับเข้าปกติ ไม่มี error', () => {
-    expect(validateMovement(base, 0, 'staff', today)).toEqual({})
+    expect(validateMovement(base, 0, ROLE.STAFF, today)).toEqual({})
   })
 
   it('ประเภทไม่ถูกต้อง', () => {
-    expect(validateMovement({ ...base, type: 'transfer' }, 0, 'staff', today)).toHaveProperty('type')
+    expect(validateMovement({ ...base, type: 'transfer' }, 0, ROLE.STAFF, today)).toHaveProperty('type')
   })
 
   it('จำนวนว่าง, 0, ติดลบ, ไม่ใช่ตัวเลข ไม่ได้ (รับเข้า/เบิกออก)', () => {
     for (const quantity of ['', '0', '-1', 'abc']) {
-      expect(validateMovement({ ...base, quantity }, 10, 'staff', today)).toHaveProperty('quantity')
-      expect(validateMovement({ ...base, type: MOVEMENT_TYPE.OUT, quantity }, 10, 'staff', today)).toHaveProperty(
+      expect(validateMovement({ ...base, quantity }, 10, ROLE.STAFF, today)).toHaveProperty('quantity')
+      expect(validateMovement({ ...base, type: MOVEMENT_TYPE.OUT, quantity }, 10, ROLE.STAFF, today)).toHaveProperty(
         'quantity',
       )
     }
   })
 
   it('จำนวนทศนิยมเกิน 2 ตำแหน่ง ไม่ได้', () => {
-    expect(validateMovement({ ...base, quantity: '1.25' }, 0, 'staff', today)).toEqual({})
-    expect(validateMovement({ ...base, quantity: '1.255' }, 0, 'staff', today)).toHaveProperty('quantity')
+    expect(validateMovement({ ...base, quantity: '1.25' }, 0, ROLE.STAFF, today)).toEqual({})
+    expect(validateMovement({ ...base, quantity: '1.255' }, 0, ROLE.STAFF, today)).toHaveProperty('quantity')
   })
 
   it('เบิกออกเท่ากับคงเหลือ ได้ (เหลือ 0)', () => {
-    expect(validateMovement({ ...base, type: MOVEMENT_TYPE.OUT, quantity: '10' }, 10, 'staff', today)).toEqual({})
+    expect(validateMovement({ ...base, type: MOVEMENT_TYPE.OUT, quantity: '10' }, 10, ROLE.STAFF, today)).toEqual({})
   })
 
   it('เบิกออกเกินคงเหลือ ไม่ได้', () => {
     expect(
-      validateMovement({ ...base, type: MOVEMENT_TYPE.OUT, quantity: '10.01' }, 10, 'staff', today),
+      validateMovement({ ...base, type: MOVEMENT_TYPE.OUT, quantity: '10.01' }, 10, ROLE.STAFF, today),
     ).toHaveProperty('quantity')
   })
 
   it('เบิกออกทศนิยมพอดีคงเหลือ (0.1 + 0.2) ได้', () => {
-    expect(validateMovement({ ...base, type: MOVEMENT_TYPE.OUT, quantity: '0.3' }, 0.1 + 0.2, 'staff', today)).toEqual(
+    expect(validateMovement({ ...base, type: MOVEMENT_TYPE.OUT, quantity: '0.3' }, 0.1 + 0.2, ROLE.STAFF, today)).toEqual(
       {},
     )
   })
 
   it('ปรับยอด staff ทำไม่ได้', () => {
     const adjust = { ...base, type: MOVEMENT_TYPE.ADJUST, quantity: '2', note: 'นับใหม่' }
-    expect(validateMovement(adjust, 5, 'staff', today)).toHaveProperty('type')
+    expect(validateMovement(adjust, 5, ROLE.STAFF, today)).toHaveProperty('type')
   })
 
   it('ปรับยอด admin บวกหรือลบได้ ต้องมีหมายเหตุ', () => {
     const adjust = { ...base, type: MOVEMENT_TYPE.ADJUST, note: 'นับสต็อก' }
-    expect(validateMovement({ ...adjust, quantity: '2' }, 5, 'admin', today)).toEqual({})
-    expect(validateMovement({ ...adjust, quantity: '-5' }, 5, 'admin', today)).toEqual({})
-    expect(validateMovement({ ...adjust, quantity: '2', note: '  ' }, 5, 'admin', today)).toHaveProperty('note')
+    expect(validateMovement({ ...adjust, quantity: '2' }, 5, ROLE.ADMIN, today)).toEqual({})
+    expect(validateMovement({ ...adjust, quantity: '-5' }, 5, ROLE.ADMIN, today)).toEqual({})
+    expect(validateMovement({ ...adjust, quantity: '2', note: '  ' }, 5, ROLE.ADMIN, today)).toHaveProperty('note')
   })
 
   it('ปรับยอดเป็น 0 ไม่ได้', () => {
     const adjust = { ...base, type: MOVEMENT_TYPE.ADJUST, quantity: '0', note: 'นับสต็อก' }
-    expect(validateMovement(adjust, 5, 'admin', today)).toHaveProperty('quantity')
+    expect(validateMovement(adjust, 5, ROLE.ADMIN, today)).toHaveProperty('quantity')
   })
 
   it('ปรับยอดลบจนติดลบ ไม่ได้', () => {
     const adjust = { ...base, type: MOVEMENT_TYPE.ADJUST, quantity: '-6', note: 'นับสต็อก' }
-    expect(validateMovement(adjust, 5, 'admin', today)).toHaveProperty('quantity')
+    expect(validateMovement(adjust, 5, ROLE.ADMIN, today)).toHaveProperty('quantity')
   })
 
   it('วันในอนาคต ไม่ได้ แต่วันนี้และวันก่อนได้', () => {
-    expect(validateMovement({ ...base, movementDate: '2026-09-30' }, 0, 'staff', today)).toHaveProperty('movementDate')
-    expect(validateMovement({ ...base, movementDate: '2026-09-28' }, 0, 'staff', today)).toEqual({})
+    expect(validateMovement({ ...base, movementDate: '2026-09-30' }, 0, ROLE.STAFF, today)).toHaveProperty('movementDate')
+    expect(validateMovement({ ...base, movementDate: '2026-09-28' }, 0, ROLE.STAFF, today)).toEqual({})
   })
 
   it('วันที่ว่างหรือรูปแบบผิด ไม่ได้', () => {
-    expect(validateMovement({ ...base, movementDate: '' }, 0, 'staff', today)).toHaveProperty('movementDate')
-    expect(validateMovement({ ...base, movementDate: '29/09/2026' }, 0, 'staff', today)).toHaveProperty('movementDate')
+    expect(validateMovement({ ...base, movementDate: '' }, 0, ROLE.STAFF, today)).toHaveProperty('movementDate')
+    expect(validateMovement({ ...base, movementDate: '29/09/2026' }, 0, ROLE.STAFF, today)).toHaveProperty('movementDate')
   })
 })
 

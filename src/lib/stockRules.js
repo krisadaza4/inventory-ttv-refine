@@ -1,4 +1,5 @@
 import { toIsoDate } from './dateFormat.js'
+import { canAdjust } from './roles.js'
 
 export const MOVEMENT_TYPE = {
   IN: 'in',
@@ -82,7 +83,7 @@ export function validateMovement(movement, onHand, role, today = toIsoDate(new D
 
   if (!Object.values(MOVEMENT_TYPE).includes(type)) {
     errors.type = 'ประเภทรายการไม่ถูกต้อง'
-  } else if (type === MOVEMENT_TYPE.ADJUST && role !== 'admin') { // T3.5 เปลี่ยนเป็น canAdjust(role)
+  } else if (type === MOVEMENT_TYPE.ADJUST && !canAdjust(role)) {
     errors.type = 'ปรับยอดได้เฉพาะเจ้าของร้าน'
   }
 
