@@ -736,8 +736,60 @@ tbody tr.selected {
   }
 
   .titlebar {
-    gap: 8px;
-    padding: 0 10px;
+    gap: 6px;
+    padding: 0 8px;
+  }
+
+  /* จอแคบ: ตัดชื่อยาวด้วย … ไม่ให้ปุ่มล้นจอ */
+  .titlebar .brand,
+  .titlebar .who {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .titlebar .who {
+    max-width: 32vw;
+  }
+
+  .tb-btn {
+    padding: 3px 7px;
+    font-size: 12px;
+  }
+
+  /* iPhone: เว้นขอบล่างให้แถบเมนูไม่ทับแถบ Home (index.html ใช้ viewport-fit=cover) */
+  .app {
+    grid-template-rows: 44px 1fr calc(58px + env(safe-area-inset-bottom));
+  }
+
+  .sidebar {
+    padding-bottom: calc(4px + env(safe-area-inset-bottom));
+  }
+
+  /* ช่องกรอกต่ำกว่า 16px ทำให้ iPhone ซูมหน้าเองตอนแตะ */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .form-grid .short {
+    width: 100%;
+  }
+
+  /* ปุ่มเล็กในตารางกดง่ายขึ้นบนจอสัมผัส */
+  .btn.sm {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .page-head {
+    flex-wrap: wrap;
+  }
+
+  .toolbar select {
+    flex: 1;
   }
 
   .sidebar {
