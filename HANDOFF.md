@@ -14,7 +14,7 @@
 
 ## งานถัดไป
 
-1. เฟส 5: T5.1 ผ่าน (lint 0 เตือน, เทสต์ 10 ไฟล์ 138 ข้อ, build ผ่าน) และ T5.5 ผ่าน (ไม่มี `.env` ใน git นอกจาก `.env.example`, ไม่มี `sb_secret_` ยาว/JWT/service_role ในไฟล์และประวัติ git, `dist` มีแค่ publishable key ซึ่งตั้งใจให้เปิดเผยได้และ `dist` ถูก ignore) เหลือ T5.2–T5.4 ผู้ใช้ทดลอง และ T5.6 deploy Vercel (ไม่มี vercel CLI ใช้ Dashboard import จาก GitHub ใส่ env 2 ตัว)
+1. เฟส 5: deploy Vercel แล้ว https://inventory-ttv.vercel.app (2026-09-29, commit `ecf3169`, env 2 ตัวตั้งใน Vercel, push `main` แล้ว deploy อัตโนมัติ; ครั้งแรก Import ไม่ deploy เอง ต้องกด Deployments → ⋯ → Create Deployment) เหลือ T5.2–T5.4 และลองบนมือถือจริง (ส่วนท้ายของ T5.6); T5.1 ผ่าน (lint 0 เตือน, เทสต์ 10 ไฟล์ 138 ข้อ, build ผ่าน) และ T5.5 ผ่าน (ไม่มี `.env` ใน git นอกจาก `.env.example`, ไม่มี `sb_secret_` ยาว/JWT/service_role ในไฟล์และประวัติ git, `dist` มีแค่ publishable key ซึ่งตั้งใจให้เปิดเผยได้และ `dist` ถูก ignore) เหลือ T5.2–T5.4 ผู้ใช้ทดลอง และ T5.6 deploy Vercel (ไม่มี vercel CLI ใช้ Dashboard import จาก GitHub ใส่ env 2 ตัว)
 2. push ขึ้น GitHub เมื่อผู้ใช้สั่ง
 3. เฟส 6 (หลัง deploy): นำเข้า/ส่งออก Excel เพื่อใช้กับโปรแกรมบัญชี Express ผ่านไฟล์ (Express เก็บข้อมูลเป็น `.DBF` ไม่มี API) เริ่มจาก T6.1 ให้ผู้ใช้ตัดสินใจก่อน
 
