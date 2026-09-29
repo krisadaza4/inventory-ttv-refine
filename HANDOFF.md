@@ -8,18 +8,18 @@
 
 - **เฟส 1 (ตั้งโปรเจกต์):** เสร็จ
 - **เฟส 2 (ฐานข้อมูล):** เสร็จ รัน `supabase/schema.sql` ใน Supabase แล้ว มีบัญชี admin 1 + staff 1 พร้อม `profiles` และ `supabase/rls_check.sql` ผ่านทั้ง 25 ข้อ
-- **เฟส 3 (ตรรกะ):** T3.1 (`3598f29`), T3.2 (`3418ed6`) commit แล้ว; T3.3 เสร็จ (`validateProduct`, `validateMovement` คืน `{ ชื่อช่อง: ข้อความไทย }` ว่าง = ผ่าน, ยังใช้ `'admin'` ตรง ๆ รอ T3.5 เปลี่ยนเป็น `canAdjust`) เทสต์รวม 56 ข้อผ่าน ยังไม่ได้ commit
+- **เฟส 3 (ตรรกะ):** T3.1–T3.3 commit และ push แล้ว (ล่าสุด `4fede46`); T3.4 เสร็จ (`searchProducts`, `filterByCategory`) เทสต์รวม 64 ข้อผ่าน ยังไม่ได้ commit. `validateMovement` ยังใช้ `'admin'` ตรง ๆ รอ T3.5 เปลี่ยนเป็น `canAdjust`
 
 ## งานถัดไป
 
-1. commit T3.3 (`src/lib/stockRules*.js`, `Tasks.md`, `HANDOFF.md`) ผ่าน git-manager
-2. T3.4 `searchProducts`, `filterByCategory` ใน `stockRules.js` (เขียนเทสต์ก่อน)
-3. push ขึ้น GitHub เมื่อผู้ใช้สั่ง (ตอนนี้ `main` นำหน้า `origin/main`)
+1. commit T3.4 (`src/lib/stockRules*.js`, `Tasks.md`, `HANDOFF.md`) ผ่าน git-manager
+2. T3.5 `roles.js`: `ROLE`, `canManageProducts`, `canAdjust` + เทสต์ แล้วใช้ `canAdjust` ใน `validateMovement`
+3. push ขึ้น GitHub เมื่อผู้ใช้สั่ง
 
 ## Git
 
 - repo private `nutcharat123/inventory-ttv` branch `main`
-- commit ล่าสุด: `26c7410` (docs/reference), `3418ed6` (T3.2), `3598f29` (T3.1)
+- commit ล่าสุด: `4fede46` (T3.3, push แล้ว), `26c7410` (docs/reference), `3418ed6` (T3.2)
 - งาน git ทำผ่าน agent git-manager เท่านั้น
 
 ## สิ่งที่ต้องรู้

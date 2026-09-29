@@ -3,6 +3,8 @@ import {
   MOVEMENT_TYPE,
   STOCK_STATUS,
   getStockStatus,
+  filterByCategory,
+  searchProducts,
   signedQuantity,
   sortByStockStatus,
   validateMovement,
@@ -224,5 +226,58 @@ describe('validateMovement', () => {
   it('วันที่ว่างหรือรูปแบบผิด ไม่ได้', () => {
     expect(validateMovement({ ...base, movementDate: '' }, 0, 'staff', today)).toHaveProperty('movementDate')
     expect(validateMovement({ ...base, movementDate: '29/09/2026' }, 0, 'staff', today)).toHaveProperty('movementDate')
+  })
+})
+
+describe('searchProducts', () => {
+  const products = [
+    { sku: 'DR-001', barcode: '8851234567890', name: 'Coffee เย็น', category: 'เครื่องดื่ม' },
+    { sku: 'FD-010', barcode: null, name: 'ขนมปัง', category: 'อาหาร' },
+    { sku: 'dr-002', barcode: '8850000000001', name: 'น้ำดื่ม', category: 'เครื่องดื่ม' },
+  ]
+  const skus = (list) => list.map((p) => p.sku)
+
+  it('คำค้นว่างหรือมีแต่ช่องว่าง คืนทั้งหมด', () => {
+    expect(searchProducts(products, '')).toEqual(products)
+    expect(searchProducts(products, '   ')).toEqual(products)
+    expect(searchProducts(products, undefined)).toEqual(products)
+  })
+
+  it('ค้นจากชื่อ ไม่สนตัวพิมพ์เล็กใหญ่', () => {
+    expect(skus(searchProducts(products, 'COFFEE'))).toEqual(['DR-001'])
+    expect(skus(searchProducts(products, 'ขนม'))).toEqual(['FD-010'])
+  })
+
+  it('ค้นจากรหัส ไม่สนตัวพิมพ์เล็กใหญ่', () => {
+    expect(skus(searchProducts(products, 'dr-'))).toEqual(['DR-001', 'dr-002'])
+  })
+
+  it('ค้นจากบาร์โค้ด (ตัดช่องว่างหัวท้ายจากเครื่องสแกน)', () => {
+    expect(skus(searchProducts(products, ' 8850000000001 '))).toEqual(['dr-002'])
+  })
+
+  it('สินค้าไม่มีบาร์โค้ด ไม่ error', () => {
+    expect(searchProducts(products, 'ไม่มีสินค้านี้')).toEqual([])
+  })
+})
+
+describe('filterByCategory', () => {
+  const products = [
+    { sku: 'A', category: 'เครื่องดื่ม' },
+    { sku: 'B', category: 'อาหาร' },
+    { sku: 'C', category: 'เครื่องดื่ม' },
+  ]
+
+  it('ไม่เลือกหมวดหมู่ คืนทั้งหมด', () => {
+    expect(filterByCategory(products, '')).toEqual(products)
+    expect(filterByCategory(products, null)).toEqual(products)
+  })
+
+  it('กรองตามหมวดหมู่ที่ตรงกัน', () => {
+    expect(filterByCategory(products, 'เครื่องดื่ม').map((p) => p.sku)).toEqual(['A', 'C'])
+  })
+
+  it('หมวดหมู่ที่ไม่มี คืน array ว่าง', () => {
+    expect(filterByCategory(products, 'ของใช้')).toEqual([])
   })
 })

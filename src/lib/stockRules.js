@@ -102,3 +102,18 @@ export function validateMovement(movement, onHand, role, today = toIsoDate(new D
   if (type === MOVEMENT_TYPE.ADJUST && isBlank(movement.note)) errors.note = 'ปรับยอดต้องระบุหมายเหตุ'
   return errors
 }
+
+// ค้นจากชื่อ รหัส หรือบาร์โค้ด ไม่สนตัวพิมพ์เล็กใหญ่ คำค้นว่างคืนทั้งหมด
+export function searchProducts(products, query) {
+  const text = String(query ?? '').trim().toLowerCase()
+  if (!text) return products
+  return products.filter((p) =>
+    [p.name, p.sku, p.barcode].some((field) => String(field ?? '').toLowerCase().includes(text)),
+  )
+}
+
+// ไม่เลือกหมวดหมู่คืนทั้งหมด
+export function filterByCategory(products, category) {
+  if (!category) return products
+  return products.filter((p) => p.category === category)
+}
