@@ -1,0 +1,110 @@
+:root {
+  --text: #4a4458;
+  --text-h: #1e1433;
+  --muted: #7a7289;
+  --page-bg: linear-gradient(160deg, #f3e8ff 0%, #fce7f3 45%, #e0f2fe 100%);
+  --bg: #fff;
+  --surface: #fff;
+  --surface-2: #f6f2fc;
+  --border: #e4dcef;
+  --shadow: 0 4px 16px rgba(76, 29, 149, 0.1);
+  --accent: #7c3aed;
+  --accent-2: #db2777;
+  --accent-text: #fff;
+  --header-bg: linear-gradient(135deg, #6d28d9 0%, #a21caf 55%, #db2777 100%);
+  --header-text: #fff;
+  --focus: #7c3aed;
+
+  /* สถานะ: ใช้คู่กับข้อความเสมอ ไม่พึ่งสีอย่างเดียว */
+  --overdue: #b42318;
+  --overdue-bg: #fee4e2;
+  --overdue-border: #f04438;
+  --outstanding: #93370d;
+  --outstanding-bg: #fef0c7;
+  --outstanding-border: #f79009;
+  --returned: #05603a;
+  --returned-bg: #d1fadf;
+  --returned-border: #12b76a;
+
+  --sans: system-ui, 'Segoe UI', 'Noto Sans Thai', Roboto, sans-serif;
+
+  font: 16px/1.6 var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: #f3e8ff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ธีมควบคุมด้วย data-theme บน <html> (ตั้งโดย App.jsx จากค่าที่จำไว้หรือค่าของระบบ) */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --text: #cfc8dc;
+  --text-h: #f5f3ff;
+  --muted: #9a92ab;
+  --page-bg: linear-gradient(160deg, #1a1030 0%, #2a0f2a 50%, #0c1a2e 100%);
+  --bg: #1c1629;
+  --surface: #221b31;
+  --surface-2: #2b2340;
+  --border: #3d3354;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --accent: #a78bfa;
+  --accent-2: #f472b6;
+  --accent-text: #1a1030;
+  --header-bg: linear-gradient(135deg, #4c1d95 0%, #701a75 55%, #9d174d 100%);
+  --focus: #c4b5fd;
+  background: #1a1030;
+
+  --overdue: #fda29b;
+  --overdue-bg: rgba(240, 68, 56, 0.16);
+  --overdue-border: #f97066;
+  --outstanding: #fec84b;
+  --outstanding-bg: rgba(247, 144, 9, 0.16);
+  --outstanding-border: #fdb022;
+  --returned: #6ce9a6;
+  --returned-bg: rgba(18, 183, 106, 0.16);
+  --returned-border: #32d583;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: var(--page-bg) fixed;
+}
+
+#root {
+  min-height: 100svh;
+  box-sizing: border-box;
+}
+
+h1,
+h2 {
+  color: var(--text-h);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+h2 {
+  font-size: 1.125rem;
+  margin: 0 0 0.75rem;
+}
+
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}

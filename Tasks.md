@@ -27,8 +27,8 @@
 
 ## เฟส 3: ตรรกะ (`src/lib`) เขียนเทสต์ก่อน
 
-- [x] T3.1 `dateFormat.js`, `theme.js` (ใช้แนวเดียวกับ Borrow Buddy) + เทสต์
-- [ ] T3.2 `stockRules.js`: `signedQuantity`, `getStockStatus(onHand, reorderPoint)`, `sortByStockStatus` + เทสต์ขอบ (0, = จุดสั่งซื้อ, ทศนิยม)
+- [x] T3.1 `dateFormat.js`, `theme.js` (ใช้แนวเดียวกับ Borrow Buddy ดู `docs/reference/`) + เทสต์
+- [x] T3.2 `stockRules.js`: `signedQuantity`, `getStockStatus(onHand, reorderPoint)`, `sortByStockStatus` + เทสต์ขอบ (0, = จุดสั่งซื้อ, ทศนิยม)
 - [ ] T3.3 `stockRules.js`: `validateProduct` (ช่องห้ามว่าง, จุดสั่งซื้อ ≥ 0, ทศนิยม ≤ 2) และ `validateMovement(movement, onHand, role)` (จำนวน, ห้ามติดลบ, adjust ต้อง admin + หมายเหตุ, ห้ามวันในอนาคต) + เทสต์
 - [ ] T3.4 `stockRules.js`: `searchProducts(products, query)` (ชื่อ/รหัส/บาร์โค้ด ไม่สนตัวพิมพ์เล็กใหญ่) และ `filterByCategory` + เทสต์
 - [ ] T3.5 `roles.js`: `ROLE`, `canManageProducts`, `canAdjust` + เทสต์
