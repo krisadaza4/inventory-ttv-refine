@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MOVEMENT_COLUMNS, PRODUCT_COLUMNS, PROFILE_COLUMNS } from './mappers.js'
-import { PAGE_SIZE, createRepository } from './repositories.js'
+import { EXPORT_PAGE_SIZE, PAGE_SIZE, createRepository } from './repositories.js'
 import { ERROR_MESSAGE } from './supabaseErrors.js'
 
 // supabase client จำลอง: บันทึกทุกการเรียกในโซ่คำสั่ง แล้วคืนผลที่กำหนด
@@ -76,6 +76,7 @@ describe('createRepository', () => {
     const repo = createRepository(fakeClient({ data: [], error: null }))
     expect(Object.keys(repo).sort()).toEqual([
       'getMyProfile',
+      'listAllMovements',
       'listMovements',
       'listProducts',
       'recordMovement',
@@ -277,5 +278,51 @@ describe('getMyProfile', () => {
   it('ไม่มี profile คืน null ไม่ใช่ error', async () => {
     const client = fakeClient({ data: null, error: null })
     expect(await createRepository(client).getMyProfile('u1')).toEqual({ profile: null, error: null })
+  })
+})
+
+describe('listAllMovements', () => {
+  // client ที่คืนผลต่างกันตามลำดับการเรียก (แต่ละ await ได้หน้าถัดไป)
+  const pagedClient = (pages) => {
+    const client = fakeClient(null)
+    let call = 0
+    const builder = client.from('stock_movements')
+    client.calls.length = 0
+    builder.then = (resolve, reject) => {
+      const result = pages[Math.min(call, pages.length - 1)]
+      call += 1
+      return Promise.resolve(result).then(resolve, reject)
+    }
+    return client
+  }
+
+  it('ดึงทีละ EXPORT_PAGE_SIZE จนได้น้อยกว่าหนึ่งหน้า แล้วรวมกัน', async () => {
+    const full = Array.from({ length: EXPORT_PAGE_SIZE }, () => movementRow)
+    const client = pagedClient([
+      { data: full, error: null },
+      { data: [movementRow], error: null },
+    ])
+    const { movements, error } = await createRepository(client).listAllMovements({ productId: 'p1', type: 'out' })
+    expect(error).toBeNull()
+    expect(movements).toHaveLength(EXPORT_PAGE_SIZE + 1)
+    const ranges = client.calls.filter(([m]) => m === 'range')
+    expect(ranges).toEqual([
+      ['range', 0, EXPORT_PAGE_SIZE - 1],
+      ['range', EXPORT_PAGE_SIZE, 2 * EXPORT_PAGE_SIZE - 1],
+    ])
+    expect(client.calls).toContainEqual(['eq', 'product_id', 'p1'])
+    expect(client.calls).toContainEqual(['eq', 'type', 'out'])
+  })
+
+  it('ผิดพลาดกลางทาง คืนรายการว่างและข้อความไทย', async () => {
+    const full = Array.from({ length: EXPORT_PAGE_SIZE }, () => movementRow)
+    const client = pagedClient([
+      { data: full, error: null },
+      { data: null, error: { code: 'PGRST301' } },
+    ])
+    expect(await createRepository(client).listAllMovements()).toEqual({
+      movements: [],
+      error: ERROR_MESSAGE.SESSION_EXPIRED,
+    })
   })
 })

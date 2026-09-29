@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { formatThaiDate } from '../lib/dateFormat.js'
+import { formatThaiDate, toIsoDate } from '../lib/dateFormat.js'
 import { PAGE } from '../lib/menu.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { PAGE_SIZE } from '../lib/repositories.js'
+import { exportFileName, movementSheet } from '../lib/spreadsheet.js'
 import { MOVEMENT_TYPE, signedQuantity } from '../lib/stockRules.js'
+import ExportButton from './ExportButton.jsx'
 import PageHead from './PageHead.jsx'
 
 const TYPE_LABEL = {
@@ -74,9 +76,20 @@ export default function HistoryPage({ allProducts, repository }) {
       <PageHead
         page={PAGE.HISTORY}
         actions={
-          <button type="button" className="btn" onClick={refresh} disabled={loadState === 'loading'}>
-            รีเฟรช
-          </button>
+          <div className="head-actions">
+            <ExportButton
+              fileName={exportFileName('movements', toIsoDate(new Date()))}
+              sheetName="ประวัติการเคลื่อนไหว"
+              buildSheet={async () => {
+                const { movements: all, error } = await repository.listAllMovements({ productId, type })
+                return error ? { error } : { sheetData: movementSheet(all) }
+              }}
+              disabled={movements.length === 0}
+            />
+            <button type="button" className="btn" onClick={refresh} disabled={loadState === 'loading'}>
+              รีเฟรช
+            </button>
+          </div>
         }
       />
 

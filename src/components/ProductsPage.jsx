@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toIsoDate } from '../lib/dateFormat.js'
 import { PAGE } from '../lib/menu.js'
 import {
   STOCK_STATUS,
@@ -8,6 +9,8 @@ import {
   searchProducts,
   sortByStockStatus,
 } from '../lib/stockRules.js'
+import { exportFileName, productSheet } from '../lib/spreadsheet.js'
+import ExportButton from './ExportButton.jsx'
 import PageHead from './PageHead.jsx'
 import ProductTable from './ProductTable.jsx'
 
@@ -25,9 +28,17 @@ export default function ProductsPage({ products, loadState, loadError, onRetry, 
       <PageHead
         page={PAGE.PRODUCTS}
         actions={
-          <button type="button" className="btn" onClick={onRetry} disabled={loadState === 'loading'}>
-            รีเฟรช
-          </button>
+          <div className="head-actions">
+            <ExportButton
+              fileName={exportFileName('products', toIsoDate(new Date()))}
+              sheetName="สินค้าคงคลัง"
+              buildSheet={() => ({ sheetData: productSheet(visible) })}
+              disabled={loadState !== 'ready' || visible.length === 0}
+            />
+            <button type="button" className="btn" onClick={onRetry} disabled={loadState === 'loading'}>
+              รีเฟรช
+            </button>
+          </div>
         }
       />
 

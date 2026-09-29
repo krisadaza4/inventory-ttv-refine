@@ -10,6 +10,9 @@ import {
 import { toThaiError } from './supabaseErrors.js'
 
 export const PAGE_SIZE = 50
+// ส่งออก Excel: ดึงทีละ 1000 แถว (ค่าสูงสุดต่อครั้งของ Supabase) กันไฟล์ใหญ่เกินด้วย EXPORT_MAX_ROWS
+export const EXPORT_PAGE_SIZE = 1000
+export const EXPORT_MAX_ROWS = 50000
 
 // รันคำสั่ง Supabase แล้วคืน { data, error } เสมอ error เป็นข้อความไทย ไม่โยนต่อ
 async function run(buildQuery) {
@@ -80,6 +83,26 @@ export function createRepository(client) {
       })
       if (error) return { movements: [], hasMore: false, error }
       return { movements: data.map(toMovement), hasMore: data.length === PAGE_SIZE, error: null }
+    },
+
+    // ทุกรายการตามตัวกรอง (สำหรับส่งออก Excel) ล่าสุดก่อน
+    async listAllMovements({ productId, type } = {}) {
+      const all = []
+      for (let from = 0; from < EXPORT_MAX_ROWS; from += EXPORT_PAGE_SIZE) {
+        const { data, error } = await run(() => {
+          let query = client.from('stock_movements').select(MOVEMENT_COLUMNS)
+          if (productId) query = query.eq('product_id', productId)
+          if (type) query = query.eq('type', type)
+          return query
+            .order('movement_date', { ascending: false })
+            .order('created_at', { ascending: false })
+            .range(from, from + EXPORT_PAGE_SIZE - 1)
+        })
+        if (error) return { movements: [], error }
+        all.push(...data.map(toMovement))
+        if (data.length < EXPORT_PAGE_SIZE) break
+      }
+      return { movements: all, error: null }
     },
 
     // ไม่มี profile คืน profile: null (หน้าจอแสดง "ยังไม่ได้กำหนดบทบาท")
