@@ -8,18 +8,19 @@
 
 - **เฟส 1 (ตั้งโปรเจกต์):** เสร็จ
 - **เฟส 2 (ฐานข้อมูล):** เสร็จ รัน `supabase/schema.sql` ใน Supabase แล้ว มีบัญชี admin 1 + staff 1 พร้อม `profiles` และ `supabase/rls_check.sql` ผ่านทั้ง 25 ข้อ
-- **เฟส 3 (ตรรกะ):** T3.1–T3.3 push แล้ว, T3.4 (`415d62d`), T3.5 (`457054f`) commit แล้วยังไม่ push; T3.6 เสร็จ (`supabaseClient.js` ปฏิเสธ key `sb_secret_`, `supabaseErrors.js` `toThaiError` ตรวจ hint ก่อน code และแยก SKU/บาร์โค้ดซ้ำจากชื่อ constraint) เทสต์รวม 92 ข้อผ่าน ยังไม่ได้ commit
+- **เฟส 3 (ตรรกะ):** เสร็จ T3.1–T3.3 push แล้ว, T3.4 `415d62d`, T3.5 `457054f`, T3.6 `03966a1` commit แล้วยังไม่ push; T3.7 (`mappers.js`, `repositories.js`) เสร็จ ยังไม่ได้ commit เทสต์รวม 122 ข้อผ่าน, `npm run build` ผ่าน
+- **ยังไม่ได้ทดสอบกับ Supabase จริง:** `MOVEMENT_COLUMNS` ใช้ embed `product:products(...)` และ `recorder:profiles(display_name)` ผ่าน FK `product_id`/`created_by` ต้องลองจริงตอน T4.5 ส่วน `getMyProfile(userId)` รับ id จาก session (ใช้ `maybeSingle` ไม่มี profile ได้ `null`)
 
 ## งานถัดไป
 
-1. commit T3.6 (`src/lib/supabase*.js`, `Tasks.md`, `HANDOFF.md`) ผ่าน git-manager
-2. T3.7 `mappers.js`, `repositories.js` + เทสต์ด้วย client จำลอง (ส่งเฉพาะคอลัมน์ที่ grant ไว้ ดูด้านล่าง)
+1. commit T3.7 (`src/lib/mappers*.js`, `src/lib/repositories*.js`, `Tasks.md`, `HANDOFF.md`) ผ่าน git-manager
+2. เฟส 4 เริ่ม T4.1 `LoginForm`, `AppHeader`, `ThemeToggle`, session และกรณีไม่มี profile (ดูแนวทางใน `docs/reference/`)
 3. push ขึ้น GitHub เมื่อผู้ใช้สั่ง
 
 ## Git
 
 - repo private `nutcharat123/inventory-ttv` branch `main`
-- commit ล่าสุด: `457054f` (T3.5), `415d62d` (T3.4), `4fede46` (T3.3, push แล้ว)
+- commit ล่าสุด: `03966a1` (T3.6), `457054f` (T3.5), `415d62d` (T3.4)
 - งาน git ทำผ่าน agent git-manager เท่านั้น
 
 ## สิ่งที่ต้องรู้
