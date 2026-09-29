@@ -245,6 +245,53 @@ button:focus-visible {
   gap: 2px;
 }
 
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-group-label {
+  color: #64748b;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 10px 10px 4px;
+}
+
+.nav-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: var(--sidebar-text);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.nav-item:hover {
+  background: var(--sidebar-active);
+}
+
+.nav-item.on {
+  background: var(--sidebar-active);
+  color: #fff;
+  box-shadow: inset 3px 0 0 #60a5fa;
+}
+
+.nav-icon {
+  width: 18px;
+  text-align: center;
+}
+
+.nav-short {
+  display: none;
+}
+
 .app-main {
   grid-area: main;
   overflow: auto;
@@ -374,6 +421,39 @@ button:focus-visible {
   .sidebar {
     flex-direction: row;
     padding: 4px;
+  }
+
+  .nav-group {
+    flex-direction: row;
+    flex: 1;
+  }
+
+  /* admin มี 2 กลุ่ม: ให้ทุกปุ่มกว้างเท่ากัน */
+  .nav-group:has(.nav-item:only-child) {
+    flex: 0.33;
+  }
+
+  .nav-group-label,
+  .nav-label {
+    display: none;
+  }
+
+  .nav-short {
+    display: block;
+  }
+
+  .nav-item {
+    flex: 1;
+    flex-direction: column;
+    gap: 0;
+    font-size: 11px;
+    padding: 4px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .nav-item.on {
+    box-shadow: inset 0 3px 0 #60a5fa;
   }
 
   .app-main {

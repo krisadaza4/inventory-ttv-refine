@@ -1,8 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import AppShell from './components/AppShell.jsx'
 import LoginForm from './components/LoginForm.jsx'
+import PageHead from './components/PageHead.jsx'
+import Sidebar from './components/Sidebar.jsx'
 import { APP_NAME, APP_SUBTITLE, ThemeToggle } from './components/TitleBar.jsx'
 import { toIsoDate } from './lib/dateFormat.js'
+import { PAGE, getMenu } from './lib/menu.js'
 import { createRepository } from './lib/repositories.js'
 import { getSupabase } from './lib/supabaseClient.js'
 import { ERROR_MESSAGE, toThaiError } from './lib/supabaseErrors.js'
@@ -135,6 +138,7 @@ function SignedIn({ userId, repository, gateProps, theme, onToggleTheme, signing
   const [profile, setProfile] = useState(undefined)
   const [loadError, setLoadError] = useState(null)
   const [attempt, setAttempt] = useState(0)
+  const [page, setPage] = useState(PAGE.PRODUCTS)
 
   // ไม่ใช้ผลที่มาช้าหลังออกจากระบบหรือกดลองใหม่ไปแล้ว
   useEffect(() => {
@@ -202,9 +206,14 @@ function SignedIn({ userId, repository, gateProps, theme, onToggleTheme, signing
     )
   }
 
+  // หน้าที่บทบาทนี้เปิดไม่ได้ (เช่น staff) กลับไปหน้าแรก
+  const allowed = getMenu(profile.role).some((group) => group.items.some((item) => item.page === page))
+  const currentPage = allowed ? page : PAGE.PRODUCTS
+
   return (
     <AppShell
       titleBar={{ profile, theme, onToggleTheme, signingOut, onSignOut }}
+      sidebar={<Sidebar role={profile.role} page={currentPage} onChange={setPage} />}
       statusBar={{ connected: true, today: toIsoDate(new Date()) }}
     >
       {signOutError && (
@@ -212,15 +221,10 @@ function SignedIn({ userId, repository, gateProps, theme, onToggleTheme, signing
           {signOutError}
         </p>
       )}
-      {/* T4.2–T4.6 แทนที่ส่วนนี้ด้วยหน้าตามเมนู */}
-      <div className="page-head">
-        <div>
-          <div className="crumb">งานประจำวัน / สินค้าคงคลัง</div>
-          <h1>สินค้าคงคลัง</h1>
-        </div>
-      </div>
+      {/* T4.3–T4.6 แทนที่ส่วนนี้ด้วยหน้าจริง */}
+      <PageHead page={currentPage} />
       <div className="panel">
-        <div className="panel-body dim">หน้านี้จะทำใน T4.3</div>
+        <div className="panel-body dim">หน้านี้กำลังพัฒนา</div>
       </div>
     </AppShell>
   )
