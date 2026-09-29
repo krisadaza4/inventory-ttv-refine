@@ -9,19 +9,20 @@
 - **เฟส 1 (ตั้งโปรเจกต์):** เสร็จ
 - **เฟส 2 (ฐานข้อมูล):** เสร็จ รัน `supabase/schema.sql` ใน Supabase แล้ว มีบัญชี admin 1 + staff 1 พร้อม `profiles` และ `supabase/rls_check.sql` ผ่านทั้ง 25 ข้อ
 - **เฟส 3 (ตรรกะ):** เสร็จและ push แล้ว (ล่าสุด `dfd8026`) เทสต์ 122 ข้อผ่าน
-- **เฟส 4 (UI):** หน้าตาตาม `docs/mockup.html` (commit `6e67fb1`) T4.1 เสร็จ (`src/index.css`, `App.jsx`, `components/LoginForm`, `TitleBar` (+`ThemeToggle`), `StatusBar`, `AppShell`) build/lint ผ่าน ผู้ใช้สั่ง commit แล้ว แต่ยังไม่ได้ยืนยันผลทดสอบเข้าสู่ระบบจริง (admin/staff, โหมดมืด, รีเฟรช, รหัสผิด) ให้ถามอีกครั้งตอนทำ T4.2
+- **เฟส 4 (UI):** หน้าตาตาม `docs/mockup.html` (commit `6e67fb1`) T4.1 เสร็จ (`src/index.css`, `App.jsx`, `components/LoginForm`, `TitleBar` (+`ThemeToggle`), `StatusBar`, `AppShell`) build/lint ผ่าน ผู้ใช้สั่ง commit แล้ว แต่ยังไม่ได้ยืนยันผลทดสอบเข้าสู่ระบบจริง (admin/staff, โหมดมืด, รีเฟรช, รหัสผิด) (commit `840230f`); T4.2 เสร็จ (`lib/menu.js` + เทสต์, `Sidebar`, `PageHead` บนมือถือเป็นแถบล่าง, staff เปิดหน้าจัดการสินค้าไม่ได้) เทสต์ 126 ข้อผ่าน commit แล้ว
 - **ยังไม่ได้ทดสอบกับ Supabase จริง:** `MOVEMENT_COLUMNS` ใช้ embed `product:products(...)` และ `recorder:profiles(display_name)` ผ่าน FK `product_id`/`created_by` ต้องลองจริงตอน T4.5 ส่วน `getMyProfile(userId)` รับ id จาก session (ใช้ `maybeSingle` ไม่มี profile ได้ `null`)
 
 ## งานถัดไป
 
-1. ยืนยันกับผู้ใช้ว่าทดสอบ T4.1 ผ่าน (ดูข้อสถานะเฟส 4)
-2. T4.2 `Sidebar` เมนูตามบทบาท (มือถือเป็นแถบล่าง)
+1. ยืนยันกับผู้ใช้ว่าทดสอบเข้าสู่ระบบจริงผ่าน (T4.1–T4.2 commit แล้ว)
+2. T4.3 หน้าสินค้าคงคลัง: กล่องสรุป, ค้นหา, กรองหมวดหมู่, `ProductTable`
 3. push ขึ้น GitHub เมื่อผู้ใช้สั่ง
+4. เฟส 6 (หลัง deploy): นำเข้า/ส่งออก Excel เพื่อใช้กับโปรแกรมบัญชี Express ผ่านไฟล์ (Express เก็บข้อมูลเป็น `.DBF` ไม่มี API) เริ่มจาก T6.1 ให้ผู้ใช้ตัดสินใจก่อน
 
 ## Git
 
 - repo private `nutcharat123/inventory-ttv` branch `main`
-- commit ล่าสุด: `6e67fb1` (mockup/design), `dfd8026` (T3.7, push แล้ว)
+- commit ล่าสุด: `840230f` (T4.1), `6e67fb1` (mockup/design), `dfd8026` (T3.7, push แล้ว)
 - งาน git ทำผ่าน agent git-manager เท่านั้น
 
 ## สิ่งที่ต้องรู้
