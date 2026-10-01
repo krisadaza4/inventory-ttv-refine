@@ -328,7 +328,7 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
         onHome: () => setPage(PAGE.PRODUCTS),
         logo: { url: logoUrl, canChange: canManageProducts(profile.role), busy: logoBusy, onPick: handleLogo },
       }}
-      sidebar={<Sidebar role={profile.role} page={currentPage} onChange={setPage} />}
+      sidebar={<Sidebar role={profile.role} page={currentPage} onChange={setPage} onHome={() => setPage(PAGE.PRODUCTS)} />}
       statusBar={{
         connected: loadState !== 'error',
         productCount: loadState === 'ready' ? products.length : null,

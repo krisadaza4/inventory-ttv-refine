@@ -1055,7 +1055,19 @@ label.btn.disabled {
 /* ===== ดีไซน์ A: แถบบนและเมนูพื้นขาว การ์ดเงาบาง (ต้องอยู่ท้ายไฟล์ เพื่อทับสไตล์เดิม) ===== */
 .app {
   grid-template-rows: 60px 1fr 30px;
-  grid-template-columns: 228px 1fr;
+  grid-template-columns: 228px minmax(0, 1fr);
+}
+
+/* ตารางกว้าง (เช่น ยอดขาย 12 เดือน) ต้องไม่ดันเนื้อหาให้กว้างเกินจอ ให้เลื่อนในกรอบตารางแทน */
+.app-main,
+.app-main > * {
+  min-width: 0;
+}
+
+.table-wrap {
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .titlebar {
@@ -1396,7 +1408,7 @@ td {
 @media (max-width: 760px) {
   .app {
     grid-template-rows: 52px 1fr calc(62px + env(safe-area-inset-bottom));
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .titlebar {
@@ -1627,14 +1639,215 @@ td {
 
 /* รหัสสินค้าในตาราง: ใหญ่และหนาขึ้น อ่านง่าย */
 td.mono,
-.sales-table .mono {
+.sales-table .mono:not(.sku-fit) {
   font-size: 16px;
   font-weight: 600;
 }
 
 @media (max-width: 760px) {
   td.mono,
-  .sales-table .mono {
+  .sales-table .mono:not(.sku-fit) {
     font-size: 15px;
+  }
+}
+
+/* มือถือ: ปุ่มและช่องกรอกใหญ่ขึ้น กดด้วยนิ้วง่าย (สูงอย่างน้อย ~44px) */
+@media (max-width: 760px) {
+  .btn {
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 15px;
+  }
+
+  .btn.sm {
+    min-height: 38px;
+    padding: 7px 14px;
+    font-size: 14px;
+  }
+
+  .tb-btn {
+    min-height: 38px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  input,
+  select {
+    min-height: 44px;
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    min-height: 0;
+    width: 20px;
+    height: 20px;
+  }
+
+  .radio label,
+  .check {
+    min-height: 40px;
+    align-items: center;
+  }
+
+  .head-actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  /* เมนูล่าง: แถบสูงขึ้น ไอคอนและชื่อเมนูใหญ่ */
+  .app {
+    grid-template-rows: 52px 1fr calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .nav-item {
+    font-size: 13px;
+    font-weight: 500;
+    gap: 4px;
+    padding: 4px 2px;
+    min-width: 0;
+  }
+
+  /* ชื่อเมนูบรรทัดเดียวเสมอ */
+  .nav-short {
+    white-space: nowrap;
+  }
+
+  .nav-item .nav-icon {
+    width: 50px;
+    height: 42px;
+    border-radius: 13px;
+    font-size: 24px;
+  }
+
+  .logo-pick,
+  .titlebar .logo {
+    min-width: 30px;
+  }
+}
+
+/* ปุ่มหน้าแรกในเมนู: แสดงเฉพาะแถบล่างของมือถือ (คอมพิวเตอร์ใช้ปุ่มบนแถบบน) */
+.nav-item.nav-home {
+  display: none;
+  --tone: #0d9488;
+  --tone-bg: #ccfbf1;
+}
+
+@media (max-width: 760px) {
+  .nav-item.nav-home {
+    display: flex;
+  }
+
+  .titlebar .tb-home {
+    display: none;
+  }
+
+  /* ทุกปุ่มในแถบล่างกว้างเท่ากัน */
+  .sidebar .nav-group {
+    display: contents;
+  }
+
+  .sidebar .nav-item {
+    flex: 1 1 0;
+  }
+}
+
+/* ยอดขายรายเดือน: หัวตาราง (รูป รหัส เดือน) ค้างอยู่ด้านบนตอนเลื่อนลง
+   ตารางเลื่อนในกรอบของตัวเอง (สูงพอดีจอ) เพราะ sticky ใช้ได้ภายในกรอบที่เลื่อนเท่านั้น */
+.sales-wrap {
+  max-height: max(320px, calc(100dvh - 300px));
+  overflow: auto;
+}
+
+.sales-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface-2);
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+
+@media (max-width: 760px) {
+  .sales-wrap {
+    max-height: max(300px, calc(100dvh - 52px - 84px - 230px - env(safe-area-inset-bottom)));
+  }
+}
+
+/* ยอดขายรายเดือน: คอลัมน์รูปและรหัสค้างอยู่ด้านซ้ายตอนเลื่อนไปทางขวา
+   คอลัมน์รูปกำหนดความกว้างตายตัว เพื่อให้คอลัมน์รหัสรู้ตำแหน่งที่ต้องค้าง */
+.sales-table {
+  --thumb-w: 104px;
+  /* ช่องรหัสกว้าง 112px พื้นที่ตัวอักษร 80px (หัก padding) */
+  --sku-w: 112px;
+  --sku-text: 80px;
+}
+
+/* รหัสยาว: ย่ออักษรให้พอดีช่อง (อักษร mono กว้าง ~0.6em) ใหญ่สุด 16px เล็กสุด 10px ยาวกว่านั้นตัดบรรทัด */
+.sales-table .sku-fit {
+  font-weight: 600;
+  display: block;
+  font-size: clamp(10px, calc(var(--sku-text) / (var(--len, 8) * 0.6)), 16px);
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+
+.sales-table th:nth-child(1),
+.sales-table td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  width: var(--thumb-w);
+  min-width: var(--thumb-w);
+  max-width: var(--thumb-w);
+}
+
+.sales-table th:nth-child(2),
+.sales-table td:nth-child(2) {
+  position: sticky;
+  left: var(--thumb-w);
+  width: var(--sku-w);
+  min-width: var(--sku-w);
+  max-width: var(--sku-w);
+  box-shadow: inset -1px 0 0 var(--border);
+}
+
+.sales-table td:nth-child(1),
+.sales-table td:nth-child(2) {
+  z-index: 1;
+  background: var(--surface);
+}
+
+.sales-table tbody tr:hover td:nth-child(1),
+.sales-table tbody tr:hover td:nth-child(2) {
+  background: var(--row-hover);
+}
+
+/* มุมซ้ายบน (หัวรูปและหัวรหัส) อยู่เหนือทุกอย่าง */
+.sales-table thead th:nth-child(1),
+.sales-table thead th:nth-child(2) {
+  z-index: 3;
+}
+
+.sales-table thead th:nth-child(2) {
+  box-shadow:
+    inset -1px 0 0 var(--border),
+    inset 0 -1px 0 var(--border);
+}
+
+/* มือถือ: รูปเล็กลง ให้เหลือที่ดูตัวเลขเดือน */
+@media (max-width: 760px) {
+  .sales-table {
+    --thumb-w: 62px;
+    --sku-w: 88px;
+    --sku-text: 68px;
+  }
+
+  .sales-table .thumb.row {
+    width: 52px;
+    height: 52px;
+  }
+
+  .sales-table td:nth-child(2) .sub {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

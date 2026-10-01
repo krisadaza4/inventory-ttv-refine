@@ -135,7 +135,7 @@ export default function MonthlySalesPage({ allProducts, imageUrls, loadState, re
         {ready && years.length > 0 && visible.length === 0 && <p className="empty dim">ไม่พบสินค้า</p>}
 
         {ready && visible.length > 0 && (
-          <div className="table-wrap">
+          <div className="table-wrap sales-wrap">
             <table className="sales-table">
               <thead>
                 <tr>
@@ -161,7 +161,10 @@ export default function MonthlySalesPage({ allProducts, imageUrls, loadState, re
                       <ProductThumb url={imageUrls[r.product.imagePath]} name={r.product.name} size="row" />
                     </td>
                     <td>
-                      <span className="mono">{r.product.sku}</span>
+                      {/* --len: CSS ลดขนาดอักษรเฉพาะรหัสที่ยาวเกินช่อง */}
+                      <span className="mono sku-fit" style={{ '--len': r.product.sku.length }}>
+                        {r.product.sku}
+                      </span>
                       {r.product.name !== r.product.sku && <div className="sub">{r.product.name}</div>}
                     </td>
                     {r.months.map((q, i) => (
