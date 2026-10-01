@@ -25,7 +25,7 @@
 ## Git
 
 - repo private `nutcharat123/inventory-ttv` branch `main`
-- commit ล่าสุด: `76e253e` (นำเข้าไฟล์สต็อก), `43ed000` (เฟส 7) push แล้วทั้งหมด
+- commit ล่าสุด (ฟีเจอร์): `59dcd38` (จับคู่รหัสเดิม), `33c7bb7` (ตัวกรองรายการซ่อม), `60e32fe` (รอซ่อม + ยอดขายรายเดือน) push แล้วทั้งหมด ดู commit ล่าสุดจริงด้วย `git log --oneline -5`
 - งาน git ทำผ่าน agent git-manager เท่านั้น
 
 ## สิ่งที่ต้องรู้
