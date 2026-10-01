@@ -14,6 +14,7 @@ describe('toProduct', () => {
       active: true,
       on_hand: '12.50',
       image_path: 'p1/1.jpg',
+      location: 'แลค A4',
     }
     expect(toProduct(row)).toEqual({
       id: 'p1',
@@ -26,11 +27,14 @@ describe('toProduct', () => {
       active: true,
       onHand: 12.5,
       imagePath: 'p1/1.jpg',
+      location: 'แลค A4',
     })
   })
 
-  it('ไม่มีรูป imagePath เป็น null', () => {
-    expect(toProduct({ id: 'p2', reorder_point: 0, on_hand: 0 }).imagePath).toBeNull()
+  it('ไม่มีรูป imagePath เป็น null, ไม่มีโลเคชั่นเป็นข้อความว่าง', () => {
+    const product = toProduct({ id: 'p2', reorder_point: 0, on_hand: 0, location: null })
+    expect(product.imagePath).toBeNull()
+    expect(product.location).toBe('')
   })
 })
 
@@ -42,6 +46,7 @@ describe('toProductRow', () => {
     name: ' น้ำดื่ม ',
     category: ' เครื่องดื่ม ',
     unit: ' ขวด ',
+    location: ' แลค A4 ',
     reorderPoint: '5',
     active: false,
     onHand: 10,
@@ -52,6 +57,7 @@ describe('toProductRow', () => {
     expect(Object.keys(toProductRow(product)).sort()).toEqual([
       'barcode',
       'category',
+      'location',
       'name',
       'reorder_point',
       'sku',
@@ -67,12 +73,18 @@ describe('toProductRow', () => {
       category: 'เครื่องดื่ม',
       unit: 'ขวด',
       reorder_point: 5,
+      location: 'แลค A4',
     })
   })
 
   it('บาร์โค้ดว่างส่งเป็น null (ไม่ชน unique และ check)', () => {
     expect(toProductRow({ ...product, barcode: '  ' }).barcode).toBeNull()
     expect(toProductRow({ ...product, barcode: undefined }).barcode).toBeNull()
+  })
+
+  it('โลเคชั่นว่างส่งเป็น null', () => {
+    expect(toProductRow({ ...product, location: ' ' }).location).toBeNull()
+    expect(toProductRow({ ...product, location: undefined }).location).toBeNull()
   })
 
   it('จุดสั่งซื้อว่างเป็น 0', () => {

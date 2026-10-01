@@ -4,7 +4,7 @@ import { checkImageFile, resizeImage } from '../lib/productImages.js'
 import { validateProduct } from '../lib/stockRules.js'
 import ProductThumb from './ProductThumb.jsx'
 
-const EMPTY = { sku: '', barcode: '', name: '', category: '', unit: '', reorderPoint: '0' }
+const EMPTY = { sku: '', barcode: '', name: '', category: '', unit: '', location: '', reorderPoint: '0' }
 
 const FIELDS = [
   { key: 'sku', label: 'รหัสสินค้า', required: true, placeholder: 'เช่น DR-001', className: 'mono' },
@@ -12,6 +12,7 @@ const FIELDS = [
   { key: 'name', label: 'ชื่อสินค้า', required: true },
   { key: 'category', label: 'หมวดหมู่', required: true, placeholder: 'เช่น เครื่องดื่ม', list: 'category-options' },
   { key: 'unit', label: 'หน่วย', required: true, placeholder: 'เช่น ชิ้น, กล่อง, กก.' },
+  { key: 'location', label: 'โลเคชั่น', hint: 'ไม่บังคับ ที่เก็บสินค้าในร้าน', placeholder: 'เช่น แลค A4' },
   { key: 'reorderPoint', label: 'จุดสั่งซื้อ', hint: 'คงเหลือเท่านี้หรือน้อยกว่า = ใกล้หมด', inputMode: 'decimal' },
 ]
 
@@ -23,6 +24,7 @@ const toFields = (product) =>
         name: product.name,
         category: product.category,
         unit: product.unit,
+        location: product.location ?? '',
         reorderPoint: String(product.reorderPoint),
       }
     : EMPTY

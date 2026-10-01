@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toIsoDate } from '../lib/dateFormat.js'
 import { resizeImage } from '../lib/productImages.js'
 import {
@@ -12,12 +12,13 @@ import {
 } from '../lib/stockSheetImport.js'
 import { MOVEMENT_TYPE } from '../lib/stockRules.js'
 import { openZip } from '../lib/zipReader.js'
+import ProductThumb from './ProductThumb.jsx'
 
 const PREVIEW_ROWS = 10
 const LIST_ROWS = 20
 
 // นำเข้าไฟล์บันทึกรายการสินค้าคลัง (.xlsx): เพิ่มสินค้า → ปรับยอดเริ่มต้น → อัปโหลดรูปที่ฝังในไฟล์
-// นำเข้าซ้ำได้: ข้ามรหัสที่มีแล้ว ไม่ปรับยอดสินค้าที่คงเหลือไม่เป็น 0 ไม่ใส่รูปทับสินค้าที่มีรูปแล้ว
+// นำเข้าซ้ำได้: ข้ามรหัสที่มีแล้ว ไม่ปรับยอดสินค้าที่คงเหลือไม่เป็น 0 ไม่ใส่รูป/โลเคชั่นทับของที่มีอยู่แล้ว
 export default function StockSheetImport({ allProducts, repository, onImported, onClose }) {
   const [fileName, setFileName] = useState('')
   const [plan, setPlan] = useState(null)
@@ -27,6 +28,35 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const zipRef = useRef(null)
+  // รูปเล็กในตารางตัวอย่าง: { [path ในไฟล์]: object URL } อ่านจากไฟล์ที่เลือก ยังไม่ได้อัปโหลด
+  const [previewUrls, setPreviewUrls] = useState({})
+
+  useEffect(() => {
+    if (!plan) return undefined
+    const paths = [...new Set(plan.entries.slice(0, PREVIEW_ROWS).map((x) => x.imagePath).filter(Boolean))]
+    const urls = {}
+    let cancelled = false
+    ;(async () => {
+      for (const path of paths) {
+        if (cancelled) break
+        const type = imageTypeOf(path)
+        if (!type) continue
+        try {
+          urls[path] = URL.createObjectURL(new Blob([await zipRef.current.read(path)], { type }))
+        } catch {
+          // อ่านรูปไม่ได้ แสดงกรอบว่าง
+        }
+      }
+      // ยกเลิกระหว่างอ่าน: ลบ URL ที่สร้างหลัง cleanup ทำงานไปแล้ว
+      if (cancelled) Object.values(urls).forEach((url) => URL.revokeObjectURL(url))
+      else setPreviewUrls(urls)
+    })()
+    return () => {
+      cancelled = true
+      Object.values(urls).forEach((url) => URL.revokeObjectURL(url))
+      setPreviewUrls({})
+    }
+  }, [plan])
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0]
@@ -66,7 +96,7 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
   const handleConfirm = async () => {
     setSaving(true)
     setError(null)
-    const counts = { inserted: 0, adjusted: 0, images: 0 }
+    const counts = { inserted: 0, adjusted: 0, images: 0, locations: 0 }
     const failures = []
 
     const toInsert = plan.entries.filter((x) => !x.exists).map((x) => x.product)
@@ -106,6 +136,11 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
         if (moveError) failures.push({ sku: entry.product.sku, reason: `ยอด: ${moveError}` })
         else counts.adjusted += 1
       }
+      if (entry.product.location && !product.location) {
+        const { error: saveError } = await repository.saveProduct({ ...product, location: entry.product.location })
+        if (saveError) failures.push({ sku: entry.product.sku, reason: `โลเคชั่น: ${saveError}` })
+        else counts.locations += 1
+      }
       if (entry.imagePath && !product.imagePath) {
         let imageError
         try {
@@ -125,7 +160,7 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
     setProgress(null)
     setPlan(null)
     setResult({ ...counts, failures })
-    const message = `นำเข้าจาก ${fileName}: เพิ่มสินค้า ${counts.inserted}, บันทึกยอดเริ่มต้น ${counts.adjusted}, ใส่รูป ${counts.images} รายการ`
+    const message = `นำเข้าจาก ${fileName}: เพิ่มสินค้า ${counts.inserted}, บันทึกยอดเริ่มต้น ${counts.adjusted}, ใส่รูป ${counts.images}, ใส่โลเคชั่น ${counts.locations} รายการ`
     // มีรายการไม่สำเร็จ เปิดหน้านี้ค้างไว้ให้เห็นรายละเอียด
     onImported(failures.length === 0 && !stopped ? message : null)
   }
@@ -133,6 +168,7 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
   const newCount = plan ? plan.entries.filter((x) => !x.exists).length : 0
   const withImage = plan ? plan.entries.filter((x) => x.imagePath).length : 0
   const withStock = plan ? plan.entries.filter((x) => x.quantity > 0).length : 0
+  const withLocation = plan ? plan.entries.filter((x) => x.product.location).length : 0
 
   return (
     <div className="panel import-panel">
@@ -144,7 +180,7 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
       </div>
       <div className="panel-body stack">
         <p className="hint">
-          ใช้ไฟล์ "บันทึกรายการสินค้าคลัง" (.xlsx) ที่มีคอลัมน์ รายการสินค้า, Pic, ของดีพร้อมขาย, สินค้ารอซ่อม, ยอดรวมสินค้า
+          ใช้ไฟล์ "บันทึกรายการสินค้าคลัง" (.xlsx) ที่มีคอลัมน์ รายการสินค้า, Pic, ของดีพร้อมขาย, สินค้ารอซ่อม, ยอดรวมสินค้า, โลเคชั่น
           รหัสใช้เป็นชื่อสินค้า หน่วย "{STOCK_SHEET_DEFAULTS.unit}" หมวดหมู่ "{STOCK_SHEET_DEFAULTS.category}" ยอดเริ่มต้นใช้ยอดรวม
           (บันทึกเป็นปรับยอด) แก้ข้อมูลทีหลังได้ในหน้านี้
         </p>
@@ -168,7 +204,7 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
         {result && result.failures.length > 0 && (
           <div className="stack">
             <p className="alert" role="alert">
-              เพิ่มสินค้า {result.inserted}, บันทึกยอด {result.adjusted}, ใส่รูป {result.images} รายการ แต่ไม่สำเร็จ{' '}
+              เพิ่มสินค้า {result.inserted}, บันทึกยอด {result.adjusted}, ใส่รูป {result.images}, ใส่โลเคชั่น {result.locations} รายการ แต่ไม่สำเร็จ{' '}
               {result.failures.length} รายการ เลือกไฟล์เดิมอีกครั้งเพื่อทำส่วนที่เหลือ
             </p>
             <ul className="sub">
@@ -192,9 +228,9 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
                 </b>
               </div>
               <div className="panel stat">
-                <span>มีรูป / มียอดมากกว่า 0</span>
+                <span>มีรูป / มียอด &gt; 0 / มีโลเคชั่น</span>
                 <b>
-                  {withImage} / {withStock}
+                  {withImage} / {withStock} / {withLocation}
                 </b>
               </div>
               <div className={plan.invalid.length > 0 ? 'panel stat out' : 'panel stat'}>
@@ -225,6 +261,7 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
                       <th className="num">ดี</th>
                       <th className="num">รอซ่อม</th>
                       <th className="num">ยอดรวม</th>
+                      <th className="hide-sm">โลเคชั่น</th>
                       <th>รูป</th>
                     </tr>
                   </thead>
@@ -235,7 +272,10 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
                         <td className="num">{x.good}</td>
                         <td className="num">{x.repair}</td>
                         <td className="num">{x.quantity}</td>
-                        <td>{x.imagePath ? 'มี' : '–'}</td>
+                        <td className="hide-sm">{x.product.location || '–'}</td>
+                        <td>
+                          <ProductThumb url={previewUrls[x.imagePath]} name={x.product.name} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>

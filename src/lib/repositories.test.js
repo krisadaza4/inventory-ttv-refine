@@ -143,7 +143,7 @@ describe('saveProduct', () => {
     expect(await createRepository(client).saveProduct(newProduct)).toEqual({ id: 'p2', error: null })
     expect(client.calls.slice(0, 2)).toEqual([
       ['from', 'products'],
-      ['insert', { sku: 'DR-002', barcode: null, name: 'โซดา', category: 'เครื่องดื่ม', unit: 'ขวด', reorder_point: 2 }],
+      ['insert', { sku: 'DR-002', barcode: null, name: 'โซดา', category: 'เครื่องดื่ม', unit: 'ขวด', reorder_point: 2, location: null }],
     ])
   })
 
@@ -341,7 +341,7 @@ describe('insertProducts', () => {
     expect(await createRepository(client).insertProducts(products)).toEqual({ inserted: IMPORT_BATCH_SIZE + 1, error: null })
     const inserts = client.calls.filter(([m]) => m === 'insert')
     expect(inserts.map(([, rows]) => rows.length)).toEqual([IMPORT_BATCH_SIZE, 1])
-    expect(Object.keys(inserts[0][1][0]).sort()).toEqual(['barcode', 'category', 'name', 'reorder_point', 'sku', 'unit'])
+    expect(Object.keys(inserts[0][1][0]).sort()).toEqual(['barcode', 'category', 'location', 'name', 'reorder_point', 'sku', 'unit'])
     expect(client.calls.filter(([m]) => m === 'from').every(([, t]) => t === 'products')).toBe(true)
   })
 

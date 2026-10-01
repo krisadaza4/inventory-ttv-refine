@@ -26,6 +26,7 @@ describe('productSheet', () => {
       'ชื่อสินค้า',
       'หมวดหมู่',
       'หน่วย',
+      'โลเคชั่น',
       'คงเหลือ',
       'จุดสั่งซื้อ',
       'สถานะสต็อก',
@@ -42,11 +43,11 @@ describe('productSheet', () => {
 
   it('จำนวนเป็นตัวเลข และสถานะเป็นข้อความไทย', () => {
     const [, first, second] = productSheet(products)
-    expect(first[5]).toMatchObject({ value: 4, type: Number })
-    expect(first[6]).toMatchObject({ value: 10, type: Number })
-    expect(values(first).slice(7)).toEqual(['ใกล้หมด', 'ใช้งาน'])
-    expect(second[5].value).toBe(2.5)
-    expect(values(second).slice(7)).toEqual(['ปกติ', 'ปิดใช้งาน'])
+    expect(first[6]).toMatchObject({ value: 4, type: Number })
+    expect(first[7]).toMatchObject({ value: 10, type: Number })
+    expect(values(first).slice(8)).toEqual(['ใกล้หมด', 'ใช้งาน'])
+    expect(second[6].value).toBe(2.5)
+    expect(values(second).slice(8)).toEqual(['ปกติ', 'ปิดใช้งาน'])
   })
 
   it('ไม่มีบาร์โค้ด เป็นช่องว่าง', () => {

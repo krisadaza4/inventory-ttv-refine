@@ -15,6 +15,7 @@ const HEADER = {
   good: 'ของดีพร้อมขาย',
   repair: 'สินค้ารอซ่อม',
   total: 'ยอดรวมสินค้า',
+  location: 'โลเคชั่น',
 }
 
 const cellText = (value) => (value === null || value === undefined ? '' : String(value))
@@ -40,6 +41,7 @@ export function parseStockSheet(rows) {
       good: col.good >= 0 ? toAmount(r[col.good]) : 0,
       repair: col.repair >= 0 ? toAmount(r[col.repair]) : 0,
       total: toAmount(r[col.total]),
+      location: col.location >= 0 ? normalizeCode(r[col.location]) : '',
     })
   })
   return { items, picColumn: col.pic, error: null }
@@ -129,6 +131,7 @@ export function planStockImport(items, imagesByRow, existingProducts) {
       name: item.code,
       category: STOCK_SHEET_DEFAULTS.category,
       unit: STOCK_SHEET_DEFAULTS.unit,
+      location: item.location ?? '',
       reorderPoint: 0,
     }
     const errors = Object.values(validateProduct(product))

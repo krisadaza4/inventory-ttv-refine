@@ -109,7 +109,7 @@ export function searchProducts(products, query) {
   const text = String(query ?? '').trim().toLowerCase()
   if (!text) return products
   return products.filter((p) =>
-    [p.name, p.sku, p.barcode].some((field) => String(field ?? '').toLowerCase().includes(text)),
+    [p.name, p.sku, p.barcode, p.location].some((field) => String(field ?? '').toLowerCase().includes(text)),
   )
 }
 

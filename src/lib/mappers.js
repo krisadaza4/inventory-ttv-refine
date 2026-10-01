@@ -1,5 +1,5 @@
 // คอลัมน์ที่อ่าน (แถวฐานข้อมูลเป็น snake_case, ในแอปเป็น camelCase)
-export const PRODUCT_COLUMNS = 'id, sku, barcode, name, category, unit, reorder_point, active, on_hand, image_path'
+export const PRODUCT_COLUMNS = 'id, sku, barcode, name, category, unit, reorder_point, active, on_hand, image_path, location'
 export const MOVEMENT_COLUMNS =
   'id, product_id, type, quantity, movement_date, note, created_by, created_at, ' +
   'product:products(name, sku, unit), recorder:profiles(display_name)'
@@ -24,6 +24,7 @@ export function toProduct(row) {
     onHand: toNumber(row.on_hand),
     // ที่อยู่ไฟล์ใน bucket product-images (null = ไม่มีรูป) ใช้ signImageUrls แปลงเป็นลิงก์
     imagePath: row.image_path ?? null,
+    location: row.location ?? '',
   }
 }
 
@@ -31,6 +32,7 @@ export function toProduct(row) {
 // active เปลี่ยนผ่าน setProductActive เท่านั้น
 export function toProductRow(product) {
   const barcode = trimText(product.barcode)
+  const location = trimText(product.location)
   return {
     sku: trimText(product.sku),
     barcode: barcode || null,
@@ -38,6 +40,7 @@ export function toProductRow(product) {
     category: trimText(product.category),
     unit: trimText(product.unit),
     reorder_point: toNumber(product.reorderPoint),
+    location: location || null,
   }
 }
 

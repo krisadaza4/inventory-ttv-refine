@@ -24,13 +24,14 @@ const number = (value) => ({ value: Number(value), type: Number, format: QUANTIT
 
 export function productSheet(products) {
   return [
-    header(['รหัสสินค้า', 'บาร์โค้ด', 'ชื่อสินค้า', 'หมวดหมู่', 'หน่วย', 'คงเหลือ', 'จุดสั่งซื้อ', 'สถานะสต็อก', 'การใช้งาน']),
+    header(['รหัสสินค้า', 'บาร์โค้ด', 'ชื่อสินค้า', 'หมวดหมู่', 'หน่วย', 'โลเคชั่น', 'คงเหลือ', 'จุดสั่งซื้อ', 'สถานะสต็อก', 'การใช้งาน']),
     ...products.map((p) => [
       text(p.sku),
       text(p.barcode),
       text(p.name),
       text(p.category),
       text(p.unit),
+      text(p.location),
       number(p.onHand),
       number(p.reorderPoint),
       text(STOCK_LABEL[getStockStatus(p.onHand, p.reorderPoint)]),

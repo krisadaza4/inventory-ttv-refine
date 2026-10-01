@@ -208,6 +208,7 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
                 <span>
                   หลังบันทึก <b>{after === null ? '–' : formatQuantity(after)}</b> {product.unit}
                 </span>
+                {product.location && <span className="dim">ที่เก็บ: {product.location}</span>}
                 {after !== null &&
                   (after < 0 ? (
                     <span className="badge out">ติดลบ บันทึกไม่ได้</span>

@@ -32,6 +32,7 @@ export default function ProductTable({ products, imageUrls, onMove }) {
                   <div>
                     {p.name}
                     {p.barcode && <div className="sub mono">{p.barcode}</div>}
+                    {p.location && <div className="sub">ที่เก็บ: {p.location}</div>}
                   </div>
                 </div>
               </td>
