@@ -17,6 +17,7 @@ describe('toProduct', () => {
       location: 'แลค A4',
       avg_monthly_sales: '64.75',
       repair_qty: '800.00',
+      legacy_sku: 'GL-101 R',
     }
     expect(toProduct(row)).toEqual({
       id: 'p1',
@@ -29,6 +30,7 @@ describe('toProduct', () => {
       active: true,
       onHand: 12.5,
       repairQty: 800,
+      legacySku: 'GL-101 R',
       imagePath: 'p1/1.jpg',
       location: 'แลค A4',
       avgMonthlySales: 64.75,

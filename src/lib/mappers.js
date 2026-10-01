@@ -1,5 +1,5 @@
 // คอลัมน์ที่อ่าน (แถวฐานข้อมูลเป็น snake_case, ในแอปเป็น camelCase)
-export const PRODUCT_COLUMNS = 'id, sku, barcode, name, category, unit, reorder_point, active, on_hand, image_path, location, avg_monthly_sales, repair_qty'
+export const PRODUCT_COLUMNS = 'id, sku, barcode, name, category, unit, reorder_point, active, on_hand, image_path, location, avg_monthly_sales, repair_qty, legacy_sku'
 export const MOVEMENT_COLUMNS =
   'id, product_id, type, quantity, movement_date, note, created_by, created_at, ' +
   'product:products(name, sku, unit), recorder:profiles(display_name)'
@@ -25,6 +25,8 @@ export function toProduct(row) {
     // on_hand = ของดี (เบิกได้), repair_qty = รอซ่อม
     onHand: toNumber(row.on_hand),
     repairQty: toNumber(row.repair_qty),
+    // รหัสเดิมก่อนแก้ชื่อ (ใช้จับคู่ตอนนำเข้าไฟล์สต็อก) ไม่มี = ''
+    legacySku: row.legacy_sku ?? '',
     // ที่อยู่ไฟล์ใน bucket product-images (null = ไม่มีรูป) ใช้ signImageUrls แปลงเป็นลิงก์
     imagePath: row.image_path ?? null,
     location: row.location ?? '',

@@ -147,9 +147,20 @@ export const imageTypeOf = (path) => IMAGE_TYPES[path.split('.').pop().toLowerCa
 
 // --- แผนนำเข้า ---------------------------------------------------------------------
 
-// existingProducts รวมที่ปิดใช้งาน: รหัสที่มีแล้วไม่เพิ่มซ้ำ (นำเข้าซ้ำได้เมื่อครั้งก่อนหยุดกลางทาง)
+// จับคู่รหัสในไฟล์กับสินค้าในระบบ: รหัสปัจจุบัน หรือรหัสเดิมก่อนแก้ชื่อ (legacySku)
+export function productLookup(products) {
+  const map = new Map()
+  for (const p of products) {
+    if (p.legacySku) map.set(skuKey(p.legacySku), p)
+  }
+  // รหัสปัจจุบันชนะรหัสเดิมเสมอ
+  for (const p of products) map.set(skuKey(p.sku), p)
+  return map
+}
+
+// existingProducts รวมที่ปิดใช้งาน: รหัสที่มีแล้ว (รวมรหัสเดิม) ไม่เพิ่มซ้ำ (นำเข้าซ้ำได้เมื่อครั้งก่อนหยุดกลางทาง)
 export function planStockImport(items, imagesByRow, existingProducts) {
-  const existing = new Set(existingProducts.map((p) => skuKey(p.sku)))
+  const existing = productLookup(existingProducts)
   const seen = new Set()
   const plan = { entries: [], invalid: [] }
 

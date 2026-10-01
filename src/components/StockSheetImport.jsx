@@ -9,6 +9,7 @@ import {
   repairNote,
   parseStockSheet,
   planStockImport,
+  productLookup,
   readSheetImages,
   skuKey,
 } from '../lib/stockSheetImport.js'
@@ -117,7 +118,8 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
       finish(counts, failures, true)
       return
     }
-    const bySku = new Map(products.map((p) => [skuKey(p.sku), p]))
+    // จับคู่ทั้งรหัสปัจจุบันและรหัสเดิมก่อนแก้ชื่อ
+    const bySku = productLookup(products)
     const today = toIsoDate(new Date())
 
     for (const [i, entry] of plan.entries.entries()) {

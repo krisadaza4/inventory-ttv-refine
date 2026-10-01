@@ -44,6 +44,9 @@ alter table public.products add column if not exists location text;
 -- ยอดขายเฉลี่ยต่อเดือนจากไฟล์สต็อกของร้าน (ค่าที่นำเข้า ไม่ได้คำนวณจากการเบิก) migration_product_avg_sales.sql
 alter table public.products add column if not exists avg_monthly_sales numeric(12, 2);
 
+-- รหัสเดิมก่อนแก้ชื่อ ให้นำเข้าไฟล์สต็อกที่ยังใช้รหัสเดิมได้ migration_legacy_sku.sql
+alter table public.products add column if not exists legacy_sku text;
+
 create index if not exists products_category_idx on public.products using btree (category);
 
 -- updated_at อัปเดตเองทุกครั้งที่แก้สินค้า
@@ -148,7 +151,8 @@ select
       when 'write_off' then -m.quantity
       else 0
     end
-  ), 0)::numeric(12, 2) as repair_qty
+  ), 0)::numeric(12, 2) as repair_qty,
+  p.legacy_sku
 from public.products p
 left join public.stock_movements m on m.product_id = p.id
 group by p.id;
@@ -283,9 +287,9 @@ grant select on public.profiles        to authenticated;
 grant select on public.stock_movements to authenticated;
 grant select on public.product_stock   to authenticated;
 grant select on public.products        to authenticated;
-grant insert (sku, barcode, name, category, unit, reorder_point, active, image_path, location, avg_monthly_sales)
+grant insert (sku, barcode, name, category, unit, reorder_point, active, image_path, location, avg_monthly_sales, legacy_sku)
   on public.products to authenticated;
-grant update (sku, barcode, name, category, unit, reorder_point, active, image_path, location, avg_monthly_sales)
+grant update (sku, barcode, name, category, unit, reorder_point, active, image_path, location, avg_monthly_sales, legacy_sku)
   on public.products to authenticated;
 
 revoke all on function public.set_updated_at() from public, anon, authenticated;

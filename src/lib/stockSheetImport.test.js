@@ -9,6 +9,7 @@ import {
   parseRels,
   parseStockSheet,
   planStockImport,
+  productLookup,
   readSheetImages,
   resolvePath,
 } from './stockSheetImport.js'
@@ -83,6 +84,19 @@ describe('planStockImport', () => {
       [7, 'รหัสซ้ำในไฟล์'],
       [8, 'ยอดรวมต้องเป็นตัวเลขไม่ติดลบ ทศนิยมไม่เกิน 2 ตำแหน่ง'],
     ])
+  })
+
+  it('รหัสเดิมก่อนแก้ชื่อ (legacySku) นับว่ามีแล้ว ไม่เพิ่มซ้ำ', () => {
+    const plan = planStockImport(items, images, [{ sku: 'WX102', legacySku: 'WX102 ใหม่ เปลี่ยนสปาร์คแล้ว' }])
+    expect(plan.entries.map((e) => e.exists)).toEqual([false, false, true])
+  })
+
+  it('productLookup: รหัสปัจจุบันชนะรหัสเดิม', () => {
+    const a = { sku: 'A', legacySku: 'B' }
+    const b = { sku: 'B', legacySku: '' }
+    const map = productLookup([a, b])
+    expect(map.get('b')).toBe(b)
+    expect(map.get('a')).toBe(a)
   })
 
   it('ทำเครื่องหมายรหัสที่มีในระบบแล้ว (นำเข้าซ้ำได้)', () => {
