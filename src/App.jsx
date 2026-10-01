@@ -325,6 +325,7 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
         onToggleTheme,
         signingOut,
         onSignOut,
+        onHome: () => setPage(PAGE.PRODUCTS),
         logo: { url: logoUrl, canChange: canManageProducts(profile.role), busy: logoBusy, onPick: handleLogo },
       }}
       sidebar={<Sidebar role={profile.role} page={currentPage} onChange={setPage} />}

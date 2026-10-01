@@ -184,7 +184,7 @@ export default function ProductForm({ product, imageUrl, categories, repository,
             {product.active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
           </button>
         )}
-        <button type="button" className="btn" onClick={onCancel} disabled={busy}>
+        <button type="button" className="btn btn-cancel" onClick={onCancel} disabled={busy}>
           ยกเลิก
         </button>
         <button type="submit" className="btn primary" disabled={busy}>

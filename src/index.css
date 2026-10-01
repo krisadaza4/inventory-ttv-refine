@@ -1484,3 +1484,157 @@ td {
 .btn-icon .btn-svg {
   flex: none;
 }
+
+/* ปุ่มรับเข้า (เขียว) / เบิกออก (ส้ม) ในตารางสินค้า */
+.btn.btn-in {
+  color: #047857;
+  background: #e3f6ec;
+  border-color: #b7e8cf;
+}
+
+.btn.btn-in:hover:not(:disabled) {
+  background: #cdeedc;
+}
+
+.btn.btn-out {
+  color: #c2410c;
+  background: #fff1e6;
+  border-color: #fed7b5;
+}
+
+.btn.btn-out:hover:not(:disabled) {
+  background: #ffe3cc;
+}
+
+:root[data-theme='dark'] .btn.btn-in {
+  color: #6ee7b7;
+  background: #12352a;
+  border-color: #1d5a45;
+}
+
+:root[data-theme='dark'] .btn.btn-out {
+  color: #fdba74;
+  background: #3a220f;
+  border-color: #6b3a14;
+}
+
+/* ปุ่มนำเข้าในหน้าจัดการสินค้า: ไฟล์สต็อก (ฟ้า) / Express (เหลืองอำพัน) */
+.btn.btn-stock {
+  color: #0369a1;
+  background: #e0f2fe;
+  border-color: #b5ddf7;
+}
+
+.btn.btn-stock:hover:not(:disabled) {
+  background: #cbe8fb;
+}
+
+.btn.btn-express {
+  color: #a16207;
+  background: #fef6d8;
+  border-color: #f6dd8f;
+}
+
+.btn.btn-express:hover:not(:disabled) {
+  background: #fcedb8;
+}
+
+:root[data-theme='dark'] .btn.btn-stock {
+  color: #7dd3fc;
+  background: #0f2b3d;
+  border-color: #1d4a66;
+}
+
+:root[data-theme='dark'] .btn.btn-express {
+  color: #fcd34d;
+  background: #3a2e0a;
+  border-color: #6b5414;
+}
+
+/* ปุ่มยกเลิกข้างปุ่มบันทึก: แดงอ่อน */
+.btn.btn-cancel {
+  color: #b42318;
+  background: #fef0ef;
+  border-color: #f8cbc7;
+}
+
+.btn.btn-cancel:hover:not(:disabled) {
+  background: #fde0de;
+}
+
+:root[data-theme='dark'] .btn.btn-cancel {
+  color: #fda29b;
+  background: #3a1411;
+  border-color: #6b2620;
+}
+
+/* ปุ่มแก้ไขในหน้าจัดการสินค้า: ฟ้า */
+.btn.btn-edit {
+  color: #1d4ed8;
+  background: #e8efff;
+  border-color: #c3d4fb;
+}
+
+.btn.btn-edit:hover:not(:disabled) {
+  background: #d6e2ff;
+}
+
+:root[data-theme='dark'] .btn.btn-edit {
+  color: #93c5fd;
+  background: #13233f;
+  border-color: #24406b;
+}
+
+/* แถบบน: ปุ่มหน้าแรก (เขียว) / ออกจากระบบ (แดงอ่อน) */
+.tb-btn.tb-home {
+  color: #047857;
+  background: #e3f6ec;
+  border-color: #b7e8cf;
+}
+
+.tb-btn.tb-home:hover:not(:disabled) {
+  background: #cdeedc;
+}
+
+.tb-btn.tb-signout {
+  color: #b42318;
+  background: #fef0ef;
+  border-color: #f8cbc7;
+}
+
+.tb-btn.tb-signout:hover:not(:disabled) {
+  background: #fde0de;
+}
+
+:root[data-theme='dark'] .tb-btn.tb-home {
+  color: #6ee7b7;
+  background: #12352a;
+  border-color: #1d5a45;
+}
+
+:root[data-theme='dark'] .tb-btn.tb-signout {
+  color: #fda29b;
+  background: #3a1411;
+  border-color: #6b2620;
+}
+
+/* มือถือ: ปุ่มหน้าแรกเหลือแค่ไอคอน ประหยัดที่ */
+@media (max-width: 760px) {
+  .tb-home .tb-text {
+    display: none;
+  }
+}
+
+/* รหัสสินค้าในตาราง: ใหญ่และหนาขึ้น อ่านง่าย */
+td.mono,
+.sales-table .mono {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+@media (max-width: 760px) {
+  td.mono,
+  .sales-table .mono {
+    font-size: 15px;
+  }
+}

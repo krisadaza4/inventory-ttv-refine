@@ -41,7 +41,7 @@ function Logo({ url, canChange, busy, onPick }) {
   )
 }
 
-export default function TitleBar({ profile, theme, onToggleTheme, signingOut, onSignOut, logo = {} }) {
+export default function TitleBar({ profile, theme, onToggleTheme, signingOut, onSignOut, onHome, logo = {} }) {
   return (
     <header className="titlebar">
       <div className="brand">
@@ -54,8 +54,13 @@ export default function TitleBar({ profile, theme, onToggleTheme, signingOut, on
         {profile.displayName}
         <small>{ROLE_LABEL[profile.role] ?? profile.role}</small>
       </div>
+      {onHome && (
+        <button type="button" className="tb-btn tb-home" onClick={onHome} title="กลับหน้าแรก (สินค้าคงคลัง)">
+          <span aria-hidden="true">⌂</span> <span className="tb-text">หน้าแรก</span>
+        </button>
+      )}
       <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-      <button type="button" className="tb-btn" onClick={onSignOut} disabled={signingOut}>
+      <button type="button" className="tb-btn tb-signout" onClick={onSignOut} disabled={signingOut}>
         {signingOut ? 'กำลังออก…' : 'ออกจากระบบ'}
       </button>
     </header>

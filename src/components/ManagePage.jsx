@@ -52,10 +52,10 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
         page={PAGE.MANAGE}
         actions={
           <div className="head-actions">
-            <button type="button" className="btn" onClick={() => setImporting('stock')} disabled={importing !== null}>
+            <button type="button" className="btn btn-stock" onClick={() => setImporting('stock')} disabled={importing !== null}>
               นำเข้าไฟล์สต็อก
             </button>
-            <button type="button" className="btn" onClick={() => setImporting('express')} disabled={importing !== null}>
+            <button type="button" className="btn btn-express" onClick={() => setImporting('express')} disabled={importing !== null}>
               นำเข้าจาก Express
             </button>
             <button type="button" className="btn primary" onClick={startNew}>
@@ -164,8 +164,8 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
                         <span className={p.active ? 'badge ok' : 'badge off'}>{p.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</span>
                       </td>
                       <td className="num">
-                        <button type="button" className="btn sm" onClick={() => startEdit(p.id)}>
-                          แก้ไข
+                        <button type="button" className="btn sm btn-edit" onClick={() => startEdit(p.id)}>
+                          <span aria-hidden="true">✎</span> แก้ไข
                         </button>
                       </td>
                     </tr>

@@ -336,7 +336,7 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
             )}
 
             <div className="form-actions">
-              <button type="button" className="btn" onClick={onClose} disabled={saving}>
+              <button type="button" className="btn btn-cancel" onClick={onClose} disabled={saving}>
                 ยกเลิก
               </button>
               <button

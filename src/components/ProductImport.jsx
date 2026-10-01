@@ -142,7 +142,7 @@ export default function ProductImport({ allProducts, repository, onImported, onC
             )}
 
             <div className="form-actions">
-              <button type="button" className="btn" onClick={onClose} disabled={saving}>
+              <button type="button" className="btn btn-cancel" onClick={onClose} disabled={saving}>
                 ยกเลิก
               </button>
               <button

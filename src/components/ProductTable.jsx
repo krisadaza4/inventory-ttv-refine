@@ -54,17 +54,17 @@ export default function ProductTable({ products, imageUrls, onMove }) {
                 <StockBadge status={getStockStatus(p.onHand, p.reorderPoint)} />
               </td>
               <td className="num hide-sm actions">
-                <button type="button" className="btn sm" onClick={() => onMove(p, MOVEMENT_TYPE.IN)}>
-                  รับเข้า
+                <button type="button" className="btn sm btn-in" onClick={() => onMove(p, MOVEMENT_TYPE.IN)}>
+                  <span aria-hidden="true">＋</span> รับเข้า
                 </button>
                 <button
                   type="button"
-                  className="btn sm"
+                  className="btn sm btn-out"
                   onClick={() => onMove(p, MOVEMENT_TYPE.OUT)}
                   disabled={p.onHand <= 0}
                   title={p.onHand <= 0 ? 'สินค้าหมด เบิกออกไม่ได้' : undefined}
                 >
-                  เบิกออก
+                  <span aria-hidden="true">－</span> เบิกออก
                 </button>
               </td>
             </tr>
