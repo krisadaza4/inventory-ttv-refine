@@ -4,10 +4,12 @@ import { listCategories, searchProducts } from '../lib/stockRules.js'
 import PageHead from './PageHead.jsx'
 import ProductForm from './ProductForm.jsx'
 import ProductImport from './ProductImport.jsx'
+import ProductThumb from './ProductThumb.jsx'
+import StockSheetImport from './StockSheetImport.jsx'
 
 // หน้าจัดการสินค้า (admin): ซ้ายตารางสินค้า ขวาฟอร์มเพิ่ม/แก้ไข (design.md ข้อ 7)
 // allProducts รวมสินค้าที่ปิดใช้งานแล้ว
-export default function ManagePage({ allProducts, loadState, loadError, onRetry, repository, onChanged }) {
+export default function ManagePage({ allProducts, imageUrls, loadState, loadError, onRetry, repository, onChanged }) {
   const [query, setQuery] = useState('')
   const [showInactive, setShowInactive] = useState(false)
   // null = เพิ่มใหม่
@@ -15,7 +17,8 @@ export default function ManagePage({ allProducts, loadState, loadError, onRetry,
   // ใช้เป็น key ให้ฟอร์มเริ่มใหม่หลังบันทึกหรือกดเพิ่มใหม่
   const [formSeq, setFormSeq] = useState(0)
   const [notice, setNotice] = useState(null)
-  const [importing, setImporting] = useState(false)
+  // null | 'express' (รายการจาก Express) | 'stock' (ไฟล์สต็อก รูป + ยอด)
+  const [importing, setImporting] = useState(null)
 
   const editing = allProducts.find((p) => p.id === editingId) ?? null
   const visible = searchProducts(
@@ -49,8 +52,11 @@ export default function ManagePage({ allProducts, loadState, loadError, onRetry,
         page={PAGE.MANAGE}
         actions={
           <div className="head-actions">
-            <button type="button" className="btn" onClick={() => setImporting(true)} disabled={importing}>
-              นำเข้าจาก Excel
+            <button type="button" className="btn" onClick={() => setImporting('stock')} disabled={importing !== null}>
+              นำเข้าไฟล์สต็อก
+            </button>
+            <button type="button" className="btn" onClick={() => setImporting('express')} disabled={importing !== null}>
+              นำเข้าจาก Express
             </button>
             <button type="button" className="btn primary" onClick={startNew}>
               + เพิ่มสินค้าใหม่
@@ -65,18 +71,33 @@ export default function ManagePage({ allProducts, loadState, loadError, onRetry,
         </p>
       )}
 
-      {importing && (
+      {importing === 'stock' && (
+        <StockSheetImport
+          allProducts={allProducts}
+          repository={repository}
+          onImported={(message) => {
+            if (message) {
+              setNotice(message)
+              setImporting(null)
+            }
+            onChanged()
+          }}
+          onClose={() => setImporting(null)}
+        />
+      )}
+
+      {importing === 'express' && (
         <ProductImport
           allProducts={allProducts}
           repository={repository}
           onImported={(message) => {
             if (message) {
               setNotice(message)
-              setImporting(false)
+              setImporting(null)
             }
             onChanged()
           }}
-          onClose={() => setImporting(false)}
+          onClose={() => setImporting(null)}
         />
       )}
 
@@ -133,7 +154,12 @@ export default function ManagePage({ allProducts, loadState, loadError, onRetry,
                   {visible.map((p) => (
                     <tr key={p.id} className={p.id === editingId ? 'selected' : undefined}>
                       <td className="mono">{p.sku}</td>
-                      <td className={p.active ? undefined : 'dim'}>{p.name}</td>
+                      <td className={p.active ? undefined : 'dim'}>
+                        <div className="with-thumb">
+                          <ProductThumb url={imageUrls[p.imagePath]} name={p.name} />
+                          {p.name}
+                        </div>
+                      </td>
                       <td className="hide-sm dim">{p.category}</td>
                       <td>
                         <span className={p.active ? 'badge ok' : 'badge off'}>{p.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</span>
@@ -154,6 +180,7 @@ export default function ManagePage({ allProducts, loadState, loadError, onRetry,
         <ProductForm
           key={`${editing?.id ?? 'new'}-${formSeq}`}
           product={editing}
+          imageUrl={editing ? imageUrls[editing.imagePath] : null}
           categories={listCategories(allProducts)}
           repository={repository}
           onSaved={handleSaved}
