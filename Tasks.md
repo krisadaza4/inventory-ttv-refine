@@ -76,10 +76,11 @@
 
 ตกลง 2026-09-29: 1 รูปต่อสินค้า, เพิ่ม/เปลี่ยนรูปเฉพาะ admin, ดูได้เฉพาะผู้ที่เข้าสู่ระบบ (bucket ส่วนตัว + signed URL), ย่อรูปในเบราว์เซอร์เหลือด้านยาว ≤ 800px (~100KB), แสดงรูปเล็กในตารางสินค้า/หน้ารับ-เบิก กดดูรูปใหญ่ได้, ฟอร์มแก้ไขเลือกรูปหรือถ่ายจากกล้องมือถือ
 
-- [ ] T7.1 `supabase/migration_product_images.sql`: คอลัมน์ `image_path`, view `product_stock`, bucket `product-images`, นโยบาย storage (ผู้ใช้รันใน Supabase)
+- [x] T7.1 `supabase/migration_product_images.sql`: คอลัมน์ `image_path`, view `product_stock`, bucket `product-images`, นโยบาย storage (ผู้ใช้รันใน Supabase)
 - [x] T7.2 `lib/productImages.js`: ขนาดหลังย่อ, ชื่อไฟล์, ตรวจชนิดไฟล์ + เทสต์; `mappers.js` เพิ่ม `imagePath`
 - [x] T7.3 `repositories.js`: `uploadProductImage`, `removeProductImage`, `signImageUrls` + เทสต์ด้วย client จำลอง
 - [x] T7.4 UI: ฟอร์มสินค้าเลือก/ถ่าย/ลบรูป, รูปเล็กในตาราง/หน้ารับ-เบิก, ดูรูปใหญ่
 - [ ] T7.5 (ผู้ใช้) ทดลองบนเว็บจริงทั้ง admin (เพิ่ม/เปลี่ยน/ลบ) และ staff (ดูได้ เปลี่ยนไม่ได้)
+- [x] T7.6 นำเข้าไฟล์สต็อกของร้าน (รหัส + รูปที่ฝังในไฟล์ + ยอดคงเหลือ): `lib/zipReader.js`, `lib/stockSheetImport.js` + เทสต์, `StockSheetImport.jsx`; ล้างข้อมูลเดิมด้วย `supabase/reset_products.sql` แล้วนำเข้า 131 รายการ (2026-10-01)
 
 - **เสร็จเมื่อ:** admin ใส่รูปสินค้าได้จากคอมพิวเตอร์และมือถือ ทุกคนที่เข้าสู่ระบบเห็นรูป
