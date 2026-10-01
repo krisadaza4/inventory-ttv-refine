@@ -1,9 +1,10 @@
 import { formatQuantity } from '../lib/numberFormat.js'
 import { MOVEMENT_TYPE, getStockStatus } from '../lib/stockRules.js'
+import ProductThumb from './ProductThumb.jsx'
 import StockBadge from './StockBadge.jsx'
 
 // ตารางสินค้าคงคลัง (เรียงมาแล้วจากหน้าที่เรียกใช้) hide-sm = ซ่อนบนมือถือ
-export default function ProductTable({ products, onMove }) {
+export default function ProductTable({ products, imageUrls, onMove }) {
   return (
     <div className="table-wrap">
       <table>
@@ -26,8 +27,13 @@ export default function ProductTable({ products, onMove }) {
             <tr key={p.id}>
               <td className="mono">{p.sku}</td>
               <td>
-                {p.name}
-                {p.barcode && <div className="sub mono">{p.barcode}</div>}
+                <div className="with-thumb">
+                  <ProductThumb url={imageUrls[p.imagePath]} name={p.name} />
+                  <div>
+                    {p.name}
+                    {p.barcode && <div className="sub mono">{p.barcode}</div>}
+                  </div>
+                </div>
               </td>
               <td className="hide-sm dim">{p.category}</td>
               <td className="num">

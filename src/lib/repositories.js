@@ -7,6 +7,7 @@ import {
   toProductRow,
   toProfile,
 } from './mappers.js'
+import { IMAGE_BUCKET, IMAGE_URL_TTL, imagePathFor } from './productImages.js'
 import { toThaiError } from './supabaseErrors.js'
 
 export const PAGE_SIZE = 50
@@ -71,6 +72,46 @@ export function createRepository(client) {
         inserted += batch.length
       }
       return { inserted, error: null }
+    },
+
+    // รูปสินค้า (admin): อัปโหลดไฟล์ใหม่ → บันทึก image_path → ลบรูปเก่า
+    // บันทึก image_path ไม่สำเร็จ ลบไฟล์ที่เพิ่งอัปโหลด ไม่ให้มีไฟล์ค้างใน bucket
+    async uploadProductImage(product, blob) {
+      const bucket = client.storage.from(IMAGE_BUCKET)
+      const path = imagePathFor(product.id)
+      const uploaded = await run(() => bucket.upload(path, blob, { contentType: 'image/jpeg', upsert: false }))
+      if (uploaded.error) return { imagePath: null, error: uploaded.error }
+
+      const { error } = await run(() =>
+        client.from('products').update({ image_path: path }).eq('id', product.id).select('id').single(),
+      )
+      if (error) {
+        await run(() => bucket.remove([path]))
+        return { imagePath: null, error }
+      }
+      if (product.imagePath) await run(() => bucket.remove([product.imagePath]))
+      return { imagePath: path, error: null }
+    },
+
+    async removeProductImage(product) {
+      const { error } = await run(() =>
+        client.from('products').update({ image_path: null }).eq('id', product.id).select('id').single(),
+      )
+      if (error) return { error }
+      if (product.imagePath) await run(() => client.storage.from(IMAGE_BUCKET).remove([product.imagePath]))
+      return { error: null }
+    },
+
+    // bucket เป็นแบบส่วนตัว: ขอลิงก์ชั่วคราวทีเดียวหลายรูป คืน { [path]: url } รูปที่ขอไม่ได้จะไม่มีในผล
+    async signImageUrls(paths) {
+      const urls = {}
+      for (let i = 0; i < paths.length; i += IMPORT_BATCH_SIZE) {
+        const batch = paths.slice(i, i + IMPORT_BATCH_SIZE)
+        const { data, error } = await run(() => client.storage.from(IMAGE_BUCKET).createSignedUrls(batch, IMAGE_URL_TTL))
+        if (error) return { urls, error }
+        for (const item of data) if (item.signedUrl && !item.error) urls[item.path] = item.signedUrl
+      }
+      return { urls, error: null }
     },
 
     async setProductActive(id, active) {

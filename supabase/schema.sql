@@ -35,6 +35,9 @@ create table if not exists public.products (
   constraint products_reorder_point_non_neg check (reorder_point >= 0)
 );
 
+-- เฟส 7: ที่อยู่ไฟล์รูปใน bucket product-images (bucket และนโยบายอยู่ใน migration_product_images.sql)
+alter table public.products add column if not exists image_path text;
+
 create index if not exists products_category_idx on public.products using btree (category);
 
 -- updated_at อัปเดตเองทุกครั้งที่แก้สินค้า
@@ -120,7 +123,8 @@ select
   coalesce(
     sum(case m.type when 'out' then -m.quantity else m.quantity end),
     0
-  )::numeric(12, 2) as on_hand
+  )::numeric(12, 2) as on_hand,
+  p.image_path
 from public.products p
 left join public.stock_movements m on m.product_id = p.id
 group by p.id;
@@ -235,9 +239,9 @@ grant select on public.profiles        to authenticated;
 grant select on public.stock_movements to authenticated;
 grant select on public.product_stock   to authenticated;
 grant select on public.products        to authenticated;
-grant insert (sku, barcode, name, category, unit, reorder_point, active)
+grant insert (sku, barcode, name, category, unit, reorder_point, active, image_path)
   on public.products to authenticated;
-grant update (sku, barcode, name, category, unit, reorder_point, active)
+grant update (sku, barcode, name, category, unit, reorder_point, active, image_path)
   on public.products to authenticated;
 
 revoke all on function public.set_updated_at() from public, anon, authenticated;

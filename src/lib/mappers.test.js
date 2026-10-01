@@ -13,6 +13,7 @@ describe('toProduct', () => {
       reorder_point: '5.00',
       active: true,
       on_hand: '12.50',
+      image_path: 'p1/1.jpg',
     }
     expect(toProduct(row)).toEqual({
       id: 'p1',
@@ -24,7 +25,12 @@ describe('toProduct', () => {
       reorderPoint: 5,
       active: true,
       onHand: 12.5,
+      imagePath: 'p1/1.jpg',
     })
+  })
+
+  it('ไม่มีรูป imagePath เป็น null', () => {
+    expect(toProduct({ id: 'p2', reorder_point: 0, on_hand: 0 }).imagePath).toBeNull()
   })
 })
 

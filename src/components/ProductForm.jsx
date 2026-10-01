@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { formatQuantity } from '../lib/numberFormat.js'
+import { checkImageFile, resizeImage } from '../lib/productImages.js'
 import { validateProduct } from '../lib/stockRules.js'
+import ProductThumb from './ProductThumb.jsx'
 
 const EMPTY = { sku: '', barcode: '', name: '', category: '', unit: '', reorderPoint: '0' }
 
@@ -26,7 +28,7 @@ const toFields = (product) =>
     : EMPTY
 
 // ฟอร์มเพิ่ม/แก้ไขสินค้า product = null คือเพิ่มใหม่ (App ใส่ key ตามสินค้า ฟอร์มจึงเริ่มใหม่ทุกครั้งที่เปลี่ยน)
-export default function ProductForm({ product, categories, repository, onSaved, onCancel }) {
+export default function ProductForm({ product, imageUrl, categories, repository, onSaved, onCancel }) {
   const [fields, setFields] = useState(() => toFields(product))
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
@@ -46,6 +48,38 @@ export default function ProductForm({ product, categories, repository, onSaved, 
     setBusy(false)
     if (error) setServerError(error)
     else onSaved(id, product ? `บันทึกการแก้ไข ${fields.name.trim()} แล้ว` : `เพิ่มสินค้า ${fields.name.trim()} แล้ว`)
+  }
+
+  // เลือกรูป/ถ่ายรูป: ย่อในเบราว์เซอร์ แล้วอัปโหลดแทนรูปเดิม
+  const handleImage = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setServerError(null)
+    const invalid = checkImageFile(file)
+    if (invalid) {
+      setServerError(invalid)
+      return
+    }
+    setBusy(true)
+    try {
+      const blob = await resizeImage(file)
+      const { error } = await repository.uploadProductImage(product, blob)
+      if (error) setServerError(error)
+      else onSaved(product.id, `${product.imagePath ? 'เปลี่ยน' : 'เพิ่ม'}รูป ${product.name} แล้ว`)
+    } catch (thrown) {
+      setServerError(thrown.message)
+    }
+    setBusy(false)
+  }
+
+  const handleRemoveImage = async () => {
+    setServerError(null)
+    setBusy(true)
+    const { error } = await repository.removeProductImage(product)
+    setBusy(false)
+    if (error) setServerError(error)
+    else onSaved(product.id, `ลบรูป ${product.name} แล้ว`)
   }
 
   const handleToggleActive = async () => {
@@ -96,6 +130,40 @@ export default function ProductForm({ product, categories, repository, onSaved, 
             <option key={c} value={c} />
           ))}
         </datalist>
+
+        <div className="form-row">
+          <span className="label">รูปสินค้า</span>
+          {product ? (
+            <div className="image-field">
+              <ProductThumb url={imageUrl} name={product.name} size="lg" />
+              <div className="image-actions">
+                <label className={busy ? 'btn sm disabled' : 'btn sm'}>
+                  {product.imagePath ? 'เปลี่ยนรูป' : 'เลือกรูป'}
+                  <input type="file" accept="image/*" className="sr-only" onChange={handleImage} disabled={busy} />
+                </label>
+                <label className={busy ? 'btn sm disabled' : 'btn sm'}>
+                  ถ่ายรูป
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="sr-only"
+                    onChange={handleImage}
+                    disabled={busy}
+                  />
+                </label>
+                {product.imagePath && (
+                  <button type="button" className="btn sm" onClick={handleRemoveImage} disabled={busy}>
+                    ลบรูป
+                  </button>
+                )}
+                <span className="hint">ย่อเหลือไม่เกิน 800px ให้อัตโนมัติ</span>
+              </div>
+            </div>
+          ) : (
+            <div className="plain hint">บันทึกสินค้าก่อน แล้วจึงเพิ่มรูปได้</div>
+          )}
+        </div>
 
         {product && (
           <div className="form-row">

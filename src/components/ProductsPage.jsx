@@ -15,7 +15,7 @@ import PageHead from './PageHead.jsx'
 import ProductTable from './ProductTable.jsx'
 
 // หน้าสินค้าคงคลัง: กล่องสรุป, ค้นหา, กรองหมวดหมู่, ตาราง (design.md ข้อ 7)
-export default function ProductsPage({ products, loadState, loadError, onRetry, onMove }) {
+export default function ProductsPage({ products, imageUrls, loadState, loadError, onRetry, onMove }) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
 
@@ -95,7 +95,7 @@ export default function ProductsPage({ products, loadState, loadError, onRetry, 
         {loadState === 'ready' && visible.length === 0 && (
           <p className="empty dim">{filtered ? 'ไม่พบสินค้าที่ตรงกับเงื่อนไข' : 'ยังไม่มีสินค้า'}</p>
         )}
-        {loadState === 'ready' && visible.length > 0 && <ProductTable products={visible} onMove={onMove} />}
+        {loadState === 'ready' && visible.length > 0 && <ProductTable products={visible} imageUrls={imageUrls} onMove={onMove} />}
 
         {loadState === 'ready' && (
           <div className="table-foot">

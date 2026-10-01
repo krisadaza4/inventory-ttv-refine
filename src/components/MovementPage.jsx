@@ -5,6 +5,7 @@ import { formatQuantity } from '../lib/numberFormat.js'
 import { canAdjust } from '../lib/roles.js'
 import { MOVEMENT_TYPE, getStockStatus, quantityAfter, searchProducts, validateMovement } from '../lib/stockRules.js'
 import PageHead from './PageHead.jsx'
+import ProductThumb from './ProductThumb.jsx'
 import StockBadge from './StockBadge.jsx'
 
 const TYPE_LABEL = {
@@ -24,7 +25,7 @@ function FieldError({ id, message }) {
 }
 
 // หน้ารับเข้า / เบิกออก (design.md ข้อ 7) intent = สินค้าและประเภทที่เลือกมาจากตารางสินค้า
-export default function MovementPage({ products, loadState, role, today, intent, repository, onSaved }) {
+export default function MovementPage({ products, imageUrls, loadState, role, today, intent, repository, onSaved }) {
   const [productQuery, setProductQuery] = useState('')
   const [productId, setProductId] = useState(intent?.productId ?? '')
   const [type, setType] = useState(intent?.type ?? MOVEMENT_TYPE.IN)
@@ -199,6 +200,7 @@ export default function MovementPage({ products, loadState, role, today, intent,
           <div className="preview" aria-live="polite">
             {product ? (
               <>
+                <ProductThumb url={imageUrls[product.imagePath]} name={product.name} size="md" />
                 <span>
                   คงเหลือตอนนี้ <b>{formatQuantity(product.onHand)}</b>
                 </span>

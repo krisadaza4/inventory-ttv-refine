@@ -81,8 +81,11 @@ describe('createRepository', () => {
       'listMovements',
       'listProducts',
       'recordMovement',
+      'removeProductImage',
       'saveProduct',
       'setProductActive',
+      'signImageUrls',
+      'uploadProductImage',
     ])
   })
 
@@ -384,5 +387,104 @@ describe('listProducts หลายหน้า', () => {
       ['range', 0, EXPORT_PAGE_SIZE - 1],
       ['range', EXPORT_PAGE_SIZE, 2 * EXPORT_PAGE_SIZE - 1],
     ])
+  })
+})
+
+// storage จำลอง: บันทึกการเรียก และคืนผลตามชื่อฟังก์ชัน
+const withStorage = (client, results = {}) => {
+  client.storage = {
+    from: (bucket) => {
+      const call = (name) => async (...args) => {
+        client.calls.push(['storage', bucket, name, ...args])
+        return results[name] ?? { data: null, error: null }
+      }
+      return { upload: call('upload'), remove: call('remove'), createSignedUrls: call('createSignedUrls') }
+    },
+  }
+  return client
+}
+
+const storageCalls = (client) => client.calls.filter(([kind]) => kind === 'storage')
+
+describe('uploadProductImage', () => {
+  const blob = { size: 1000, type: 'image/jpeg' }
+
+  it('อัปโหลดไฟล์ใหม่ แล้วบันทึก image_path และลบรูปเก่า', async () => {
+    const client = withStorage(fakeClient({ data: { id: 'p1' }, error: null }))
+    const { imagePath, error } = await createRepository(client).uploadProductImage({ id: 'p1', imagePath: 'p1/old.jpg' }, blob)
+    expect(error).toBeNull()
+    expect(imagePath).toMatch(/^p1\/\d+\.jpg$/)
+    const [upload, remove] = storageCalls(client)
+    expect(upload).toEqual(['storage', 'product-images', 'upload', imagePath, blob, { contentType: 'image/jpeg', upsert: false }])
+    expect(remove).toEqual(['storage', 'product-images', 'remove', ['p1/old.jpg']])
+    expect(client.calls).toContainEqual(['update', { image_path: imagePath }])
+    expect(client.calls).toContainEqual(['eq', 'id', 'p1'])
+  })
+
+  it('ไม่มีรูปเก่า ไม่เรียกลบ', async () => {
+    const client = withStorage(fakeClient({ data: { id: 'p1' }, error: null }))
+    await createRepository(client).uploadProductImage({ id: 'p1', imagePath: null }, blob)
+    expect(storageCalls(client).map((c) => c[2])).toEqual(['upload'])
+  })
+
+  it('อัปโหลดไม่สำเร็จ ไม่แก้ตารางสินค้า', async () => {
+    const client = withStorage(fakeClient({ data: { id: 'p1' }, error: null }), {
+      upload: { data: null, error: { statusCode: '403', message: 'new row violates row-level security policy' } },
+    })
+    const result = await createRepository(client).uploadProductImage({ id: 'p1', imagePath: null }, blob)
+    expect(result.imagePath).toBeNull()
+    expect(result.error).toBeTruthy()
+    expect(client.calls.map(([m]) => m)).not.toContain('update')
+  })
+
+  it('บันทึก image_path ไม่สำเร็จ ลบไฟล์ที่เพิ่งอัปโหลดทิ้ง และไม่ลบรูปเก่า', async () => {
+    const client = withStorage(fakeClient({ data: null, error: { code: '42501' } }))
+    const result = await createRepository(client).uploadProductImage({ id: 'p1', imagePath: 'p1/old.jpg' }, blob)
+    expect(result).toEqual({ imagePath: null, error: ERROR_MESSAGE.FORBIDDEN })
+    const removes = storageCalls(client).filter((c) => c[2] === 'remove')
+    expect(removes).toHaveLength(1)
+    expect(removes[0][3][0]).not.toBe('p1/old.jpg')
+  })
+})
+
+describe('removeProductImage', () => {
+  it('ล้าง image_path แล้วลบไฟล์', async () => {
+    const client = withStorage(fakeClient({ data: { id: 'p1' }, error: null }))
+    expect(await createRepository(client).removeProductImage({ id: 'p1', imagePath: 'p1/a.jpg' })).toEqual({ error: null })
+    expect(client.calls).toContainEqual(['update', { image_path: null }])
+    expect(storageCalls(client)).toEqual([['storage', 'product-images', 'remove', ['p1/a.jpg']]])
+  })
+
+  it('ล้างไม่สำเร็จ ไม่ลบไฟล์', async () => {
+    const client = withStorage(fakeClient({ data: null, error: { code: '42501' } }))
+    expect(await createRepository(client).removeProductImage({ id: 'p1', imagePath: 'p1/a.jpg' })).toEqual({
+      error: ERROR_MESSAGE.FORBIDDEN,
+    })
+    expect(storageCalls(client)).toEqual([])
+  })
+})
+
+describe('signImageUrls', () => {
+  it('ขอ signed URL ทีเดียวหลายรูป คืนเป็น { path: url }', async () => {
+    const client = withStorage(fakeClient(null), {
+      createSignedUrls: {
+        data: [
+          { path: 'p1/a.jpg', signedUrl: 'https://x/a', error: null },
+          { path: 'p2/b.jpg', signedUrl: null, error: 'not found' },
+        ],
+        error: null,
+      },
+    })
+    expect(await createRepository(client).signImageUrls(['p1/a.jpg', 'p2/b.jpg'])).toEqual({
+      urls: { 'p1/a.jpg': 'https://x/a' },
+      error: null,
+    })
+    expect(storageCalls(client)[0]).toEqual(['storage', 'product-images', 'createSignedUrls', ['p1/a.jpg', 'p2/b.jpg'], 3600])
+  })
+
+  it('ไม่มีรูป ไม่เรียก storage', async () => {
+    const client = withStorage(fakeClient(null))
+    expect(await createRepository(client).signImageUrls([])).toEqual({ urls: {}, error: null })
+    expect(storageCalls(client)).toEqual([])
   })
 })

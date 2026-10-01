@@ -87,6 +87,13 @@ describe('toThaiError', () => {
     expect(toThaiError({ name: 'AuthRetryableFetchError', message: '' })).toBe(ERROR_MESSAGE.NETWORK)
   })
 
+  it('Storage: ไม่มีสิทธิ์ (statusCode 403) และไฟล์ใหญ่เกิน (413)', () => {
+    expect(toThaiError({ statusCode: '403', message: 'new row violates row-level security policy' })).toBe(
+      ERROR_MESSAGE.FORBIDDEN,
+    )
+    expect(toThaiError({ statusCode: '413', message: 'Payload too large' })).toBe(ERROR_MESSAGE.IMAGE_TOO_LARGE)
+  })
+
   it('ไม่รู้จัก', () => {
     expect(toThaiError({ message: 'weird' })).toBe(ERROR_MESSAGE.UNKNOWN)
   })

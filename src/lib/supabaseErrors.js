@@ -21,6 +21,7 @@ export const ERROR_MESSAGE = {
   INVALID_DATA: 'ข้อมูลไม่ถูกต้องตามกติกา กรุณาตรวจสอบอีกครั้ง',
   FORBIDDEN: 'ไม่มีสิทธิ์ทำรายการนี้',
   NOT_FOUND: 'ไม่พบรายการนี้ หรือไม่มีสิทธิ์แก้ไข',
+  IMAGE_TOO_LARGE: 'ไฟล์รูปใหญ่เกินกำหนด',
   UNKNOWN: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง',
 }
 
@@ -83,6 +84,9 @@ export function toThaiError(error) {
   if (error.code === '23505') return duplicateMessage(error)
   if (error.code && BY_CODE[error.code]) return BY_CODE[error.code]
   if (error.status === 429) return ERROR_MESSAGE.RATE_LIMIT
+  // Supabase Storage ใช้ statusCode เป็นข้อความ เช่น '403' เมื่อผิดนโยบาย
+  if (String(error.statusCode) === '403' || error.status === 403) return ERROR_MESSAGE.FORBIDDEN
+  if (String(error.statusCode) === '413') return ERROR_MESSAGE.IMAGE_TOO_LARGE
   if (isNetworkError(error)) return ERROR_MESSAGE.NETWORK
   return ERROR_MESSAGE.UNKNOWN
 }

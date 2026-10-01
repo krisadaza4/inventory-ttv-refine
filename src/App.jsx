@@ -232,6 +232,20 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
   const [attempt, setAttempt] = useState(0)
   // กดรับเข้า/เบิกออกจากตารางสินค้า: หน้ารับเข้า / เบิกออก (T4.4) เลือกสินค้าและประเภทไว้ให้
   const [moveIntent, setMoveIntent] = useState(null)
+  // { [imagePath]: signed URL } ขอใหม่ทุกครั้งที่โหลดสินค้า (ลิงก์ใช้ได้ 1 ชั่วโมง)
+  const [imageUrls, setImageUrls] = useState({})
+
+  useEffect(() => {
+    const paths = allProducts.map((p) => p.imagePath).filter(Boolean)
+    if (paths.length === 0) return undefined
+    let active = true
+    repository.signImageUrls(paths).then(({ urls }) => {
+      if (active) setImageUrls(urls)
+    })
+    return () => {
+      active = false
+    }
+  }, [repository, allProducts])
 
   useEffect(() => {
     let active = true
@@ -285,6 +299,7 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
       {currentPage === PAGE.PRODUCTS && (
         <ProductsPage
           products={products}
+          imageUrls={imageUrls}
           loadState={loadState}
           loadError={loadError}
           onRetry={reloadProducts}
@@ -295,6 +310,7 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
         <MovementPage
           key={moveIntent?.seq ?? 0}
           products={products}
+          imageUrls={imageUrls}
           loadState={loadState}
           role={profile.role}
           today={today}
@@ -306,6 +322,7 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
       {currentPage === PAGE.MANAGE && (
         <ManagePage
           allProducts={allProducts}
+          imageUrls={imageUrls}
           loadState={loadState}
           loadError={loadError}
           onRetry={reloadProducts}
