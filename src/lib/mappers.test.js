@@ -15,6 +15,8 @@ describe('toProduct', () => {
       on_hand: '12.50',
       image_path: 'p1/1.jpg',
       location: 'แลค A4',
+      avg_monthly_sales: '64.75',
+      repair_qty: '800.00',
     }
     expect(toProduct(row)).toEqual({
       id: 'p1',
@@ -26,8 +28,10 @@ describe('toProduct', () => {
       reorderPoint: 5,
       active: true,
       onHand: 12.5,
+      repairQty: 800,
       imagePath: 'p1/1.jpg',
       location: 'แลค A4',
+      avgMonthlySales: 64.75,
     })
   })
 
@@ -35,6 +39,7 @@ describe('toProduct', () => {
     const product = toProduct({ id: 'p2', reorder_point: 0, on_hand: 0, location: null })
     expect(product.imagePath).toBeNull()
     expect(product.location).toBe('')
+    expect(product.avgMonthlySales).toBeNull()
   })
 })
 
@@ -80,6 +85,12 @@ describe('toProductRow', () => {
   it('บาร์โค้ดว่างส่งเป็น null (ไม่ชน unique และ check)', () => {
     expect(toProductRow({ ...product, barcode: '  ' }).barcode).toBeNull()
     expect(toProductRow({ ...product, barcode: undefined }).barcode).toBeNull()
+  })
+
+  it('ยอดขายเฉลี่ย: ไม่ส่งมาไม่แก้, null ล้างค่า, ข้อความแปลงเป็นตัวเลข', () => {
+    expect(toProductRow(product)).not.toHaveProperty('avg_monthly_sales')
+    expect(toProductRow({ ...product, avgMonthlySales: null }).avg_monthly_sales).toBeNull()
+    expect(toProductRow({ ...product, avgMonthlySales: '64.75' }).avg_monthly_sales).toBe(64.75)
   })
 
   it('โลเคชั่นว่างส่งเป็น null', () => {

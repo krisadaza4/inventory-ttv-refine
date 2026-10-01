@@ -41,6 +41,9 @@ alter table public.products add column if not exists image_path text;
 -- ที่เก็บสินค้าในร้าน เช่น "แลค A4" (ไม่บังคับ) migration_product_location.sql
 alter table public.products add column if not exists location text;
 
+-- ยอดขายเฉลี่ยต่อเดือนจากไฟล์สต็อกของร้าน (ค่าที่นำเข้า ไม่ได้คำนวณจากการเบิก) migration_product_avg_sales.sql
+alter table public.products add column if not exists avg_monthly_sales numeric(12, 2);
+
 create index if not exists products_category_idx on public.products using btree (category);
 
 -- updated_at อัปเดตเองทุกครั้งที่แก้สินค้า
@@ -71,13 +74,15 @@ create table if not exists public.stock_movements (
   created_by    uuid not null default auth.uid() references public.profiles (id),
   created_at    timestamptz not null default now(),
 
-  constraint stock_movements_type_valid check (type in ('in', 'out', 'adjust')),
+  -- ส่งซ่อม/ซ่อมเสร็จ/ตัดจำหน่าย: สินค้ารอซ่อม (migration_repair.sql)
+  constraint stock_movements_type_valid
+    check (type in ('in', 'out', 'adjust', 'to_repair', 'repaired', 'write_off')),
   constraint stock_movements_quantity_valid check (
-    (type in ('in', 'out') and quantity > 0)
-    or (type = 'adjust' and quantity <> 0)
+    (type = 'adjust' and quantity <> 0)
+    or (type <> 'adjust' and quantity > 0)
   ),
-  constraint stock_movements_adjust_needs_note check (
-    type <> 'adjust' or length(trim(coalesce(note, ''))) > 0
+  constraint stock_movements_note_required check (
+    type not in ('adjust', 'to_repair', 'repaired', 'write_off') or length(trim(coalesce(note, ''))) > 0
   )
 );
 
@@ -123,12 +128,27 @@ select
   p.active,
   p.created_at,
   p.updated_at,
-  coalesce(
-    sum(case m.type when 'out' then -m.quantity else m.quantity end),
-    0
-  )::numeric(12, 2) as on_hand,
+  coalesce(sum(
+    case m.type
+      when 'in' then m.quantity
+      when 'adjust' then m.quantity
+      when 'repaired' then m.quantity
+      when 'out' then -m.quantity
+      when 'to_repair' then -m.quantity
+      else 0
+    end
+  ), 0)::numeric(12, 2) as on_hand,
   p.image_path,
-  p.location
+  p.location,
+  p.avg_monthly_sales,
+  coalesce(sum(
+    case m.type
+      when 'to_repair' then m.quantity
+      when 'repaired' then -m.quantity
+      when 'write_off' then -m.quantity
+      else 0
+    end
+  ), 0)::numeric(12, 2) as repair_qty
 from public.products p
 left join public.stock_movements m on m.product_id = p.id
 group by p.id;
@@ -148,24 +168,24 @@ returns public.stock_movements
 language plpgsql
 security definer
 set search_path = ''
-as $$
+as $
 declare
   v_role    text := public.current_app_role();
   v_today   date := (now() at time zone 'Asia/Bangkok')::date;
   v_date    date := coalesce(p_movement_date, v_today);
   v_note    text := nullif(trim(p_note), '');
   v_active  boolean;
-  v_on_hand numeric;
-  v_delta   numeric;
+  v_good    numeric;
+  v_repair  numeric;
   v_row     public.stock_movements;
 begin
-  -- 1. ผู้เรียกต้องมี profile และปรับยอดได้เฉพาะ admin
+  -- 1. ผู้เรียกต้องมี profile, ปรับยอด/ตัดจำหน่ายได้เฉพาะ admin
   if v_role is null then
     raise exception 'บัญชีนี้ยังไม่ได้กำหนดบทบาท กรุณาติดต่อเจ้าของร้าน'
       using errcode = '42501', hint = 'no_profile';
   end if;
 
-  if p_type is null or p_type not in ('in', 'out', 'adjust') then
+  if p_type is null or p_type not in ('in', 'out', 'adjust', 'to_repair', 'repaired', 'write_off') then
     raise exception 'ประเภทรายการไม่ถูกต้อง' using hint = 'invalid_type';
   end if;
 
@@ -174,9 +194,14 @@ begin
       using errcode = '42501', hint = 'adjust_admin_only';
   end if;
 
+  if p_type = 'write_off' and v_role <> 'admin' then
+    raise exception 'ตัดจำหน่ายได้เฉพาะเจ้าของร้าน'
+      using errcode = '42501', hint = 'write_off_admin_only';
+  end if;
+
   if p_quantity is null
      or p_quantity <> round(p_quantity, 2)
-     or (p_type in ('in', 'out') and p_quantity <= 0)
+     or (p_type <> 'adjust' and p_quantity <= 0)
      or (p_type = 'adjust' and p_quantity = 0) then
     raise exception 'จำนวนไม่ถูกต้อง' using hint = 'invalid_quantity';
   end if;
@@ -187,6 +212,10 @@ begin
 
   if p_type = 'adjust' and v_note is null then
     raise exception 'การปรับยอดต้องระบุหมายเหตุ' using hint = 'adjust_needs_note';
+  end if;
+
+  if p_type in ('to_repair', 'repaired', 'write_off') and v_note is null then
+    raise exception 'กรุณาระบุเหตุผล' using hint = 'needs_note';
   end if;
 
   -- 2. ล็อกแถวสินค้า กันสองคนบันทึกสินค้าเดียวกันพร้อมกัน
@@ -203,17 +232,28 @@ begin
     raise exception 'สินค้านี้ถูกปิดใช้งานแล้ว' using hint = 'product_inactive';
   end if;
 
-  -- 3. จำนวนคงเหลือใหม่ต้องไม่ติดลบ
-  select coalesce(sum(case type when 'out' then -quantity else quantity end), 0)
-  into v_on_hand
+  -- 3. ของดีและรอซ่อมหลังบันทึกต้องไม่ติดลบ
+  select
+    coalesce(sum(case type
+      when 'in' then quantity when 'adjust' then quantity when 'repaired' then quantity
+      when 'out' then -quantity when 'to_repair' then -quantity else 0 end), 0),
+    coalesce(sum(case type
+      when 'to_repair' then quantity when 'repaired' then -quantity when 'write_off' then -quantity
+      else 0 end), 0)
+  into v_good, v_repair
   from public.stock_movements
   where product_id = p_product_id;
 
-  v_delta := case p_type when 'out' then -p_quantity else p_quantity end;
+  if p_type in ('out', 'to_repair') and v_good - p_quantity < 0 then
+    raise exception 'จำนวนคงเหลือไม่พอ (คงเหลือ %)', v_good using hint = 'insufficient_stock';
+  end if;
 
-  if v_on_hand + v_delta < 0 then
-    raise exception 'จำนวนคงเหลือไม่พอ (คงเหลือ %)', v_on_hand
-      using hint = 'insufficient_stock';
+  if p_type = 'adjust' and v_good + p_quantity < 0 then
+    raise exception 'จำนวนคงเหลือไม่พอ (คงเหลือ %)', v_good using hint = 'insufficient_stock';
+  end if;
+
+  if p_type in ('repaired', 'write_off') and v_repair - p_quantity < 0 then
+    raise exception 'ยอดรอซ่อมไม่พอ (รอซ่อม %)', v_repair using hint = 'insufficient_repair';
   end if;
 
   -- 4. บันทึกโดยใช้ผู้เรียกเป็นผู้บันทึก
@@ -225,7 +265,7 @@ begin
 
   return v_row;
 end;
-$$;
+$;
 
 revoke all on function public.record_movement(uuid, text, numeric, date, text) from public, anon;
 grant execute on function public.record_movement(uuid, text, numeric, date, text) to authenticated;
@@ -243,9 +283,9 @@ grant select on public.profiles        to authenticated;
 grant select on public.stock_movements to authenticated;
 grant select on public.product_stock   to authenticated;
 grant select on public.products        to authenticated;
-grant insert (sku, barcode, name, category, unit, reorder_point, active, image_path, location)
+grant insert (sku, barcode, name, category, unit, reorder_point, active, image_path, location, avg_monthly_sales)
   on public.products to authenticated;
-grant update (sku, barcode, name, category, unit, reorder_point, active, image_path, location)
+grant update (sku, barcode, name, category, unit, reorder_point, active, image_path, location, avg_monthly_sales)
   on public.products to authenticated;
 
 revoke all on function public.set_updated_at() from public, anon, authenticated;
@@ -287,3 +327,48 @@ create policy "stock_movements_select_with_role"
   on public.stock_movements for select
   to authenticated
   using ((select public.current_app_role()) is not null);
+
+-- ยอดขายรายเดือน (เพิ่ม 2026-10-01) -----------------------------------------
+create table if not exists public.product_monthly_sales (
+  product_id uuid not null references public.products (id) on delete cascade,
+  year       integer not null,
+  month      integer not null,
+  quantity   numeric(12, 2) not null,
+  updated_at timestamptz not null default now(),
+
+  primary key (product_id, year, month),
+  constraint product_monthly_sales_month_valid check (month between 1 and 12),
+  constraint product_monthly_sales_year_valid check (year between 2000 and 2100),
+  constraint product_monthly_sales_quantity_non_neg check (quantity >= 0)
+);
+
+create index if not exists product_monthly_sales_year_idx
+  on public.product_monthly_sales using btree (year);
+
+alter table public.product_monthly_sales enable row level security;
+
+revoke all on public.product_monthly_sales from anon, authenticated;
+grant select on public.product_monthly_sales to authenticated;
+grant insert (product_id, year, month, quantity, updated_at) on public.product_monthly_sales to authenticated;
+-- upsert (นำเข้าซ้ำ) เขียน ON CONFLICT DO UPDATE ทุกคอลัมน์ที่ส่ง จึงต้องมีสิทธิ์ update ครบ
+grant update (product_id, year, month, quantity, updated_at) on public.product_monthly_sales to authenticated;
+
+drop policy if exists "monthly_sales_select_with_role" on public.product_monthly_sales;
+create policy "monthly_sales_select_with_role"
+  on public.product_monthly_sales for select
+  to authenticated
+  using ((select public.current_app_role()) is not null);
+
+drop policy if exists "monthly_sales_insert_admin" on public.product_monthly_sales;
+create policy "monthly_sales_insert_admin"
+  on public.product_monthly_sales for insert
+  to authenticated
+  with check ((select public.current_app_role()) = 'admin');
+
+drop policy if exists "monthly_sales_update_admin" on public.product_monthly_sales;
+create policy "monthly_sales_update_admin"
+  on public.product_monthly_sales for update
+  to authenticated
+  using ((select public.current_app_role()) = 'admin')
+  with check ((select public.current_app_role()) = 'admin');
+

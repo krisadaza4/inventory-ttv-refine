@@ -13,6 +13,8 @@ describe('productSheet', () => {
       unit: 'ขวด',
       reorderPoint: 10,
       onHand: 4,
+      repairQty: 3,
+      avgMonthlySales: 12.5,
       active: true,
     },
     { sku: 'US-2', barcode: null, name: 'สบู่', category: 'ของใช้', unit: 'ก้อน', reorderPoint: 0, onHand: 2.5, active: false },
@@ -27,8 +29,10 @@ describe('productSheet', () => {
       'หมวดหมู่',
       'หน่วย',
       'โลเคชั่น',
-      'คงเหลือ',
+      'คงเหลือ (ของดี)',
+      'รอซ่อม',
       'จุดสั่งซื้อ',
+      'ขายเฉลี่ย/เดือน',
       'สถานะสต็อก',
       'การใช้งาน',
     ])
@@ -44,10 +48,14 @@ describe('productSheet', () => {
   it('จำนวนเป็นตัวเลข และสถานะเป็นข้อความไทย', () => {
     const [, first, second] = productSheet(products)
     expect(first[6]).toMatchObject({ value: 4, type: Number })
-    expect(first[7]).toMatchObject({ value: 10, type: Number })
-    expect(values(first).slice(8)).toEqual(['ใกล้หมด', 'ใช้งาน'])
+    expect(first[7]).toMatchObject({ value: 3, type: Number })
+    expect(first[8]).toMatchObject({ value: 10, type: Number })
+    expect(first[9]).toMatchObject({ value: 12.5, type: Number })
+    expect(values(first).slice(10)).toEqual(['ใกล้หมด', 'ใช้งาน'])
     expect(second[6].value).toBe(2.5)
-    expect(values(second).slice(8)).toEqual(['ปกติ', 'ปิดใช้งาน'])
+    expect(second[7].value).toBe(0)
+    expect(second[9]).toMatchObject({ value: '', type: String })
+    expect(values(second).slice(10)).toEqual(['ปกติ', 'ปิดใช้งาน'])
   })
 
   it('ไม่มีบาร์โค้ด เป็นช่องว่าง', () => {
@@ -110,5 +118,19 @@ describe('exportFileName', () => {
   it('ชื่อไฟล์ตามชนิดและวันที่', () => {
     expect(exportFileName('products', '2026-09-29')).toBe('inventory-products-2026-09-29.xlsx')
     expect(exportFileName('movements', '2026-09-29')).toBe('inventory-movements-2026-09-29.xlsx')
+  })
+})
+
+describe('monthlySalesSheet', () => {
+  it('หัวคอลัมน์ 12 เดือน + รวม + เฉลี่ย เดือนว่างเป็นช่องว่าง', async () => {
+    const { monthlySalesSheet } = await import('./spreadsheet.js')
+    const months = Array(12).fill(null)
+    months[0] = 205
+    const [head, row] = monthlySalesSheet([{ product: { sku: 'A', name: 'เอ' }, months, total: 205, average: 17.08 }])
+    expect(head).toHaveLength(16)
+    expect(head[2].value).toBe('ม.ค.')
+    expect(row[2]).toMatchObject({ value: 205, type: Number })
+    expect(row[3]).toMatchObject({ value: '', type: String })
+    expect(row[15]).toMatchObject({ value: 17.08, type: Number })
   })
 })

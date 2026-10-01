@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { toIsoDate } from '../lib/dateFormat.js'
+import { formatQuantity } from '../lib/numberFormat.js'
 import { resizeImage } from '../lib/productImages.js'
 import {
   STOCK_SHEET_DEFAULTS,
   imageTypeOf,
   openingNote,
+  repairNote,
   parseStockSheet,
   planStockImport,
   readSheetImages,
@@ -70,13 +72,13 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
       const { default: readXlsxFile } = await import('read-excel-file/browser')
       const sheets = await readXlsxFile(file)
       const rows = Array.isArray(sheets[0]) ? sheets : (sheets[0]?.data ?? [])
-      const { items, picColumn, error: parseError } = parseStockSheet(rows)
+      const { items, picColumn, salesYear, error: parseError } = parseStockSheet(rows)
       if (parseError) {
         setError(parseError)
       } else {
         const zip = openZip(await file.arrayBuffer())
         zipRef.current = zip
-        setPlan(planStockImport(items, await readSheetImages(zip, picColumn), allProducts))
+        setPlan({ ...planStockImport(items, await readSheetImages(zip, picColumn), allProducts), salesYear })
       }
     } catch {
       setError('อ่านไฟล์ไม่ได้ กรุณาใช้ไฟล์ Excel (.xlsx)')
@@ -96,7 +98,7 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
   const handleConfirm = async () => {
     setSaving(true)
     setError(null)
-    const counts = { inserted: 0, adjusted: 0, images: 0, locations: 0 }
+    const counts = { inserted: 0, adjusted: 0, repairs: 0, images: 0, locations: 0, averages: 0, monthly: 0 }
     const failures = []
 
     const toInsert = plan.entries.filter((x) => !x.exists).map((x) => x.product)
@@ -136,10 +138,34 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
         if (moveError) failures.push({ sku: entry.product.sku, reason: `ยอด: ${moveError}` })
         else counts.adjusted += 1
       }
-      if (entry.product.location && !product.location) {
-        const { error: saveError } = await repository.saveProduct({ ...product, location: entry.product.location })
-        if (saveError) failures.push({ sku: entry.product.sku, reason: `โลเคชั่น: ${saveError}` })
-        else counts.locations += 1
+      // ยอดรอซ่อมในไฟล์: ย้ายจากของดีไปรอซ่อม (หลังปรับยอดเริ่มต้นซึ่งใช้ยอดรวม) ทำครั้งเดียวต่อสินค้า
+      if (entry.repair > 0 && product.repairQty === 0) {
+        const { error: repairError } = await repository.recordMovement({
+          productId: product.id,
+          type: MOVEMENT_TYPE.TO_REPAIR,
+          quantity: entry.repair,
+          movementDate: today,
+          note: repairNote(fileName),
+        })
+        if (repairError) failures.push({ sku: entry.product.sku, reason: `รอซ่อม: ${repairError}` })
+        else counts.repairs += 1
+      }
+      // โลเคชั่น: เติมเฉพาะที่ยังว่าง, ยอดขายเฉลี่ย: ใช้ค่าจากไฟล์ล่าสุดเสมอ
+      const fillLocation = Boolean(entry.product.location) && !product.location
+      const { avgMonthlySales } = entry.product
+      const updateAverage = avgMonthlySales !== null && avgMonthlySales !== product.avgMonthlySales
+      if (fillLocation || updateAverage) {
+        const { error: saveError } = await repository.saveProduct({
+          ...product,
+          location: fillLocation ? entry.product.location : product.location,
+          avgMonthlySales: updateAverage ? avgMonthlySales : product.avgMonthlySales,
+        })
+        if (saveError) {
+          failures.push({ sku: entry.product.sku, reason: `โลเคชั่น/ยอดขายเฉลี่ย: ${saveError}` })
+        } else {
+          if (fillLocation) counts.locations += 1
+          if (updateAverage) counts.averages += 1
+        }
       }
       if (entry.imagePath && !product.imagePath) {
         let imageError
@@ -152,6 +178,23 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
         else counts.images += 1
       }
     }
+    // ยอดขายรายเดือน: บันทึกทีเดียวหลังได้ id ของสินค้าครบ (แก้ทับค่าเดิมของปีเดียวกัน)
+    if (plan.salesYear) {
+      setProgress('กำลังบันทึกยอดขายรายเดือน…')
+      const sales = plan.entries.flatMap((entry) => {
+        const product = bySku.get(skuKey(entry.product.sku))
+        if (!product) return []
+        return Object.entries(entry.monthly).map(([month, quantity]) => ({
+          productId: product.id,
+          year: plan.salesYear,
+          month: Number(month),
+          quantity,
+        }))
+      })
+      const { saved, error: salesError } = await repository.upsertMonthlySales(sales)
+      counts.monthly = saved
+      if (salesError) failures.push({ sku: '(ยอดขายรายเดือน)', reason: `บันทึกแล้ว ${saved} จาก ${sales.length}: ${salesError}` })
+    }
     finish(counts, failures)
   }
 
@@ -160,7 +203,7 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
     setProgress(null)
     setPlan(null)
     setResult({ ...counts, failures })
-    const message = `นำเข้าจาก ${fileName}: เพิ่มสินค้า ${counts.inserted}, บันทึกยอดเริ่มต้น ${counts.adjusted}, ใส่รูป ${counts.images}, ใส่โลเคชั่น ${counts.locations} รายการ`
+    const message = `นำเข้าจาก ${fileName}: เพิ่มสินค้า ${counts.inserted}, บันทึกยอดเริ่มต้น ${counts.adjusted}, รอซ่อม ${counts.repairs}, ใส่รูป ${counts.images}, ใส่โลเคชั่น ${counts.locations}, ยอดขายเฉลี่ย ${counts.averages}, ยอดขายรายเดือน ${counts.monthly} ช่อง`
     // มีรายการไม่สำเร็จ เปิดหน้านี้ค้างไว้ให้เห็นรายละเอียด
     onImported(failures.length === 0 && !stopped ? message : null)
   }
@@ -180,7 +223,7 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
       </div>
       <div className="panel-body stack">
         <p className="hint">
-          ใช้ไฟล์ "บันทึกรายการสินค้าคลัง" (.xlsx) ที่มีคอลัมน์ รายการสินค้า, Pic, ของดีพร้อมขาย, สินค้ารอซ่อม, ยอดรวมสินค้า, โลเคชั่น
+          ใช้ไฟล์ "บันทึกรายการสินค้าคลัง" (.xlsx) ที่มีคอลัมน์ รายการสินค้า, Pic, ของดีพร้อมขาย, สินค้ารอซ่อม, ยอดรวมสินค้า, โลเคชั่น, เฉลี่ย/เดือน
           รหัสใช้เป็นชื่อสินค้า หน่วย "{STOCK_SHEET_DEFAULTS.unit}" หมวดหมู่ "{STOCK_SHEET_DEFAULTS.category}" ยอดเริ่มต้นใช้ยอดรวม
           (บันทึกเป็นปรับยอด) แก้ข้อมูลทีหลังได้ในหน้านี้
         </p>
@@ -204,7 +247,7 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
         {result && result.failures.length > 0 && (
           <div className="stack">
             <p className="alert" role="alert">
-              เพิ่มสินค้า {result.inserted}, บันทึกยอด {result.adjusted}, ใส่รูป {result.images}, ใส่โลเคชั่น {result.locations} รายการ แต่ไม่สำเร็จ{' '}
+              เพิ่มสินค้า {result.inserted}, บันทึกยอด {result.adjusted}, รอซ่อม {result.repairs}, ใส่รูป {result.images}, ใส่โลเคชั่น {result.locations}, ยอดขายเฉลี่ย {result.averages} รายการ แต่ไม่สำเร็จ{' '}
               {result.failures.length} รายการ เลือกไฟล์เดิมอีกครั้งเพื่อทำส่วนที่เหลือ
             </p>
             <ul className="sub">
@@ -257,24 +300,28 @@ export default function StockSheetImport({ allProducts, repository, onImported, 
                 <table>
                   <thead>
                     <tr>
+                      <th className="thumb-col">รูป</th>
                       <th>รหัส</th>
                       <th className="num">ดี</th>
                       <th className="num">รอซ่อม</th>
                       <th className="num">ยอดรวม</th>
                       <th className="hide-sm">โลเคชั่น</th>
-                      <th>รูป</th>
+                      <th className="num hide-sm">เฉลี่ย/เดือน</th>
                     </tr>
                   </thead>
                   <tbody>
                     {plan.entries.slice(0, PREVIEW_ROWS).map((x) => (
                       <tr key={x.product.sku}>
+                        <td className="thumb-col">
+                          <ProductThumb url={previewUrls[x.imagePath]} name={x.product.name} size="row" />
+                        </td>
                         <td className="mono">{x.product.sku}</td>
                         <td className="num">{x.good}</td>
                         <td className="num">{x.repair}</td>
                         <td className="num">{x.quantity}</td>
                         <td className="hide-sm">{x.product.location || '–'}</td>
-                        <td>
-                          <ProductThumb url={previewUrls[x.imagePath]} name={x.product.name} />
+                        <td className="num hide-sm">
+                          {x.product.avgMonthlySales === null ? '–' : formatQuantity(x.product.avgMonthlySales)}
                         </td>
                       </tr>
                     ))}

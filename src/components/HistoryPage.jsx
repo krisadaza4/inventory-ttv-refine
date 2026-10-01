@@ -4,15 +4,11 @@ import { PAGE } from '../lib/menu.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { PAGE_SIZE } from '../lib/repositories.js'
 import { exportFileName, movementSheet } from '../lib/spreadsheet.js'
-import { MOVEMENT_TYPE, signedQuantity } from '../lib/stockRules.js'
+import { MOVEMENT_LABEL, MOVEMENT_TYPE, signedQuantity } from '../lib/stockRules.js'
 import ExportButton from './ExportButton.jsx'
 import PageHead from './PageHead.jsx'
 
-const TYPE_LABEL = {
-  [MOVEMENT_TYPE.IN]: 'รับเข้า',
-  [MOVEMENT_TYPE.OUT]: 'เบิกออก',
-  [MOVEMENT_TYPE.ADJUST]: 'ปรับยอด',
-}
+const TYPE_LABEL = MOVEMENT_LABEL
 
 // หน้าประวัติการเคลื่อนไหว: ล่าสุดก่อน โหลดทีละ PAGE_SIZE กรองสินค้า/ประเภท (design.md ข้อ 7)
 // allProducts รวมที่ปิดใช้งาน เพื่อดูประวัติของสินค้าที่เลิกใช้แล้วได้

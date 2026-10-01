@@ -1,10 +1,42 @@
 import { toIsoDate } from './dateFormat.js'
-import { canAdjust } from './roles.js'
+import { canAdjust, canWriteOff } from './roles.js'
 
 export const MOVEMENT_TYPE = {
   IN: 'in',
   OUT: 'out',
   ADJUST: 'adjust',
+  // สินค้ารอซ่อม: ส่งซ่อม (ของดี → รอซ่อม), ซ่อมเสร็จ (รอซ่อม → ของดี), ตัดจำหน่าย (ซ่อมไม่ได้ ตัดออกจากรอซ่อม)
+  TO_REPAIR: 'to_repair',
+  REPAIRED: 'repaired',
+  WRITE_OFF: 'write_off',
+}
+
+export const MOVEMENT_LABEL = {
+  [MOVEMENT_TYPE.IN]: 'รับเข้า',
+  [MOVEMENT_TYPE.OUT]: 'เบิกออก',
+  [MOVEMENT_TYPE.ADJUST]: 'ปรับยอด',
+  [MOVEMENT_TYPE.TO_REPAIR]: 'ส่งซ่อม',
+  [MOVEMENT_TYPE.REPAIRED]: 'ซ่อมเสร็จ',
+  [MOVEMENT_TYPE.WRITE_OFF]: 'ตัดจำหน่าย',
+}
+
+// ประเภทที่ต้องระบุหมายเหตุ/เหตุผล (ฐานข้อมูลตรวจซ้ำ)
+export const NOTE_REQUIRED_TYPES = [
+  MOVEMENT_TYPE.ADJUST,
+  MOVEMENT_TYPE.TO_REPAIR,
+  MOVEMENT_TYPE.REPAIRED,
+  MOVEMENT_TYPE.WRITE_OFF,
+]
+
+// ตัวเลือกเหตุผลที่ใช้บ่อย (พิมพ์เองได้)
+export const REPAIR_REASONS = ['สปาร์คเสีย', 'รอคิวซ่อม', 'ชิ้นส่วนชำรุด', 'ลูกค้าส่งคืน', 'ซ่อมไม่ได้']
+
+// ประเภทที่บทบาทนี้บันทึกได้ (record_movement ตรวจซ้ำ)
+export function allowedMovementTypes(role) {
+  return Object.values(MOVEMENT_TYPE).filter(
+    (type) =>
+      (type !== MOVEMENT_TYPE.ADJUST || canAdjust(role)) && (type !== MOVEMENT_TYPE.WRITE_OFF || canWriteOff(role)),
+  )
 }
 
 export const STOCK_STATUS = {
@@ -19,19 +51,37 @@ const STATUS_ORDER = [STOCK_STATUS.OUT, STOCK_STATUS.LOW, STOCK_STATUS.OK]
 // numeric(12,2) จาก Supabase อาจมาเป็นข้อความ และผลบวกทศนิยมอาจเพี้ยน จึงปัดเป็น 2 ตำแหน่ง
 const toAmount = (value) => Math.round(Number(value) * 100) / 100
 
-// จำนวนที่มีผลต่อคงเหลือ: in บวก, out ลบ, adjust ตามที่กรอก
-export function signedQuantity(type, quantity) {
+// ผลต่อยอด { good: ของดี (onHand), repair: รอซ่อม (repairQty) } ตรงกับ view product_stock
+export function movementEffect(type, quantity) {
   const amount = toAmount(quantity)
   switch (type) {
     case MOVEMENT_TYPE.IN:
     case MOVEMENT_TYPE.ADJUST:
-      return amount
+      return { good: amount, repair: 0 }
     case MOVEMENT_TYPE.OUT:
-      return -amount
+      return { good: -amount, repair: 0 }
+    case MOVEMENT_TYPE.TO_REPAIR:
+      return { good: -amount, repair: amount }
+    case MOVEMENT_TYPE.REPAIRED:
+      return { good: amount, repair: -amount }
+    case MOVEMENT_TYPE.WRITE_OFF:
+      return { good: 0, repair: -amount }
     default:
       throw new Error(`ประเภทรายการไม่ถูกต้อง: ${type}`)
   }
 }
+
+// จำนวน +/− ที่แสดงในประวัติและไฟล์ส่งออก: ผลต่อของดี ยกเว้นตัดจำหน่ายแสดงเป็นลบ (ออกจากยอดรอซ่อม)
+export function signedQuantity(type, quantity) {
+  const { good, repair } = movementEffect(type, quantity)
+  return type === MOVEMENT_TYPE.WRITE_OFF ? repair : good
+}
+
+// stock เป็นตัวเลข (ของดี) หรือ { onHand, repairQty }
+const toStock = (stock) =>
+  typeof stock === 'object' && stock !== null
+    ? { onHand: toAmount(stock.onHand ?? 0), repairQty: toAmount(stock.repairQty ?? 0) }
+    : { onHand: toAmount(stock ?? 0), repairQty: 0 }
 
 export function getStockStatus(onHand, reorderPoint) {
   const amount = toAmount(onHand)
@@ -77,14 +127,18 @@ export function validateProduct(product) {
 }
 
 // ตรวจก่อนส่ง record_movement (ฐานข้อมูลตรวจซ้ำอีกชั้น) today เป็น 'YYYY-MM-DD'
-export function validateMovement(movement, onHand, role, today = toIsoDate(new Date())) {
+// stock เป็นตัวเลข (ของดี) หรือ { onHand, repairQty }
+export function validateMovement(movement, stock, role, today = toIsoDate(new Date())) {
   const errors = {}
   const { type } = movement
+  const { onHand, repairQty } = toStock(stock)
 
   if (!Object.values(MOVEMENT_TYPE).includes(type)) {
     errors.type = 'ประเภทรายการไม่ถูกต้อง'
   } else if (type === MOVEMENT_TYPE.ADJUST && !canAdjust(role)) {
     errors.type = 'ปรับยอดได้เฉพาะเจ้าของร้าน'
+  } else if (type === MOVEMENT_TYPE.WRITE_OFF && !canWriteOff(role)) {
+    errors.type = 'ตัดจำหน่ายได้เฉพาะเจ้าของร้าน'
   }
 
   const quantity = parseAmount(movement.quantity)
@@ -92,15 +146,19 @@ export function validateMovement(movement, onHand, role, today = toIsoDate(new D
     errors.quantity = 'จำนวนต้องเป็นตัวเลข ทศนิยมไม่เกิน 2 ตำแหน่ง'
   } else if (type === MOVEMENT_TYPE.ADJUST ? quantity === 0 : quantity <= 0) {
     errors.quantity = type === MOVEMENT_TYPE.ADJUST ? 'จำนวนปรับยอดต้องไม่เป็น 0' : 'จำนวนต้องมากกว่า 0'
-  } else if (!errors.type && toAmount(toAmount(onHand) + signedQuantity(type, quantity)) < 0) {
-    errors.quantity = `คงเหลือไม่พอ (คงเหลือ ${toAmount(onHand)})`
+  } else if (!errors.type) {
+    const effect = movementEffect(type, quantity)
+    if (toAmount(onHand + effect.good) < 0) errors.quantity = `คงเหลือไม่พอ (คงเหลือ ${onHand})`
+    else if (toAmount(repairQty + effect.repair) < 0) errors.quantity = `ยอดรอซ่อมไม่พอ (รอซ่อม ${repairQty})`
   }
 
   const date = movement.movementDate ?? ''
   if (!ISO_DATE.test(date)) errors.movementDate = 'กรุณาเลือกวันที่'
   else if (date > today) errors.movementDate = 'วันที่ต้องไม่เป็นวันในอนาคต'
 
-  if (type === MOVEMENT_TYPE.ADJUST && isBlank(movement.note)) errors.note = 'ปรับยอดต้องระบุหมายเหตุ'
+  if (NOTE_REQUIRED_TYPES.includes(type) && isBlank(movement.note)) {
+    errors.note = type === MOVEMENT_TYPE.ADJUST ? 'ปรับยอดต้องระบุหมายเหตุ' : 'กรุณาระบุเหตุผล'
+  }
   return errors
 }
 
@@ -131,9 +189,16 @@ export function listCategories(products) {
   return [...new Set(products.map((p) => p.category))].sort((a, b) => a.localeCompare(b, 'th'))
 }
 
-// คงเหลือหลังบันทึก สำหรับแสดงก่อนกดบันทึก จำนวนหรือประเภทยังไม่ถูกต้อง คืน null
-export function quantityAfter(onHand, type, quantity) {
+// ยอดหลังบันทึก { onHand, repairQty } สำหรับแสดงก่อนกดบันทึก จำนวนหรือประเภทยังไม่ถูกต้อง คืน null
+export function stockAfter(stock, type, quantity) {
   const amount = parseAmount(quantity)
   if (amount === null || !Object.values(MOVEMENT_TYPE).includes(type)) return null
-  return toAmount(toAmount(onHand) + signedQuantity(type, amount))
+  const { onHand, repairQty } = toStock(stock)
+  const effect = movementEffect(type, amount)
+  return { onHand: toAmount(onHand + effect.good), repairQty: toAmount(repairQty + effect.repair) }
+}
+
+// ของดีหลังบันทึก
+export function quantityAfter(onHand, type, quantity) {
+  return stockAfter(onHand, type, quantity)?.onHand ?? null
 }

@@ -2,16 +2,30 @@ import { useState } from 'react'
 import { formatThaiDate } from '../lib/dateFormat.js'
 import { PAGE } from '../lib/menu.js'
 import { formatQuantity } from '../lib/numberFormat.js'
-import { canAdjust } from '../lib/roles.js'
-import { MOVEMENT_TYPE, getStockStatus, quantityAfter, searchProducts, validateMovement } from '../lib/stockRules.js'
+import {
+  MOVEMENT_LABEL,
+  MOVEMENT_TYPE,
+  NOTE_REQUIRED_TYPES,
+  REPAIR_REASONS,
+  allowedMovementTypes,
+  getStockStatus,
+  searchProducts,
+  stockAfter,
+  validateMovement,
+} from '../lib/stockRules.js'
 import PageHead from './PageHead.jsx'
 import ProductThumb from './ProductThumb.jsx'
 import StockBadge from './StockBadge.jsx'
 
-const TYPE_LABEL = {
-  [MOVEMENT_TYPE.IN]: 'รับเข้า',
-  [MOVEMENT_TYPE.OUT]: 'เบิกออก',
-  [MOVEMENT_TYPE.ADJUST]: 'ปรับยอด',
+const TYPE_LABEL = MOVEMENT_LABEL
+
+const REPAIR_TYPES = [MOVEMENT_TYPE.TO_REPAIR, MOVEMENT_TYPE.REPAIRED, MOVEMENT_TYPE.WRITE_OFF]
+
+const NOTE_PLACEHOLDER = {
+  [MOVEMENT_TYPE.ADJUST]: 'การปรับยอดต้องระบุเหตุผล',
+  [MOVEMENT_TYPE.TO_REPAIR]: 'เหตุผลที่ส่งซ่อม เช่น สปาร์คเสีย',
+  [MOVEMENT_TYPE.REPAIRED]: 'ซ่อมอะไรไป เช่น เปลี่ยนสปาร์คแล้ว',
+  [MOVEMENT_TYPE.WRITE_OFF]: 'เหตุผลที่ตัดจำหน่าย เช่น ซ่อมไม่ได้',
 }
 
 // ข้อความผิดพลาดสีแดงใต้ช่อง
@@ -37,12 +51,16 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
   const [serverError, setServerError] = useState(null)
   const [notice, setNotice] = useState(null)
 
-  const types = canAdjust(role) ? Object.values(MOVEMENT_TYPE) : [MOVEMENT_TYPE.IN, MOVEMENT_TYPE.OUT]
+  const types = allowedMovementTypes(role)
   const product = products.find((p) => p.id === productId) ?? null
   // สินค้าที่เลือกอยู่แสดงเสมอ แม้ไม่ตรงคำค้น
   const options = searchProducts(products, productQuery)
   const shownOptions = product && !options.includes(product) ? [product, ...options] : options
-  const after = product ? quantityAfter(product.onHand, type, quantity) : null
+  const after = product ? stockAfter(product, type, quantity) : null
+  const noteRequired = NOTE_REQUIRED_TYPES.includes(type)
+  const isRepairType = REPAIR_TYPES.includes(type)
+  // แสดงยอดรอซ่อมเมื่อเกี่ยวข้อง
+  const showRepair = Boolean(product) && (isRepairType || product.repairQty > 0)
   const productError = errors.productId
 
   const clearForm = () => {
@@ -58,7 +76,7 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
     setNotice(null)
     setServerError(null)
     const movement = { productId, type, quantity, movementDate, note }
-    const found = product ? validateMovement(movement, product.onHand, role, today) : {}
+    const found = product ? validateMovement(movement, product, role, today) : {}
     if (!product) found.productId = 'กรุณาเลือกสินค้า'
     setErrors(found)
     if (Object.keys(found).length > 0) return
@@ -79,7 +97,7 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
 
   return (
     <>
-      <PageHead page={PAGE.MOVE} title="บันทึกรับเข้า / เบิกออก" />
+      <PageHead page={PAGE.MOVE} title="บันทึกรับเข้า / เบิกออก / ส่งซ่อม" />
 
       {notice && (
         <p className="notice" role="status">
@@ -120,7 +138,8 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
               </option>
               {shownOptions.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.sku} · {p.name} (คงเหลือ {formatQuantity(p.onHand)} {p.unit})
+                  {p.sku} · {p.name} (คงเหลือ {formatQuantity(p.onHand)}
+                  {p.repairQty > 0 ? ` รอซ่อม ${formatQuantity(p.repairQty)}` : ''} {p.unit})
                 </option>
               ))}
             </select>
@@ -159,7 +178,13 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
             <div className="hint" id="move-qty-hint">
               {type === MOVEMENT_TYPE.ADJUST
                 ? 'ใส่ค่าบวกเพื่อเพิ่ม หรือค่าลบเพื่อลด ทศนิยมไม่เกิน 2 ตำแหน่ง'
-                : 'ทศนิยมไม่เกิน 2 ตำแหน่ง'}
+                : type === MOVEMENT_TYPE.TO_REPAIR
+                  ? 'ย้ายจากของดีไปรอซ่อม (เบิกไม่ได้จนกว่าจะซ่อมเสร็จ)'
+                  : type === MOVEMENT_TYPE.REPAIRED
+                    ? 'ย้ายจากรอซ่อมกลับเป็นของดี'
+                    : type === MOVEMENT_TYPE.WRITE_OFF
+                      ? 'ตัดออกจากยอดรอซ่อม (ซ่อมไม่ได้)'
+                      : 'ทศนิยมไม่เกิน 2 ตำแหน่ง'}
             </div>
             <FieldError message={errors.quantity} />
           </div>
@@ -181,18 +206,27 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
             <FieldError message={errors.movementDate} />
           </div>
 
-          <label className={type === MOVEMENT_TYPE.ADJUST ? 'req' : undefined} htmlFor="move-note">
-            หมายเหตุ
+          <label className={noteRequired ? 'req' : undefined} htmlFor="move-note">
+            {isRepairType ? 'เหตุผล' : 'หมายเหตุ'}
           </label>
           <div>
             <textarea
               id="move-note"
               rows={2}
-              placeholder={type === MOVEMENT_TYPE.ADJUST ? 'การปรับยอดต้องระบุเหตุผล' : 'เช่น ขายหน้าร้าน'}
+              placeholder={NOTE_PLACEHOLDER[type] ?? 'เช่น ขายหน้าร้าน'}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               aria-invalid={Boolean(errors.note)}
             />
+            {isRepairType && (
+              <div className="chips" aria-label="เหตุผลที่ใช้บ่อย">
+                {REPAIR_REASONS.map((reason) => (
+                  <button key={reason} type="button" className="btn sm" onClick={() => setNote(reason)}>
+                    {reason}
+                  </button>
+                ))}
+              </div>
+            )}
             <FieldError message={errors.note} />
           </div>
 
@@ -206,14 +240,20 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
                 </span>
                 <span aria-hidden="true">→</span>
                 <span>
-                  หลังบันทึก <b>{after === null ? '–' : formatQuantity(after)}</b> {product.unit}
+                  หลังบันทึก <b>{after === null ? '–' : formatQuantity(after.onHand)}</b> {product.unit}
                 </span>
+                {showRepair && (
+                  <span>
+                    รอซ่อม <b>{formatQuantity(product.repairQty)}</b> →{' '}
+                    <b>{after === null ? '–' : formatQuantity(after.repairQty)}</b>
+                  </span>
+                )}
                 {product.location && <span className="dim">ที่เก็บ: {product.location}</span>}
                 {after !== null &&
-                  (after < 0 ? (
+                  (after.onHand < 0 || after.repairQty < 0 ? (
                     <span className="badge out">ติดลบ บันทึกไม่ได้</span>
                   ) : (
-                    <StockBadge status={getStockStatus(after, product.reorderPoint)} />
+                    <StockBadge status={getStockStatus(after.onHand, product.reorderPoint)} />
                   ))}
               </>
             ) : (

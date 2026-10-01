@@ -15,9 +15,9 @@ import {
 
 // รูปแบบเดียวกับไฟล์ "บันทึกรายการสินค้าคลัง": หัวรายงาน 1 แถว แล้วหัวตาราง
 const sheet = [
-  ['บันทึกรายการสินค้าคลังประจำปี 2026', null, null, null, null, null],
-  ['ลำดับที่', 'รายการสินค้า', 'Pic', 'ของดีพร้อมขาย', 'สินค้ารอซ่อม', 'ยอดรวมสินค้า', 'โลเคชั่น'],
-  [1, 'GL-101I', null, 1786, null, 1786, ' แลค  A6,B5 '],
+  ['บันทึกรายการสินค้าคลังประจำปี 2026', null, null, null, null, null, null, null, 'สรุปยอดขายปี 2569 เดือน มกราคม - ธันวาคม'],
+  ['ลำดับที่', 'รายการสินค้า', 'Pic', 'ของดีพร้อมขาย', 'สินค้ารอซ่อม', 'ยอดรวมสินค้า', 'โลเคชั่น', 'เฉลี่ย/เดือน', 'ม.ค.', 'ก.พ.'],
+  [1, 'GL-101I', null, 1786, null, 1786, ' แลค  A6,B5 ', 64.756, 205, null],
   [2, ' GL-203I ', null, 480, 800, 1280],
   [3, null, null, null, null, null],
   [4, 'WX102   ใหม่ เปลี่ยนสปาร์คแล้ว', null, 0, null, 0],
@@ -34,11 +34,12 @@ describe('normalizeCode', () => {
 
 describe('parseStockSheet', () => {
   it('หาหัวตารางเอง อ่านรหัส ยอดดี รอซ่อม ยอดรวม พร้อมเลขแถว Excel', () => {
-    const { items, picColumn, error } = parseStockSheet(sheet)
+    const { items, picColumn, salesYear, error } = parseStockSheet(sheet)
     expect(error).toBeNull()
     expect(picColumn).toBe(2)
-    expect(items[0]).toEqual({ row: 3, code: 'GL-101I', good: 1786, repair: 0, total: 1786, location: 'แลค A6,B5' })
-    expect(items[1]).toEqual({ row: 4, code: 'GL-203I', good: 480, repair: 800, total: 1280, location: '' })
+    expect(salesYear).toBe(2026)
+    expect(items[0]).toEqual({ row: 3, code: 'GL-101I', good: 1786, repair: 0, total: 1786, location: 'แลค A6,B5', avg: 64.76, monthly: { 1: 205 } })
+    expect(items[1]).toEqual({ row: 4, code: 'GL-203I', good: 480, repair: 800, total: 1280, location: '', avg: null, monthly: {} })
     expect(items.map((i) => i.row)).toEqual([3, 4, 6, 7, 8])
   })
 
@@ -62,11 +63,13 @@ describe('planStockImport', () => {
         category: STOCK_SHEET_DEFAULTS.category,
         unit: STOCK_SHEET_DEFAULTS.unit,
         location: 'แลค A6,B5',
+        avgMonthlySales: 64.76,
         reorderPoint: 0,
       },
       quantity: 1786,
       good: 1786,
       repair: 0,
+      monthly: { 1: 205 },
       imagePath: 'xl/media/image1.png',
       exists: false,
     })

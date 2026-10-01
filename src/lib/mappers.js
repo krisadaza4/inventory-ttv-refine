@@ -1,9 +1,10 @@
 // คอลัมน์ที่อ่าน (แถวฐานข้อมูลเป็น snake_case, ในแอปเป็น camelCase)
-export const PRODUCT_COLUMNS = 'id, sku, barcode, name, category, unit, reorder_point, active, on_hand, image_path, location'
+export const PRODUCT_COLUMNS = 'id, sku, barcode, name, category, unit, reorder_point, active, on_hand, image_path, location, avg_monthly_sales, repair_qty'
 export const MOVEMENT_COLUMNS =
   'id, product_id, type, quantity, movement_date, note, created_by, created_at, ' +
   'product:products(name, sku, unit), recorder:profiles(display_name)'
 export const PROFILE_COLUMNS = 'id, display_name, role'
+export const MONTHLY_SALES_COLUMNS = 'product_id, year, month, quantity'
 
 const trimText = (value) => String(value ?? '').trim()
 
@@ -21,10 +22,14 @@ export function toProduct(row) {
     unit: row.unit,
     reorderPoint: toNumber(row.reorder_point),
     active: row.active,
+    // on_hand = ของดี (เบิกได้), repair_qty = รอซ่อม
     onHand: toNumber(row.on_hand),
+    repairQty: toNumber(row.repair_qty),
     // ที่อยู่ไฟล์ใน bucket product-images (null = ไม่มีรูป) ใช้ signImageUrls แปลงเป็นลิงก์
     imagePath: row.image_path ?? null,
     location: row.location ?? '',
+    // ยอดขายเฉลี่ย/เดือนจากไฟล์สต็อก (null = ไม่มีข้อมูล)
+    avgMonthlySales: trimText(row.avg_monthly_sales) === '' ? null : Number(row.avg_monthly_sales),
   }
 }
 
@@ -41,6 +46,10 @@ export function toProductRow(product) {
     unit: trimText(product.unit),
     reorder_point: toNumber(product.reorderPoint),
     location: location || null,
+    // ฟอร์มสินค้าไม่มีช่องนี้: ไม่ส่งมา = ไม่แก้ค่าเดิม
+    ...(product.avgMonthlySales === undefined
+      ? {}
+      : { avg_monthly_sales: product.avgMonthlySales === null ? null : toNumber(product.avgMonthlySales) }),
   }
 }
 
@@ -65,4 +74,24 @@ export function toMovement(row) {
 export function toProfile(row) {
   if (!row) return null
   return { id: row.id, displayName: row.display_name, role: row.role }
+}
+
+// แถวจาก product_monthly_sales (year เป็น ค.ศ.)
+export function toMonthlySale(row) {
+  return {
+    productId: row.product_id,
+    year: Number(row.year),
+    month: Number(row.month),
+    quantity: toNumber(row.quantity),
+  }
+}
+
+export function toMonthlySaleRow(sale) {
+  return {
+    product_id: sale.productId,
+    year: sale.year,
+    month: sale.month,
+    quantity: toNumber(sale.quantity),
+    updated_at: new Date().toISOString(),
+  }
 }

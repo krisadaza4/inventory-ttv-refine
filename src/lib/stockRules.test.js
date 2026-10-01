@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { ROLE } from './roles.js'
 import {
+  MOVEMENT_LABEL,
   MOVEMENT_TYPE,
+  allowedMovementTypes,
+  movementEffect,
+  stockAfter,
   STOCK_STATUS,
   getStockStatus,
   countByStockStatus,
@@ -334,5 +338,67 @@ describe('quantityAfter', () => {
     expect(quantityAfter(4, MOVEMENT_TYPE.IN, 'abc')).toBeNull()
     expect(quantityAfter(4, MOVEMENT_TYPE.IN, '1.255')).toBeNull()
     expect(quantityAfter(4, 'transfer', '1')).toBeNull()
+  })
+})
+
+describe('สินค้ารอซ่อม', () => {
+  const today = '2026-10-01'
+  const stock = { onHand: 10, repairQty: 4 }
+  const move = (type, quantity, note = 'สปาร์คเสีย') => ({ type, quantity, movementDate: today, note })
+
+  it('ทุกประเภทมีป้ายภาษาไทย', () => {
+    expect(Object.values(MOVEMENT_TYPE).every((t) => MOVEMENT_LABEL[t])).toBe(true)
+  })
+
+  it('movementEffect: ส่งซ่อม ของดี → รอซ่อม, ซ่อมเสร็จ กลับ, ตัดจำหน่าย ลดรอซ่อม', () => {
+    expect(movementEffect(MOVEMENT_TYPE.TO_REPAIR, 3)).toEqual({ good: -3, repair: 3 })
+    expect(movementEffect(MOVEMENT_TYPE.REPAIRED, 2)).toEqual({ good: 2, repair: -2 })
+    expect(movementEffect(MOVEMENT_TYPE.WRITE_OFF, 1)).toEqual({ good: 0, repair: -1 })
+    expect(movementEffect(MOVEMENT_TYPE.OUT, 1)).toEqual({ good: -1, repair: 0 })
+  })
+
+  it('signedQuantity: ผลต่อของดี ยกเว้นตัดจำหน่ายเป็นลบ', () => {
+    expect(signedQuantity(MOVEMENT_TYPE.TO_REPAIR, 3)).toBe(-3)
+    expect(signedQuantity(MOVEMENT_TYPE.REPAIRED, 3)).toBe(3)
+    expect(signedQuantity(MOVEMENT_TYPE.WRITE_OFF, 3)).toBe(-3)
+  })
+
+  it('allowedMovementTypes: staff ไม่มีปรับยอดและตัดจำหน่าย', () => {
+    expect(allowedMovementTypes(ROLE.ADMIN)).toEqual(Object.values(MOVEMENT_TYPE))
+    expect(allowedMovementTypes(ROLE.STAFF)).toEqual(['in', 'out', 'to_repair', 'repaired'])
+  })
+
+  it('ส่งซ่อม/ซ่อมเสร็จ/ตัดจำหน่าย ต้องมีเหตุผล', () => {
+    for (const type of [MOVEMENT_TYPE.TO_REPAIR, MOVEMENT_TYPE.REPAIRED, MOVEMENT_TYPE.WRITE_OFF]) {
+      expect(validateMovement(move(type, '1', ' '), stock, ROLE.ADMIN, today).note).toBe('กรุณาระบุเหตุผล')
+      expect(validateMovement(move(type, '1'), stock, ROLE.ADMIN, today)).toEqual({})
+    }
+  })
+
+  it('ส่งซ่อมเกินของดี / ซ่อมเสร็จหรือตัดจำหน่ายเกินรอซ่อม ไม่ได้', () => {
+    expect(validateMovement(move(MOVEMENT_TYPE.TO_REPAIR, '11'), stock, ROLE.STAFF, today).quantity).toBe(
+      'คงเหลือไม่พอ (คงเหลือ 10)',
+    )
+    expect(validateMovement(move(MOVEMENT_TYPE.REPAIRED, '5'), stock, ROLE.STAFF, today).quantity).toBe(
+      'ยอดรอซ่อมไม่พอ (รอซ่อม 4)',
+    )
+    expect(validateMovement(move(MOVEMENT_TYPE.WRITE_OFF, '5'), stock, ROLE.ADMIN, today)).toHaveProperty('quantity')
+  })
+
+  it('เบิกออกใช้ได้เฉพาะของดี ไม่นับรอซ่อม', () => {
+    expect(validateMovement(move(MOVEMENT_TYPE.OUT, '11'), stock, ROLE.STAFF, today)).toHaveProperty('quantity')
+  })
+
+  it('staff ตัดจำหน่ายไม่ได้', () => {
+    expect(validateMovement(move(MOVEMENT_TYPE.WRITE_OFF, '1'), stock, ROLE.STAFF, today).type).toBe(
+      'ตัดจำหน่ายได้เฉพาะเจ้าของร้าน',
+    )
+  })
+
+  it('stockAfter คืนทั้งของดีและรอซ่อม', () => {
+    expect(stockAfter(stock, MOVEMENT_TYPE.TO_REPAIR, '3')).toEqual({ onHand: 7, repairQty: 7 })
+    expect(stockAfter(stock, MOVEMENT_TYPE.WRITE_OFF, '4')).toEqual({ onHand: 10, repairQty: 0 })
+    expect(stockAfter(10, MOVEMENT_TYPE.IN, '1')).toEqual({ onHand: 11, repairQty: 0 })
+    expect(stockAfter(stock, MOVEMENT_TYPE.IN, '')).toBeNull()
   })
 })

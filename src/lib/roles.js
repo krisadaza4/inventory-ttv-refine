@@ -13,3 +13,8 @@ export function canManageProducts(role) {
 export function canAdjust(role) {
   return role === ROLE.ADMIN
 }
+
+// ตัดจำหน่ายสินค้ารอซ่อมที่ซ่อมไม่ได้: เฉพาะเจ้าของร้าน (record_movement ตรวจซ้ำ)
+export function canWriteOff(role) {
+  return role === ROLE.ADMIN
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ROLE, canAdjust, canManageProducts } from './roles.js'
+import { ROLE, canAdjust, canManageProducts, canWriteOff } from './roles.js'
 
 describe('ROLE', () => {
   it('ตรงกับค่าใน profiles.role', () => {
@@ -39,5 +39,13 @@ describe('canAdjust', () => {
 
   it('ไม่มีบทบาท ไม่ได้', () => {
     expect(canAdjust(undefined)).toBe(false)
+  })
+})
+
+describe('canWriteOff', () => {
+  it('ตัดจำหน่ายได้เฉพาะ admin', () => {
+    expect(canWriteOff(ROLE.ADMIN)).toBe(true)
+    expect(canWriteOff(ROLE.STAFF)).toBe(false)
+    expect(canWriteOff(null)).toBe(false)
   })
 })

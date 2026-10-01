@@ -1,7 +1,10 @@
 import {
+  MONTHLY_SALES_COLUMNS,
   MOVEMENT_COLUMNS,
   PRODUCT_COLUMNS,
   PROFILE_COLUMNS,
+  toMonthlySale,
+  toMonthlySaleRow,
   toMovement,
   toProduct,
   toProductRow,
@@ -133,6 +136,40 @@ export function createRepository(client) {
         }),
       )
       return { movement: error ? null : toMovement(data), error }
+    },
+
+    // ยอดขายรายเดือนทั้งหมด (สินค้า ~ร้อยรายการ × 12 เดือนต่อปี) ดึงทีละ EXPORT_PAGE_SIZE
+    async listMonthlySales() {
+      const all = []
+      for (let from = 0; from < EXPORT_MAX_ROWS; from += EXPORT_PAGE_SIZE) {
+        const { data, error } = await run(() =>
+          client
+            .from('product_monthly_sales')
+            .select(MONTHLY_SALES_COLUMNS)
+            .order('product_id', { ascending: true })
+            .order('year', { ascending: true })
+            .order('month', { ascending: true })
+            .range(from, from + EXPORT_PAGE_SIZE - 1),
+        )
+        if (error) return { sales: [], error }
+        all.push(...data.map(toMonthlySale))
+        if (data.length < EXPORT_PAGE_SIZE) break
+      }
+      return { sales: all, error: null }
+    },
+
+    // นำเข้ายอดขายรายเดือน (admin): มีแล้วแก้ทับ ไม่มีเพิ่มใหม่ ทีละ IMPORT_BATCH_SIZE
+    async upsertMonthlySales(sales) {
+      let saved = 0
+      for (let i = 0; i < sales.length; i += IMPORT_BATCH_SIZE) {
+        const batch = sales.slice(i, i + IMPORT_BATCH_SIZE)
+        const { error } = await run(() =>
+          client.from('product_monthly_sales').upsert(batch.map(toMonthlySaleRow), { onConflict: 'product_id,year,month' }),
+        )
+        if (error) return { saved, error }
+        saved += batch.length
+      }
+      return { saved, error: null }
     },
 
     // page เริ่มที่ 0 ล่าสุดก่อน

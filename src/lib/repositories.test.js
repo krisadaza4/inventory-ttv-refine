@@ -9,7 +9,7 @@ const fakeClient = (result) => {
   const builder = {
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
   }
-  for (const method of ['select', 'insert', 'update', 'delete', 'eq', 'order', 'range', 'single', 'maybeSingle']) {
+  for (const method of ['select', 'insert', 'upsert', 'update', 'delete', 'eq', 'order', 'range', 'single', 'maybeSingle']) {
     builder[method] = (...args) => {
       calls.push([method, ...args])
       return builder
@@ -78,6 +78,7 @@ describe('createRepository', () => {
       'getMyProfile',
       'insertProducts',
       'listAllMovements',
+      'listMonthlySales',
       'listMovements',
       'listProducts',
       'recordMovement',
@@ -86,6 +87,7 @@ describe('createRepository', () => {
       'setProductActive',
       'signImageUrls',
       'uploadProductImage',
+      'upsertMonthlySales',
     ])
   })
 
@@ -486,5 +488,33 @@ describe('signImageUrls', () => {
     const client = withStorage(fakeClient(null))
     expect(await createRepository(client).signImageUrls([])).toEqual({ urls: {}, error: null })
     expect(storageCalls(client)).toEqual([])
+  })
+})
+
+describe('ยอดขายรายเดือน', () => {
+  it('listMonthlySales แปลงแถวเป็นตัวเลข', async () => {
+    const client = fakeClient({ data: [{ product_id: 'p1', year: 2026, month: '1', quantity: '205.00' }], error: null })
+    expect(await createRepository(client).listMonthlySales()).toEqual({
+      sales: [{ productId: 'p1', year: 2026, month: 1, quantity: 205 }],
+      error: null,
+    })
+    expect(client.calls[0]).toEqual(['from', 'product_monthly_sales'])
+  })
+
+  it('upsertMonthlySales ทีละชุด แก้ทับตาม product_id, year, month', async () => {
+    const client = fakeClient({ data: null, error: null })
+    const sales = Array.from({ length: IMPORT_BATCH_SIZE + 1 }, (_, i) => ({ productId: `p${i}`, year: 2026, month: 1, quantity: 1 }))
+    expect(await createRepository(client).upsertMonthlySales(sales)).toEqual({ saved: IMPORT_BATCH_SIZE + 1, error: null })
+    const upserts = client.calls.filter(([m]) => m === 'upsert')
+    expect(upserts.map(([, rows]) => rows.length)).toEqual([IMPORT_BATCH_SIZE, 1])
+    expect(upserts[0][2]).toEqual({ onConflict: 'product_id,year,month' })
+    expect(Object.keys(upserts[0][1][0]).sort()).toEqual(['month', 'product_id', 'quantity', 'updated_at', 'year'])
+  })
+
+  it('ผิดพลาด คืนข้อความไทยและจำนวนที่บันทึกแล้ว', async () => {
+    const client = fakeClient({ data: null, error: { code: '42501' } })
+    const { saved, error } = await createRepository(client).upsertMonthlySales([{ productId: 'p', year: 2026, month: 1, quantity: 1 }])
+    expect(saved).toBe(0)
+    expect(error).toBe(ERROR_MESSAGE.FORBIDDEN)
   })
 })

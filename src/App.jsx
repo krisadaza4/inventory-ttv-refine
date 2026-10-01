@@ -3,6 +3,7 @@ import AppShell from './components/AppShell.jsx'
 import HistoryPage from './components/HistoryPage.jsx'
 import LoginForm from './components/LoginForm.jsx'
 import ManagePage from './components/ManagePage.jsx'
+import MonthlySalesPage from './components/MonthlySalesPage.jsx'
 import MovementPage from './components/MovementPage.jsx'
 import ProductsPage from './components/ProductsPage.jsx'
 import Sidebar from './components/Sidebar.jsx'
@@ -331,6 +332,9 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
         />
       )}
       {currentPage === PAGE.HISTORY && <HistoryPage allProducts={allProducts} repository={repository} />}
+      {currentPage === PAGE.SALES && (
+        <MonthlySalesPage allProducts={allProducts} imageUrls={imageUrls} loadState={loadState} repository={repository} />
+      )}
     </AppShell>
   )
 }

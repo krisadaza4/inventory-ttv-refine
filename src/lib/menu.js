@@ -4,6 +4,7 @@ export const PAGE = {
   PRODUCTS: 'products',
   MOVE: 'move',
   HISTORY: 'history',
+  SALES: 'sales',
   MANAGE: 'manage',
 }
 
@@ -15,6 +16,7 @@ const MENU = [
       { page: PAGE.PRODUCTS, label: 'สินค้าคงคลัง', short: 'สินค้า', icon: '▦' },
       { page: PAGE.MOVE, label: 'รับเข้า / เบิกออก', short: 'รับ/เบิก', icon: '⇄' },
       { page: PAGE.HISTORY, label: 'ประวัติการเคลื่อนไหว', short: 'ประวัติ', icon: '☰' },
+      { page: PAGE.SALES, label: 'ยอดขายรายเดือน', short: 'ยอดขาย', icon: '▤' },
     ],
   },
   {

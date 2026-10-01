@@ -716,6 +716,30 @@ tbody tr.selected {
   height: 120px;
 }
 
+/* รูปในคอลัมน์แรกของตาราง: ใหญ่ขึ้น และแสดงทั้งรูปไม่ตัดขอบ */
+.thumb.row {
+  width: 88px;
+  height: 88px;
+  background: #fff;
+}
+
+.thumb.row img {
+  object-fit: contain;
+}
+
+th.thumb-col,
+td.thumb-col {
+  width: 1%;
+  padding-right: 0;
+}
+
+@media (max-width: 640px) {
+  .thumb.row {
+    width: 64px;
+    height: 64px;
+  }
+}
+
 .thumb.empty {
   cursor: default;
 }
@@ -993,4 +1017,30 @@ label.btn.disabled {
   .stat {
     padding: 8px 10px;
   }
+}
+
+/* ปุ่มเหตุผลที่ใช้บ่อย ใต้ช่องเหตุผล */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+/* ยอดขายรายเดือน: หัวคอลัมน์กดเรียงได้ ตัวเลขไม่ตัดบรรทัด */
+.sort-head {
+  all: unset;
+  cursor: pointer;
+  font: inherit;
+  font-weight: inherit;
+  white-space: nowrap;
+}
+
+.sort-head:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.sales-table td.num {
+  white-space: nowrap;
 }

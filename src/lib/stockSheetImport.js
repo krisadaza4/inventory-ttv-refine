@@ -1,3 +1,4 @@
+import { MONTH_LABELS, toGregorianYear } from './monthlySales.js'
 import { validateProduct } from './stockRules.js'
 
 // นำเข้าจากไฟล์ "บันทึกรายการสินค้าคลัง" ของร้าน: รหัสสินค้า + รูป (ฝังในไฟล์) + ยอดคงเหลือ
@@ -16,6 +17,7 @@ const HEADER = {
   repair: 'สินค้ารอซ่อม',
   total: 'ยอดรวมสินค้า',
   location: 'โลเคชั่น',
+  avg: 'เฉลี่ย/เดือน',
 }
 
 const cellText = (value) => (value === null || value === undefined ? '' : String(value))
@@ -23,14 +25,33 @@ const cellText = (value) => (value === null || value === undefined ? '' : String
 export const normalizeCode = (value) => cellText(value).trim().replace(/\s+/g, ' ')
 const skuKey = (sku) => normalizeCode(sku).toLowerCase()
 const toAmount = (value) => (cellText(value).trim() === '' ? 0 : Number(value))
+// ยอดขายเฉลี่ย: ปัดทศนิยม 2 ตำแหน่ง (numeric(12,2)) ว่างหรือไม่ใช่ตัวเลข = null
+const toAverage = (value) => {
+  if (cellText(value).trim() === '') return null
+  const n = Number(value)
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null
+}
+
+// ปีของยอดขายจากหัวรายงาน เช่น "สรุปยอดขายปี 2569 …" คืน ค.ศ. ไม่พบคืน null
+function findSalesYear(rows) {
+  for (const r of rows) {
+    for (const cell of r) {
+      const m = cellText(cell).match(/ยอดขายปี\s*(\d{4})/)
+      if (m) return toGregorianYear(Number(m[1]))
+    }
+  }
+  return null
+}
 
 // rows = แถวจาก read-excel-file, row ในผลเป็นเลขแถวของ Excel (เริ่มที่ 1)
 export function parseStockSheet(rows) {
   const headerIndex = rows.findIndex((r) => r.includes(HEADER.code) && r.includes(HEADER.total))
-  if (headerIndex === -1) return { items: [], picColumn: -1, error: STOCK_SHEET_ERROR.NO_HEADER }
+  if (headerIndex === -1) return { items: [], picColumn: -1, salesYear: null, error: STOCK_SHEET_ERROR.NO_HEADER }
 
   const header = rows[headerIndex]
   const col = Object.fromEntries(Object.entries(HEADER).map(([key, title]) => [key, header.indexOf(title)]))
+  const monthCols = MONTH_LABELS.map((label) => header.indexOf(label))
+  const salesYear = findSalesYear(rows.slice(0, headerIndex))
   const items = []
   rows.slice(headerIndex + 1).forEach((r, i) => {
     const code = normalizeCode(r[col.code])
@@ -42,9 +63,17 @@ export function parseStockSheet(rows) {
       repair: col.repair >= 0 ? toAmount(r[col.repair]) : 0,
       total: toAmount(r[col.total]),
       location: col.location >= 0 ? normalizeCode(r[col.location]) : '',
+      avg: col.avg >= 0 ? toAverage(r[col.avg]) : null,
+      // { เดือน 1–12: จำนวน } เฉพาะช่องที่มีตัวเลข
+      monthly: Object.fromEntries(
+        monthCols.flatMap((c, i) => {
+          const value = c >= 0 ? toAverage(r[c]) : null
+          return value === null || value < 0 ? [] : [[i + 1, value]]
+        }),
+      ),
     })
   })
-  return { items, picColumn: col.pic, error: null }
+  return { items, picColumn: col.pic, salesYear, error: null }
 }
 
 // --- รูปที่ฝังในไฟล์: sheet → drawing → media -------------------------------------
@@ -132,6 +161,7 @@ export function planStockImport(items, imagesByRow, existingProducts) {
       category: STOCK_SHEET_DEFAULTS.category,
       unit: STOCK_SHEET_DEFAULTS.unit,
       location: item.location ?? '',
+      avgMonthlySales: item.avg ?? null,
       reorderPoint: 0,
     }
     const errors = Object.values(validateProduct(product))
@@ -156,12 +186,15 @@ export function planStockImport(items, imagesByRow, existingProducts) {
       quantity,
       good: item.good,
       repair: item.repair,
+      monthly: item.monthly ?? {},
       imagePath: imagesByRow.get(item.row) ?? null,
       exists: existing.has(key),
     })
   }
   return plan
 }
+
+export const repairNote = (fileName) => `ยอดรอซ่อมเริ่มต้นจากไฟล์ ${fileName}`
 
 export const openingNote = (entry, fileName) =>
   `ยอดเริ่มต้นจากไฟล์ ${fileName} (ของดี ${entry.good}, รอซ่อม ${entry.repair})`

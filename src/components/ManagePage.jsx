@@ -141,6 +141,7 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
               <table>
                 <thead>
                   <tr>
+                    <th className="thumb-col">รูป</th>
                     <th>รหัส</th>
                     <th>ชื่อสินค้า</th>
                     <th className="hide-sm">หมวดหมู่</th>
@@ -153,13 +154,11 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
                 <tbody>
                   {visible.map((p) => (
                     <tr key={p.id} className={p.id === editingId ? 'selected' : undefined}>
-                      <td className="mono">{p.sku}</td>
-                      <td className={p.active ? undefined : 'dim'}>
-                        <div className="with-thumb">
-                          <ProductThumb url={imageUrls[p.imagePath]} name={p.name} />
-                          {p.name}
-                        </div>
+                      <td className="thumb-col">
+                        <ProductThumb url={imageUrls[p.imagePath]} name={p.name} size="row" />
                       </td>
+                      <td className="mono">{p.sku}</td>
+                      <td className={p.active ? undefined : 'dim'}>{p.name}</td>
                       <td className="hide-sm dim">{p.category}</td>
                       <td>
                         <span className={p.active ? 'badge ok' : 'badge off'}>{p.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</span>

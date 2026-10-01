@@ -8,13 +8,13 @@ describe('getMenu', () => {
   it('admin เห็นทุกหน้า แบ่ง 2 กลุ่ม', () => {
     const menu = getMenu(ROLE.ADMIN)
     expect(menu.map((group) => group.label)).toEqual(['งานประจำวัน', 'ผู้ดูแล'])
-    expect(pagesOf(menu)).toEqual([PAGE.PRODUCTS, PAGE.MOVE, PAGE.HISTORY, PAGE.MANAGE])
+    expect(pagesOf(menu)).toEqual([PAGE.PRODUCTS, PAGE.MOVE, PAGE.HISTORY, PAGE.SALES, PAGE.MANAGE])
   })
 
   it('staff ไม่เห็นกลุ่มผู้ดูแล', () => {
     const menu = getMenu(ROLE.STAFF)
     expect(menu.map((group) => group.label)).toEqual(['งานประจำวัน'])
-    expect(pagesOf(menu)).toEqual([PAGE.PRODUCTS, PAGE.MOVE, PAGE.HISTORY])
+    expect(pagesOf(menu)).toEqual([PAGE.PRODUCTS, PAGE.MOVE, PAGE.HISTORY, PAGE.SALES])
   })
 
   it('บทบาทไม่รู้จัก เห็นเหมือน staff', () => {
