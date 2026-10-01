@@ -20,6 +20,10 @@ export const MOVEMENT_LABEL = {
   [MOVEMENT_TYPE.WRITE_OFF]: 'ตัดจำหน่าย',
 }
 
+// รายการเกี่ยวกับการซ่อม และค่าตัวกรอง "รายการซ่อมทั้งหมด" ในหน้าประวัติ
+export const REPAIR_TYPES = [MOVEMENT_TYPE.TO_REPAIR, MOVEMENT_TYPE.REPAIRED, MOVEMENT_TYPE.WRITE_OFF]
+export const REPAIR_FILTER = 'repair_all'
+
 // ประเภทที่ต้องระบุหมายเหตุ/เหตุผล (ฐานข้อมูลตรวจซ้ำ)
 export const NOTE_REQUIRED_TYPES = [
   MOVEMENT_TYPE.ADJUST,

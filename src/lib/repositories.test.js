@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MOVEMENT_COLUMNS, PRODUCT_COLUMNS, PROFILE_COLUMNS } from './mappers.js'
 import { EXPORT_PAGE_SIZE, IMPORT_BATCH_SIZE, PAGE_SIZE, createRepository } from './repositories.js'
+import { REPAIR_FILTER } from './stockRules.js'
 import { ERROR_MESSAGE } from './supabaseErrors.js'
 
 // supabase client จำลอง: บันทึกทุกการเรียกในโซ่คำสั่ง แล้วคืนผลที่กำหนด
@@ -9,7 +10,7 @@ const fakeClient = (result) => {
   const builder = {
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
   }
-  for (const method of ['select', 'insert', 'upsert', 'update', 'delete', 'eq', 'order', 'range', 'single', 'maybeSingle']) {
+  for (const method of ['select', 'insert', 'upsert', 'update', 'delete', 'eq', 'in', 'order', 'range', 'single', 'maybeSingle']) {
     builder[method] = (...args) => {
       calls.push([method, ...args])
       return builder
@@ -516,5 +517,20 @@ describe('ยอดขายรายเดือน', () => {
     const { saved, error } = await createRepository(client).upsertMonthlySales([{ productId: 'p', year: 2026, month: 1, quantity: 1 }])
     expect(saved).toBe(0)
     expect(error).toBe(ERROR_MESSAGE.FORBIDDEN)
+  })
+})
+
+describe('ตัวกรองรายการซ่อมทั้งหมด', () => {
+  it('listMovements ใช้ in กับ 3 ประเภทการซ่อม', async () => {
+    const client = fakeClient({ data: [], error: null })
+    await createRepository(client).listMovements({ type: REPAIR_FILTER })
+    expect(client.calls).toContainEqual(['in', 'type', ['to_repair', 'repaired', 'write_off']])
+    expect(client.calls.some(([m, col]) => m === 'eq' && col === 'type')).toBe(false)
+  })
+
+  it('listAllMovements (ส่งออก) ใช้ตัวกรองเดียวกัน', async () => {
+    const client = fakeClient({ data: [], error: null })
+    await createRepository(client).listAllMovements({ type: REPAIR_FILTER })
+    expect(client.calls).toContainEqual(['in', 'type', ['to_repair', 'repaired', 'write_off']])
   })
 })

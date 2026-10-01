@@ -11,6 +11,7 @@ import {
   toProfile,
 } from './mappers.js'
 import { IMAGE_BUCKET, IMAGE_URL_TTL, imagePathFor } from './productImages.js'
+import { REPAIR_FILTER, REPAIR_TYPES } from './stockRules.js'
 import { toThaiError } from './supabaseErrors.js'
 
 export const PAGE_SIZE = 50
@@ -28,6 +29,12 @@ async function run(buildQuery) {
   } catch (thrown) {
     return { data: null, error: toThaiError(thrown) }
   }
+}
+
+// ตัวกรองประเภทในหน้าประวัติ: REPAIR_FILTER = ส่งซ่อม/ซ่อมเสร็จ/ตัดจำหน่าย รวมกัน
+const filterType = (query, type) => {
+  if (!type) return query
+  return type === REPAIR_FILTER ? query.in('type', REPAIR_TYPES) : query.eq('type', type)
 }
 
 // client รับเป็นพารามิเตอร์ เพื่อให้ทดสอบด้วย client จำลองได้
@@ -178,7 +185,7 @@ export function createRepository(client) {
       const { data, error } = await run(() => {
         let query = client.from('stock_movements').select(MOVEMENT_COLUMNS)
         if (productId) query = query.eq('product_id', productId)
-        if (type) query = query.eq('type', type)
+        query = filterType(query, type)
         return query
           .order('movement_date', { ascending: false })
           .order('created_at', { ascending: false })
@@ -195,7 +202,7 @@ export function createRepository(client) {
         const { data, error } = await run(() => {
           let query = client.from('stock_movements').select(MOVEMENT_COLUMNS)
           if (productId) query = query.eq('product_id', productId)
-          if (type) query = query.eq('type', type)
+          query = filterType(query, type)
           return query
             .order('movement_date', { ascending: false })
             .order('created_at', { ascending: false })

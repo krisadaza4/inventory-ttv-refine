@@ -4,7 +4,7 @@ import { PAGE } from '../lib/menu.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { PAGE_SIZE } from '../lib/repositories.js'
 import { exportFileName, movementSheet } from '../lib/spreadsheet.js'
-import { MOVEMENT_LABEL, MOVEMENT_TYPE, signedQuantity } from '../lib/stockRules.js'
+import { MOVEMENT_LABEL, MOVEMENT_TYPE, REPAIR_FILTER, signedQuantity } from '../lib/stockRules.js'
 import ExportButton from './ExportButton.jsx'
 import PageHead from './PageHead.jsx'
 
@@ -102,6 +102,7 @@ export default function HistoryPage({ allProducts, repository }) {
           </select>
           <select aria-label="กรองประเภท" value={type} onChange={changeFilter(setType)}>
             <option value="">ทุกประเภท</option>
+            <option value={REPAIR_FILTER}>รายการซ่อมทั้งหมด</option>
             {Object.values(MOVEMENT_TYPE).map((t) => (
               <option key={t} value={t}>
                 {TYPE_LABEL[t]}

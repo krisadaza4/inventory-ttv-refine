@@ -7,6 +7,7 @@ import {
   MOVEMENT_TYPE,
   NOTE_REQUIRED_TYPES,
   REPAIR_REASONS,
+  REPAIR_TYPES,
   allowedMovementTypes,
   getStockStatus,
   searchProducts,
@@ -18,8 +19,6 @@ import ProductThumb from './ProductThumb.jsx'
 import StockBadge from './StockBadge.jsx'
 
 const TYPE_LABEL = MOVEMENT_LABEL
-
-const REPAIR_TYPES = [MOVEMENT_TYPE.TO_REPAIR, MOVEMENT_TYPE.REPAIRED, MOVEMENT_TYPE.WRITE_OFF]
 
 const NOTE_PLACEHOLDER = {
   [MOVEMENT_TYPE.ADJUST]: 'การปรับยอดต้องระบุเหตุผล',
