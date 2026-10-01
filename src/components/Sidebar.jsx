@@ -14,6 +14,7 @@ export default function Sidebar({ role, page, onChange }) {
               key={item.page}
               type="button"
               className={item.page === page ? 'nav-item on' : 'nav-item'}
+              data-page={item.page}
               aria-current={item.page === page ? 'page' : undefined}
               title={item.label}
               onClick={() => onChange(item.page)}

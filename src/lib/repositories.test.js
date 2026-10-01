@@ -76,6 +76,7 @@ describe('createRepository', () => {
   it('มีเฉพาะฟังก์ชันตามที่ออกแบบ ไม่มีฟังก์ชันลบ', () => {
     const repo = createRepository(fakeClient({ data: [], error: null }))
     expect(Object.keys(repo).sort()).toEqual([
+      'getLogoUrl',
       'getMyProfile',
       'insertProducts',
       'listAllMovements',
@@ -87,6 +88,7 @@ describe('createRepository', () => {
       'saveProduct',
       'setProductActive',
       'signImageUrls',
+      'uploadLogo',
       'uploadProductImage',
       'upsertMonthlySales',
     ])
@@ -401,13 +403,45 @@ const withStorage = (client, results = {}) => {
         client.calls.push(['storage', bucket, name, ...args])
         return results[name] ?? { data: null, error: null }
       }
-      return { upload: call('upload'), remove: call('remove'), createSignedUrls: call('createSignedUrls') }
+      return {
+        upload: call('upload'),
+        remove: call('remove'),
+        createSignedUrls: call('createSignedUrls'),
+        createSignedUrl: call('createSignedUrl'),
+      }
     },
   }
   return client
 }
 
 const storageCalls = (client) => client.calls.filter(([kind]) => kind === 'storage')
+
+describe('โลโก้ร้าน', () => {
+  it('ขอลิงก์โลโก้ ไม่มีไฟล์คืน null', async () => {
+    const client = withStorage(fakeClient(), { createSignedUrl: { data: null, error: { message: 'Object not found' } } })
+    expect(await createRepository(client).getLogoUrl()).toEqual({ url: null })
+  })
+
+  it('ขอลิงก์โลโก้สำเร็จ', async () => {
+    const client = withStorage(fakeClient(), { createSignedUrl: { data: { signedUrl: 'https://x/logo' }, error: null } })
+    expect(await createRepository(client).getLogoUrl()).toEqual({ url: 'https://x/logo' })
+    expect(storageCalls(client)[0]).toEqual(['storage', 'product-images', 'createSignedUrl', 'branding/logo.jpg', 3600])
+  })
+
+  it('อัปโหลดโลโก้เขียนทับไฟล์เดิม', async () => {
+    const client = withStorage(fakeClient())
+    const blob = { size: 10, type: 'image/jpeg' }
+    expect(await createRepository(client).uploadLogo(blob)).toEqual({ error: null })
+    expect(storageCalls(client)[0]).toEqual([
+      'storage',
+      'product-images',
+      'upload',
+      'branding/logo.jpg',
+      blob,
+      { contentType: 'image/jpeg', upsert: true, cacheControl: '60' },
+    ])
+  })
+})
 
 describe('uploadProductImage', () => {
   const blob = { size: 1000, type: 'image/jpeg' }

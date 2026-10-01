@@ -18,11 +18,37 @@ export function ThemeToggle({ theme, onToggle }) {
   )
 }
 
-export default function TitleBar({ profile, theme, onToggleTheme, signingOut, onSignOut }) {
+// โลโก้: ยังไม่ตั้ง = กล่องสี admin กดเพื่อเลือกไฟล์รูปใหม่ได้
+function Logo({ url, canChange, busy, onPick }) {
+  const mark = url ? <img className="logo" src={url} alt="" /> : <span className="logo" aria-hidden="true" />
+  if (!canChange) return mark
+  return (
+    <label className={busy ? 'logo-pick busy' : 'logo-pick'} title="คลิกเพื่อเปลี่ยนโลโก้">
+      {mark}
+      <span className="sr-only">เปลี่ยนโลโก้</span>
+      <input
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        disabled={busy}
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (file) onPick(file)
+        }}
+      />
+    </label>
+  )
+}
+
+export default function TitleBar({ profile, theme, onToggleTheme, signingOut, onSignOut, logo = {} }) {
   return (
     <header className="titlebar">
       <div className="brand">
-        {APP_NAME} <small>{APP_SUBTITLE}</small>
+        <Logo {...logo} />
+        <span className="brand-text">
+          {APP_NAME} <small>{APP_SUBTITLE}</small>
+        </span>
       </div>
       <div className="who">
         {profile.displayName}

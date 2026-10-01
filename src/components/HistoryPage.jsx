@@ -7,6 +7,7 @@ import { exportFileName, movementSheet } from '../lib/spreadsheet.js'
 import { MOVEMENT_LABEL, MOVEMENT_TYPE, REPAIR_FILTER, signedQuantity } from '../lib/stockRules.js'
 import ExportButton from './ExportButton.jsx'
 import PageHead from './PageHead.jsx'
+import RefreshIcon from './RefreshIcon.jsx'
 
 const TYPE_LABEL = MOVEMENT_LABEL
 
@@ -82,7 +83,8 @@ export default function HistoryPage({ allProducts, repository }) {
               }}
               disabled={movements.length === 0}
             />
-            <button type="button" className="btn" onClick={refresh} disabled={loadState === 'loading'}>
+            <button type="button" className="btn btn-icon" onClick={refresh} disabled={loadState === 'loading'}>
+              <RefreshIcon />
               รีเฟรช
             </button>
           </div>

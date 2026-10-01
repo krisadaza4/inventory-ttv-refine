@@ -13,6 +13,7 @@ import { exportFileName, productSheet } from '../lib/spreadsheet.js'
 import ExportButton from './ExportButton.jsx'
 import PageHead from './PageHead.jsx'
 import ProductTable from './ProductTable.jsx'
+import RefreshIcon from './RefreshIcon.jsx'
 
 // หน้าสินค้าคงคลัง: กล่องสรุป, ค้นหา, กรองหมวดหมู่, ตาราง (design.md ข้อ 7)
 export default function ProductsPage({ products, imageUrls, loadState, loadError, onRetry, onMove }) {
@@ -35,7 +36,8 @@ export default function ProductsPage({ products, imageUrls, loadState, loadError
               buildSheet={() => ({ sheetData: productSheet(visible) })}
               disabled={loadState !== 'ready' || visible.length === 0}
             />
-            <button type="button" className="btn" onClick={onRetry} disabled={loadState === 'loading'}>
+            <button type="button" className="btn btn-icon" onClick={onRetry} disabled={loadState === 'loading'}>
+              <RefreshIcon />
               รีเฟรช
             </button>
           </div>

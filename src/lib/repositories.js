@@ -10,7 +10,7 @@ import {
   toProductRow,
   toProfile,
 } from './mappers.js'
-import { IMAGE_BUCKET, IMAGE_URL_TTL, imagePathFor } from './productImages.js'
+import { IMAGE_BUCKET, IMAGE_URL_TTL, LOGO_PATH, imagePathFor } from './productImages.js'
 import { REPAIR_FILTER, REPAIR_TYPES } from './stockRules.js'
 import { toThaiError } from './supabaseErrors.js'
 
@@ -122,6 +122,22 @@ export function createRepository(client) {
         for (const item of data) if (item.signedUrl && !item.error) urls[item.path] = item.signedUrl
       }
       return { urls, error: null }
+    },
+
+    // โลโก้ร้าน: ยังไม่เคยตั้ง (ไม่มีไฟล์) คืน url = null
+    async getLogoUrl() {
+      const { data, error } = await run(() => client.storage.from(IMAGE_BUCKET).createSignedUrl(LOGO_PATH, IMAGE_URL_TTL))
+      return { url: error ? null : (data?.signedUrl ?? null) }
+    },
+
+    // เขียนทับไฟล์เดิม cache สั้น เพื่อให้เห็นโลโก้ใหม่เร็ว
+    async uploadLogo(blob) {
+      const { error } = await run(() =>
+        client.storage
+          .from(IMAGE_BUCKET)
+          .upload(LOGO_PATH, blob, { contentType: 'image/jpeg', upsert: true, cacheControl: '60' }),
+      )
+      return { error }
     },
 
     async setProductActive(id, active) {

@@ -8,6 +8,7 @@ import { searchProducts } from '../lib/stockRules.js'
 import ExportButton from './ExportButton.jsx'
 import PageHead from './PageHead.jsx'
 import ProductThumb from './ProductThumb.jsx'
+import RefreshIcon from './RefreshIcon.jsx'
 
 // คลิกหัวคอลัมน์เพื่อเรียง: ตัวเลขเริ่มจากมาก → น้อย รหัสเริ่มจาก ก → ฮ
 const firstDir = (key) => (key === 'sku' ? 'asc' : 'desc')
@@ -79,13 +80,14 @@ export default function MonthlySalesPage({ allProducts, imageUrls, loadState, re
             />
             <button
               type="button"
-              className="btn"
+              className="btn btn-icon"
               onClick={() => {
                 setSalesState('loading')
                 setAttempt((n) => n + 1)
               }}
               disabled={salesState === 'loading'}
             >
+              <RefreshIcon />
               รีเฟรช
             </button>
           </div>

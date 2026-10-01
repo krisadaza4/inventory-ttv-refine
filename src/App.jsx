@@ -10,7 +10,9 @@ import Sidebar from './components/Sidebar.jsx'
 import { APP_NAME, APP_SUBTITLE, ThemeToggle } from './components/TitleBar.jsx'
 import { toIsoDate } from './lib/dateFormat.js'
 import { PAGE, getMenu } from './lib/menu.js'
+import { LOGO_SIDE, checkImageFile, resizeImage } from './lib/productImages.js'
 import { createRepository } from './lib/repositories.js'
+import { canManageProducts } from './lib/roles.js'
 import { getSupabase } from './lib/supabaseClient.js'
 import { ERROR_MESSAGE, toThaiError } from './lib/supabaseErrors.js'
 import { getInitialTheme, saveTheme, toggleTheme } from './lib/theme.js'
@@ -235,6 +237,39 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
   const [moveIntent, setMoveIntent] = useState(null)
   // { [imagePath]: signed URL } ขอใหม่ทุกครั้งที่โหลดสินค้า (ลิงก์ใช้ได้ 1 ชั่วโมง)
   const [imageUrls, setImageUrls] = useState({})
+  // โลโก้ร้าน (null = ยังไม่ตั้ง)
+  const [logoUrl, setLogoUrl] = useState(null)
+  const [logoBusy, setLogoBusy] = useState(false)
+  const [logoError, setLogoError] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    repository.getLogoUrl().then(({ url }) => {
+      if (active) setLogoUrl(url)
+    })
+    return () => {
+      active = false
+    }
+  }, [repository])
+
+  const handleLogo = async (file) => {
+    const problem = checkImageFile(file)
+    if (problem) {
+      setLogoError(problem)
+      return
+    }
+    setLogoBusy(true)
+    setLogoError(null)
+    try {
+      const { error } = await repository.uploadLogo(await resizeImage(file, LOGO_SIDE))
+      if (error) setLogoError(error)
+      else setLogoUrl((await repository.getLogoUrl()).url)
+    } catch (thrown) {
+      setLogoError(thrown.message)
+    } finally {
+      setLogoBusy(false)
+    }
+  }
 
   useEffect(() => {
     const paths = allProducts.map((p) => p.imagePath).filter(Boolean)
@@ -284,7 +319,14 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
 
   return (
     <AppShell
-      titleBar={{ profile, theme, onToggleTheme, signingOut, onSignOut }}
+      titleBar={{
+        profile,
+        theme,
+        onToggleTheme,
+        signingOut,
+        onSignOut,
+        logo: { url: logoUrl, canChange: canManageProducts(profile.role), busy: logoBusy, onPick: handleLogo },
+      }}
       sidebar={<Sidebar role={profile.role} page={currentPage} onChange={setPage} />}
       statusBar={{
         connected: loadState !== 'error',
@@ -295,6 +337,11 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
       {signOutError && (
         <p className="alert" role="alert">
           {signOutError}
+        </p>
+      )}
+      {logoError && (
+        <p className="alert" role="alert">
+          เปลี่ยนโลโก้ไม่สำเร็จ: {logoError}
         </p>
       )}
       {currentPage === PAGE.PRODUCTS && (

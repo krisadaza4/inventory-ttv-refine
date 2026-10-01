@@ -3,6 +3,9 @@
 export const IMAGE_BUCKET = 'product-images'
 export const MAX_IMAGE_SIDE = 800
 export const IMAGE_QUALITY = 0.8
+// โลโก้ร้าน: ไฟล์เดียวใน bucket เดียวกัน (admin เปลี่ยนได้ ทุกคนดูได้) ย่อเหลือ 256px
+export const LOGO_PATH = 'branding/logo.jpg'
+export const LOGO_SIDE = 256
 // signed URL ของรูปใช้ได้ 1 ชั่วโมง โหลดสินค้าใหม่เมื่อไรได้ URL ใหม่
 export const IMAGE_URL_TTL = 60 * 60
 
@@ -36,14 +39,14 @@ export function imagePathFor(productId, now = Date.now()) {
 }
 
 // ย่อรูปเป็น JPEG ด้วย canvas (ใช้ได้เฉพาะในเบราว์เซอร์ ไม่มีเทสต์อัตโนมัติ)
-export async function resizeImage(file) {
+export async function resizeImage(file, max = MAX_IMAGE_SIDE) {
   let bitmap
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
   } catch {
     throw new Error(IMAGE_ERROR.CANNOT_READ)
   }
-  const { width, height } = scaledSize(bitmap.width, bitmap.height)
+  const { width, height } = scaledSize(bitmap.width, bitmap.height, max)
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
