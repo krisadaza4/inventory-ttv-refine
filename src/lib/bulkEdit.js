@@ -1,8 +1,16 @@
 // แก้สินค้าทีละหลายรายการ (admin): ตั้งจุดสั่งซื้อจากยอดขายเฉลี่ย และตั้งหมวดหมู่ให้รายการที่เลือก
 
-// ตัวเลือกจำนวนเดือนที่ต้องมีของสำรอง
-export const COVER_MONTHS = [0.5, 1, 2, 3]
-export const DEFAULT_COVER_MONTHS = 1
+// จำนวนเดือนที่ต้องมีของสำรอง (ช่วงเวลาสั่งผลิต) ค่าเริ่มต้น 3.4 เดือนตามที่ร้านใช้
+export const DEFAULT_COVER_MONTHS = 3.4
+export const MAX_COVER_MONTHS = 24
+
+// จำนวนเดือนที่พิมพ์: มากกว่า 0 ไม่เกิน MAX_COVER_MONTHS ทศนิยมไม่เกิน 1 ตำแหน่ง ไม่ถูกต้อง คืน null
+export function parseCoverMonths(value) {
+  const text = String(value ?? '').trim()
+  if (!/^\d+(\.\d)?$/.test(text)) return null
+  const months = Number(text)
+  return months > 0 && months <= MAX_COVER_MONTHS ? months : null
+}
 
 // จุดสั่งซื้อที่แนะนำ = ขายเฉลี่ย/เดือน × จำนวนเดือน ปัดขึ้นเป็นจำนวนเต็ม ไม่มียอดขายเฉลี่ย คืน null
 export function suggestReorderPoint(avgMonthlySales, months) {

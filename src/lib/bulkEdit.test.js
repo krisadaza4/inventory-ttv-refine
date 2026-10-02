@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { groupIdsByValue, planReorderPoints, suggestReorderPoint } from './bulkEdit.js'
+import { groupIdsByValue, parseCoverMonths, planReorderPoints, suggestReorderPoint } from './bulkEdit.js'
 
 describe('suggestReorderPoint', () => {
   it('ขายเฉลี่ย × เดือน ปัดขึ้นเป็นจำนวนเต็ม', () => {
@@ -67,5 +67,21 @@ describe('groupIdsByValue', () => {
 
   it('ไม่มีรายการ คืน array ว่าง', () => {
     expect(groupIdsByValue([])).toEqual([])
+  })
+})
+
+describe('parseCoverMonths', () => {
+  it('รับจำนวนเดือนทศนิยม 1 ตำแหน่ง', () => {
+    expect(parseCoverMonths('3.4')).toBe(3.4)
+    expect(parseCoverMonths(' 2 ')).toBe(2)
+    expect(parseCoverMonths('24')).toBe(24)
+  })
+
+  it('ค่าว่าง 0 ติดลบ เกิน 24 หรือทศนิยมเกิน 1 ตำแหน่ง คืน null', () => {
+    for (const bad of ['', '0', '-1', '25', '3.45', 'abc', null]) expect(parseCoverMonths(bad)).toBeNull()
+  })
+
+  it('ใช้กับ suggestReorderPoint: ขายเดือนละ 10 สำรอง 3.4 เดือน = 34', () => {
+    expect(suggestReorderPoint(10, parseCoverMonths('3.4'))).toBe(34)
   })
 })

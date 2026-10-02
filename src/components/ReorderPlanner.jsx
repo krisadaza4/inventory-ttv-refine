@@ -1,15 +1,16 @@
 import { useState } from 'react'
-import { COVER_MONTHS, DEFAULT_COVER_MONTHS, planReorderPoints } from '../lib/bulkEdit.js'
+import { DEFAULT_COVER_MONTHS, MAX_COVER_MONTHS, parseCoverMonths, planReorderPoints } from '../lib/bulkEdit.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 
-// ตั้งจุดสั่งซื้อจากยอดขายเฉลี่ย (admin): เลือกจำนวนเดือนสำรอง ดูตัวอย่าง แล้วยืนยันบันทึกทีเดียว
+// ตั้งจุดสั่งซื้อจากยอดขายเฉลี่ย (admin): พิมพ์จำนวนเดือนสำรอง ดูตัวอย่าง แล้วยืนยันบันทึกทีเดียว
 export default function ReorderPlanner({ allProducts, repository, onSaved, onClose }) {
-  const [months, setMonths] = useState(DEFAULT_COVER_MONTHS)
+  const [monthsText, setMonthsText] = useState(String(DEFAULT_COVER_MONTHS))
   const [onlyUnset, setOnlyUnset] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  const plan = planReorderPoints(allProducts, months, { onlyUnset })
+  const months = parseCoverMonths(monthsText)
+  const plan = months === null ? [] : planReorderPoints(allProducts, months, { onlyUnset })
   const noAverage = allProducts.filter((p) => p.active && p.avgMonthlySales === null).length
 
   const handleConfirm = async () => {
@@ -41,17 +42,28 @@ export default function ReorderPlanner({ allProducts, repository, onSaved, onClo
           "ใกล้หมด" สินค้าที่ไม่มียอดขายเฉลี่ย {noAverage} รายการจะไม่ถูกเปลี่ยน
         </p>
         <div className="toolbar plain-toolbar">
-          <select aria-label="จำนวนเดือนสำรอง" value={months} onChange={(e) => setMonths(Number(e.target.value))}>
-            {COVER_MONTHS.map((m) => (
-              <option key={m} value={m}>
-                สำรอง {m} เดือน
-              </option>
-            ))}
-          </select>
+          <label className="check">
+            สำรอง
+            <input
+              className="months-input"
+              inputMode="decimal"
+              aria-label="จำนวนเดือนสำรอง"
+              aria-invalid={months === null}
+              value={monthsText}
+              onChange={(e) => setMonthsText(e.target.value)}
+            />
+            เดือน
+          </label>
           <label className="check">
             <input type="checkbox" checked={onlyUnset} onChange={(e) => setOnlyUnset(e.target.checked)} /> เฉพาะที่จุดสั่งซื้อยังเป็น 0
           </label>
         </div>
+
+        {months === null && (
+          <p className="alert" role="alert">
+            จำนวนเดือนต้องมากกว่า 0 ไม่เกิน {MAX_COVER_MONTHS} ทศนิยมไม่เกิน 1 ตำแหน่ง เช่น 3.4
+          </p>
+        )}
 
         {error && (
           <p className="alert" role="alert">
@@ -59,9 +71,9 @@ export default function ReorderPlanner({ allProducts, repository, onSaved, onClo
           </p>
         )}
 
-        {plan.length === 0 ? (
+        {months !== null && plan.length === 0 ? (
           <p className="empty dim">ไม่มีรายการที่ต้องเปลี่ยน</p>
-        ) : (
+        ) : plan.length === 0 ? null : (
           <div className="table-wrap planner-table">
             <table>
               <thead>
