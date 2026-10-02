@@ -3,6 +3,8 @@ import { THEME } from '../lib/theme.js'
 
 export const APP_NAME = 'Inventory TTV'
 export const APP_SUBTITLE = 'ระบบบริหารสต็อกสินค้า'
+// เลขเวอร์ชันจาก package.json (vite.config.js ฝังให้ตอน build)
+export const APP_RELEASE = __APP_RELEASE__
 
 const ROLE_LABEL = {
   [ROLE.ADMIN]: 'เจ้าของร้าน (admin)',
@@ -48,11 +50,17 @@ export default function TitleBar({ profile, theme, onToggleTheme, signingOut, on
         <Logo {...logo} />
         {onHome ? (
           <button type="button" className="brand-text brand-home" onClick={onHome} title="กลับหน้าแรก (สินค้าคงคลัง)">
-            {APP_NAME} <small>{APP_SUBTITLE}</small>
+            <span className="brand-name">
+              {APP_NAME} <small>{APP_SUBTITLE}</small>
+            </span>
+            <span className="app-version">v{APP_RELEASE}</span>
           </button>
         ) : (
           <span className="brand-text">
-            {APP_NAME} <small>{APP_SUBTITLE}</small>
+            <span className="brand-name">
+              {APP_NAME} <small>{APP_SUBTITLE}</small>
+            </span>
+            <span className="app-version">v{APP_RELEASE}</span>
           </span>
         )}
       </div>

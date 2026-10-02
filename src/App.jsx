@@ -1,12 +1,9 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import AppShell from './components/AppShell.jsx'
-import HistoryPage from './components/HistoryPage.jsx'
 import LoginForm from './components/LoginForm.jsx'
-import ManagePage from './components/ManagePage.jsx'
-import MonthlySalesPage from './components/MonthlySalesPage.jsx'
-import MovementPage from './components/MovementPage.jsx'
 import ProductsPage from './components/ProductsPage.jsx'
 import Sidebar from './components/Sidebar.jsx'
+import { lazyPage } from './components/lazyPage.js'
 import { APP_NAME, APP_SUBTITLE, ThemeToggle } from './components/TitleBar.jsx'
 import { toIsoDate } from './lib/dateFormat.js'
 import { PAGE, getMenu } from './lib/menu.js'
@@ -16,6 +13,12 @@ import { canManageProducts } from './lib/roles.js'
 import { getSupabase } from './lib/supabaseClient.js'
 import { ERROR_MESSAGE, toThaiError } from './lib/supabaseErrors.js'
 import { getInitialTheme, saveTheme, toggleTheme } from './lib/theme.js'
+
+// หน้าแรก (สินค้า) โหลดพร้อมแอป หน้าอื่นโหลดเมื่อเปิดครั้งแรก
+const MovementPage = lazyPage(() => import('./components/MovementPage.jsx'))
+const ManagePage = lazyPage(() => import('./components/ManagePage.jsx'))
+const HistoryPage = lazyPage(() => import('./components/HistoryPage.jsx'))
+const MonthlySalesPage = lazyPage(() => import('./components/MonthlySalesPage.jsx'))
 
 // หน้าก่อนเข้าโปรแกรม: เข้าสู่ระบบ, กำลังตรวจ, ตั้งค่าไม่ครบ, ไม่มี profile
 function Gate({ children, theme, onToggleTheme }) {
@@ -355,34 +358,42 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
           onMove={handleMove}
         />
       )}
-      {currentPage === PAGE.MOVE && (
-        <MovementPage
-          key={moveIntent?.seq ?? 0}
-          products={products}
-          imageUrls={imageUrls}
-          loadState={loadState}
-          role={profile.role}
-          today={today}
-          intent={moveIntent}
-          repository={repository}
-          onSaved={reloadProducts}
-        />
-      )}
-      {currentPage === PAGE.MANAGE && (
-        <ManagePage
-          allProducts={allProducts}
-          imageUrls={imageUrls}
-          loadState={loadState}
-          loadError={loadError}
-          onRetry={reloadProducts}
-          repository={repository}
-          onChanged={reloadProducts}
-        />
-      )}
-      {currentPage === PAGE.HISTORY && <HistoryPage allProducts={allProducts} repository={repository} />}
-      {currentPage === PAGE.SALES && (
-        <MonthlySalesPage allProducts={allProducts} imageUrls={imageUrls} loadState={loadState} repository={repository} />
-      )}
+      <Suspense
+        fallback={
+          <p className="empty" role="status">
+            กำลังโหลดหน้า…
+          </p>
+        }
+      >
+        {currentPage === PAGE.MOVE && (
+          <MovementPage
+            key={moveIntent?.seq ?? 0}
+            products={products}
+            imageUrls={imageUrls}
+            loadState={loadState}
+            role={profile.role}
+            today={today}
+            intent={moveIntent}
+            repository={repository}
+            onSaved={reloadProducts}
+          />
+        )}
+        {currentPage === PAGE.MANAGE && (
+          <ManagePage
+            allProducts={allProducts}
+            imageUrls={imageUrls}
+            loadState={loadState}
+            loadError={loadError}
+            onRetry={reloadProducts}
+            repository={repository}
+            onChanged={reloadProducts}
+          />
+        )}
+        {currentPage === PAGE.HISTORY && <HistoryPage allProducts={allProducts} repository={repository} />}
+        {currentPage === PAGE.SALES && (
+          <MonthlySalesPage allProducts={allProducts} imageUrls={imageUrls} loadState={loadState} repository={repository} />
+        )}
+      </Suspense>
     </AppShell>
   )
 }
