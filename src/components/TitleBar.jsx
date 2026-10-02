@@ -46,9 +46,15 @@ export default function TitleBar({ profile, theme, onToggleTheme, signingOut, on
     <header className="titlebar">
       <div className="brand">
         <Logo {...logo} />
-        <span className="brand-text">
-          {APP_NAME} <small>{APP_SUBTITLE}</small>
-        </span>
+        {onHome ? (
+          <button type="button" className="brand-text brand-home" onClick={onHome} title="กลับหน้าแรก (สินค้าคงคลัง)">
+            {APP_NAME} <small>{APP_SUBTITLE}</small>
+          </button>
+        ) : (
+          <span className="brand-text">
+            {APP_NAME} <small>{APP_SUBTITLE}</small>
+          </span>
+        )}
       </div>
       <div className="who">
         {profile.displayName}

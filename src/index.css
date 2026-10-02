@@ -1885,3 +1885,57 @@ td.mono,
 .category-new {
   margin-top: 6px;
 }
+
+/* แถบบน: กดชื่อโปรแกรมเพื่อกลับหน้าแรก (เพิ่มจากปุ่มหน้าแรก) */
+.brand-home {
+  all: unset;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  border-radius: 6px;
+}
+
+.brand-home:hover {
+  color: var(--primary-2);
+}
+
+.brand-home:focus-visible {
+  outline: 2px solid var(--primary-2);
+  outline-offset: 2px;
+}
+
+/* โลโก้ใหญ่ขึ้น รูปที่กว้าง (เช่น โลโก้ตัวอักษร) แสดงกว้างได้ตามสัดส่วน */
+.titlebar .logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.titlebar img.logo {
+  width: auto;
+  min-width: 44px;
+  max-width: 110px;
+}
+
+@media (max-width: 760px) {
+  .titlebar .logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+  }
+
+  .titlebar img.logo {
+    width: auto;
+    min-width: 38px;
+    max-width: 80px;
+  }
+
+  .logo-pick,
+  .titlebar .logo {
+    min-width: 38px;
+  }
+}
