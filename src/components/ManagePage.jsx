@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PAGE } from '../lib/menu.js'
 import { filterByCategory, listCategories, searchProducts } from '../lib/stockRules.js'
 import PageHead from './PageHead.jsx'
@@ -20,6 +20,13 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
   const [notice, setNotice] = useState(null)
   // null | 'express' (รายการจาก Express) | 'stock' (ไฟล์สต็อก รูป + ยอด)
   const [importing, setImporting] = useState(null)
+  const formRef = useRef(null)
+
+  // มือถือ: ฟอร์มอยู่ใต้รายการสินค้า กดแก้ไข/เพิ่มใหม่แล้วเลื่อนลงไปที่ฟอร์มให้เห็นทันที
+  useEffect(() => {
+    if (formSeq === 0 || !window.matchMedia('(max-width: 760px)').matches) return
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [formSeq])
 
   const editing = allProducts.find((p) => p.id === editingId) ?? null
   const visible = filterByCategory(
@@ -188,15 +195,17 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
           )}
         </div>
 
-        <ProductForm
-          key={`${editing?.id ?? 'new'}-${formSeq}`}
-          product={editing}
-          imageUrl={editing ? imageUrls[editing.imagePath] : null}
-          categories={listCategories(allProducts)}
-          repository={repository}
-          onSaved={handleSaved}
-          onCancel={startNew}
-        />
+        <div ref={formRef} className="form-anchor">
+          <ProductForm
+            key={`${editing?.id ?? 'new'}-${formSeq}`}
+            product={editing}
+            imageUrl={editing ? imageUrls[editing.imagePath] : null}
+            categories={listCategories(allProducts)}
+            repository={repository}
+            onSaved={handleSaved}
+            onCancel={startNew}
+          />
+        </div>
       </div>
     </>
   )

@@ -1939,3 +1939,8 @@ td.mono,
     min-width: 38px;
   }
 }
+
+/* หน้าจัดการ: เลื่อนถึงฟอร์มแล้วเว้นขอบบนเล็กน้อย */
+.form-anchor {
+  scroll-margin-top: 12px;
+}
