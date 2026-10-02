@@ -10,9 +10,10 @@ import {
   toProductRow,
   toProfile,
 } from './mappers.js'
+import { groupIdsByValue } from './bulkEdit.js'
 import { IMAGE_BUCKET, IMAGE_URL_TTL, LOGO_PATH, imagePathFor } from './productImages.js'
 import { REPAIR_FILTER, REPAIR_TYPES } from './stockRules.js'
-import { toThaiError } from './supabaseErrors.js'
+import { ERROR_MESSAGE, toThaiError } from './supabaseErrors.js'
 
 export const PAGE_SIZE = 50
 // ส่งออก Excel: ดึงทีละ 1000 แถว (ค่าสูงสุดต่อครั้งของ Supabase) กันไฟล์ใหญ่เกินด้วย EXPORT_MAX_ROWS
@@ -29,6 +30,22 @@ async function run(buildQuery) {
   } catch (thrown) {
     return { data: null, error: toThaiError(thrown) }
   }
+}
+
+// แก้หลายรายการ: ส่ง id ทีละ UPDATE_BATCH_SIZE (id อยู่ใน URL ห้ามยาวเกิน)
+export const UPDATE_BATCH_SIZE = 100
+
+// update แถวตาม id แล้วนับแถวที่บันทึกได้จริง RLS กรองแถวออกเงียบ ๆ จึงถือว่าไม่ครบ = ไม่มีสิทธิ์
+async function updateByIds(client, ids, row) {
+  let updated = 0
+  for (let i = 0; i < ids.length; i += UPDATE_BATCH_SIZE) {
+    const batch = ids.slice(i, i + UPDATE_BATCH_SIZE)
+    const { data, error } = await run(() => client.from('products').update(row).in('id', batch).select('id'))
+    if (error) return { updated, error }
+    updated += data.length
+    if (data.length < batch.length) return { updated, error: ERROR_MESSAGE.NOT_FOUND }
+  }
+  return { updated, error: null }
 }
 
 // ตัวกรองประเภทในหน้าประวัติ: REPAIR_FILTER = ส่งซ่อม/ซ่อมเสร็จ/ตัดจำหน่าย รวมกัน
@@ -138,6 +155,22 @@ export function createRepository(client) {
           .upload(LOGO_PATH, blob, { contentType: 'image/jpeg', upsert: true, cacheControl: '60' }),
       )
       return { error }
+    },
+
+    // ตั้งหมวดหมู่ให้หลายรายการ คืนจำนวนที่บันทึกได้ (ชุดไหนผิดพลาดหยุดทันที)
+    async setProductsCategory(ids, category) {
+      return updateByIds(client, ids, { category: String(category ?? '').trim() })
+    },
+
+    // ตั้งจุดสั่งซื้อหลายรายการ changes = [{ id, reorderPoint }] บันทึกครั้งเดียวต่อค่า
+    async setReorderPoints(changes) {
+      let updated = 0
+      for (const { value, ids } of groupIdsByValue(changes.map((c) => ({ id: c.id, value: c.reorderPoint })))) {
+        const result = await updateByIds(client, ids, { reorder_point: value })
+        updated += result.updated
+        if (result.error) return { updated, error: result.error }
+      }
+      return { updated, error: null }
     },
 
     async setProductActive(id, active) {

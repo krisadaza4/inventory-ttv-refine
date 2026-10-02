@@ -1944,3 +1944,60 @@ td.mono,
 .form-anchor {
   scroll-margin-top: 12px;
 }
+
+/* หน้าจัดการ: เลือกหลายรายการเพื่อตั้งหมวดหมู่ */
+.pick-col {
+  width: 36px;
+  text-align: center;
+}
+
+.pick-col input {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--ok-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.bulk-bar .bulk-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .bulk-bar select,
+  .bulk-bar input {
+    flex: 1 1 140px;
+  }
+}
+
+/* ตั้งจุดสั่งซื้อ: ตัวเลือกอยู่ในเนื้อหาแผง ไม่ต้องมีเส้นคั่น ตารางตัวอย่างเลื่อนในกรอบ */
+.plain-toolbar {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.planner-table {
+  max-height: 50vh;
+  overflow: auto;
+}
+
+.btn.btn-reorder {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #9a3412;
+}
+
+:root[data-theme='dark'] .btn.btn-reorder {
+  background: #431407;
+  border-color: #9a3412;
+  color: #fed7aa;
+}

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { PAGE } from '../lib/menu.js'
 import { filterByCategory, listCategories, searchProducts } from '../lib/stockRules.js'
+import BulkCategoryBar from './BulkCategoryBar.jsx'
 import PageHead from './PageHead.jsx'
 import ProductForm from './ProductForm.jsx'
 import ProductImport from './ProductImport.jsx'
 import ProductThumb from './ProductThumb.jsx'
+import ReorderPlanner from './ReorderPlanner.jsx'
 import StockSheetImport from './StockSheetImport.jsx'
 
 // หน้าจัดการสินค้า (admin): ซ้ายตารางสินค้า ขวาฟอร์มเพิ่ม/แก้ไข (design.md ข้อ 7)
@@ -18,9 +20,11 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
   // ใช้เป็น key ให้ฟอร์มเริ่มใหม่หลังบันทึกหรือกดเพิ่มใหม่
   const [formSeq, setFormSeq] = useState(0)
   const [notice, setNotice] = useState(null)
-  // null | 'express' (รายการจาก Express) | 'stock' (ไฟล์สต็อก รูป + ยอด)
+  // null | 'express' (รายการจาก Express) | 'stock' (ไฟล์สต็อก รูป + ยอด) | 'reorder' (ตั้งจุดสั่งซื้อ)
   const [importing, setImporting] = useState(null)
   const formRef = useRef(null)
+  // id สินค้าที่เลือกไว้ตั้งหมวดหมู่ทีละหลายรายการ
+  const [selected, setSelected] = useState(() => new Set())
 
   // มือถือ: ฟอร์มอยู่ใต้รายการสินค้า กดแก้ไข/เพิ่มใหม่แล้วเลื่อนลงไปที่ฟอร์มให้เห็นทันที
   useEffect(() => {
@@ -49,6 +53,32 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
     setNotice(null)
   }
 
+  const toggleSelected = (id) =>
+    setSelected((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  const allVisibleSelected = visible.length > 0 && visible.every((p) => selected.has(p.id))
+  const toggleAllVisible = () =>
+    setSelected((current) => {
+      const next = new Set(current)
+      for (const p of visible) {
+        if (allVisibleSelected) next.delete(p.id)
+        else next.add(p.id)
+      }
+      return next
+    })
+
+  // แก้ทีละหลายรายการเสร็จ: ฟอร์มที่เปิดค้างอาจมีค่าเก่า จึงกลับเป็นฟอร์มเพิ่มใหม่ (ไม่เลื่อนจอ) แล้วโหลดใหม่
+  // message = null คือบันทึกได้บางส่วน (ข้อความผิดพลาดแสดงในแถบนั้นเอง)
+  const handleBulkSaved = (message) => {
+    if (message) setNotice(message)
+    setEditingId(null)
+    onChanged()
+  }
+
   // ไม่เริ่มฟอร์มใหม่ที่นี่: สินค้ายังเป็นค่าเก่าจนกว่าโหลดใหม่เสร็จ ฟอร์มจะแสดงค่าเก่าแล้วบันทึกทับได้
   // ฟอร์มแก้ไขคงค่าที่เพิ่งบันทึกไว้ ส่วนสินค้าใหม่ key เปลี่ยนเองเมื่อสินค้าโผล่ในรายการ
   const handleSaved = (id, message) => {
@@ -68,6 +98,9 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
             </button>
             <button type="button" className="btn btn-express" onClick={() => setImporting('express')} disabled={importing !== null}>
               นำเข้าจาก Express
+            </button>
+            <button type="button" className="btn btn-reorder" onClick={() => setImporting('reorder')} disabled={importing !== null}>
+              ตั้งจุดสั่งซื้อ
             </button>
             <button type="button" className="btn primary" onClick={startNew}>
               + เพิ่มสินค้าใหม่
@@ -92,6 +125,18 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
               setImporting(null)
             }
             onChanged()
+          }}
+          onClose={() => setImporting(null)}
+        />
+      )}
+
+      {importing === 'reorder' && (
+        <ReorderPlanner
+          allProducts={allProducts}
+          repository={repository}
+          onSaved={(message) => {
+            handleBulkSaved(message)
+            if (message) setImporting(null)
           }}
           onClose={() => setImporting(null)}
         />
@@ -137,6 +182,19 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
             </label>
           </div>
 
+          {selected.size > 0 && (
+            <BulkCategoryBar
+              ids={[...selected]}
+              categories={listCategories(allProducts)}
+              repository={repository}
+              onSaved={(message) => {
+                handleBulkSaved(message)
+                if (message) setSelected(new Set())
+              }}
+              onClear={() => setSelected(new Set())}
+            />
+          )}
+
           {loadState === 'loading' && (
             <p className="empty" role="status">
               กำลังโหลดรายการสินค้า…
@@ -160,6 +218,14 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
               <table>
                 <thead>
                   <tr>
+                    <th className="pick-col">
+                      <input
+                        type="checkbox"
+                        aria-label="เลือกทั้งหมดที่แสดง"
+                        checked={allVisibleSelected}
+                        onChange={toggleAllVisible}
+                      />
+                    </th>
                     <th className="thumb-col">รูป</th>
                     <th>รหัส</th>
                     <th>ชื่อสินค้า</th>
@@ -173,6 +239,14 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
                 <tbody>
                   {visible.map((p) => (
                     <tr key={p.id} className={p.id === editingId ? 'selected' : undefined}>
+                      <td className="pick-col">
+                        <input
+                          type="checkbox"
+                          aria-label={`เลือก ${p.sku}`}
+                          checked={selected.has(p.id)}
+                          onChange={() => toggleSelected(p.id)}
+                        />
+                      </td>
                       <td className="thumb-col">
                         <ProductThumb url={imageUrls[p.imagePath]} name={p.name} size="row" />
                       </td>

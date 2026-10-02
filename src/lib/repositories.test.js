@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MOVEMENT_COLUMNS, PRODUCT_COLUMNS, PROFILE_COLUMNS } from './mappers.js'
-import { EXPORT_PAGE_SIZE, IMPORT_BATCH_SIZE, PAGE_SIZE, createRepository } from './repositories.js'
+import { EXPORT_PAGE_SIZE, IMPORT_BATCH_SIZE, PAGE_SIZE, UPDATE_BATCH_SIZE, createRepository } from './repositories.js'
 import { REPAIR_FILTER } from './stockRules.js'
 import { ERROR_MESSAGE } from './supabaseErrors.js'
 
@@ -87,6 +87,8 @@ describe('createRepository', () => {
       'removeProductImage',
       'saveProduct',
       'setProductActive',
+      'setProductsCategory',
+      'setReorderPoints',
       'signImageUrls',
       'uploadLogo',
       'uploadProductImage',
@@ -184,6 +186,61 @@ describe('setProductActive', () => {
   it('ไม่มีสิทธิ์ (RLS กรองแถวออก) คืนข้อความไทย', async () => {
     const client = fakeClient({ data: null, error: { code: 'PGRST116' } })
     expect(await createRepository(client).setProductActive('p1', false)).toEqual({ error: ERROR_MESSAGE.NOT_FOUND })
+  })
+})
+
+describe('setProductsCategory', () => {
+  it('update หมวดหมู่ (ตัดช่องว่าง) ตาม id หลายรายการ', async () => {
+    const client = fakeClient({ data: [{ id: 'p1' }, { id: 'p2' }], error: null })
+    expect(await createRepository(client).setProductsCategory(['p1', 'p2'], ' เครื่องปั่น ')).toEqual({
+      updated: 2,
+      error: null,
+    })
+    expect(client.calls).toEqual([
+      ['from', 'products'],
+      ['update', { category: 'เครื่องปั่น' }],
+      ['in', 'id', ['p1', 'p2']],
+      ['select', 'id'],
+    ])
+  })
+
+  it('แบ่งส่งทีละชุด', async () => {
+    const ids = Array.from({ length: UPDATE_BATCH_SIZE + 1 }, (_, i) => `p${i}`)
+    const client = fakeClient({ data: [], error: null })
+    await createRepository(client).setProductsCategory(ids, 'x')
+    // ชุดแรกได้ 0 แถว (ไม่ครบ) จึงหยุดทันที
+    expect(client.calls.filter((c) => c[0] === 'in')).toHaveLength(1)
+    expect(client.calls.find((c) => c[0] === 'in')[2]).toHaveLength(UPDATE_BATCH_SIZE)
+  })
+
+  it('บันทึกได้ไม่ครบ (RLS กรองแถวออก) คืนข้อความไม่มีสิทธิ์', async () => {
+    const client = fakeClient({ data: [{ id: 'p1' }], error: null })
+    expect(await createRepository(client).setProductsCategory(['p1', 'p2'], 'x')).toEqual({
+      updated: 1,
+      error: ERROR_MESSAGE.NOT_FOUND,
+    })
+  })
+})
+
+describe('setReorderPoints', () => {
+  it('บันทึกครั้งเดียวต่อค่า', async () => {
+    const client = fakeClient({ data: [{ id: 'x' }], error: null })
+    const changes = [
+      { id: 'a', reorderPoint: 3 },
+      { id: 'b', reorderPoint: 8 },
+    ]
+    expect(await createRepository(client).setReorderPoints(changes)).toEqual({ updated: 2, error: null })
+    expect(client.calls.filter((c) => c[0] === 'update')).toEqual([
+      ['update', { reorder_point: 3 }],
+      ['update', { reorder_point: 8 }],
+    ])
+  })
+
+  it('ผิดพลาดหยุดทันที', async () => {
+    const client = fakeClient({ data: null, error: { code: '42501' } })
+    const { updated, error } = await createRepository(client).setReorderPoints([{ id: 'a', reorderPoint: 3 }])
+    expect(updated).toBe(0)
+    expect(error).toBeTruthy()
   })
 })
 
