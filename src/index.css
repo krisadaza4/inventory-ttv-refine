@@ -1780,6 +1780,18 @@ td.mono,
   overflow: auto;
 }
 
+/* มือถือ: ตารางยอดขายชิดแถบเมนูล่าง ไม่เหลือช่องว่างด้านล่าง */
+@media (max-width: 760px) {
+  .app-main:has(.sales-wrap) {
+    padding-bottom: 0;
+  }
+
+  .app-main:has(.sales-wrap) > .panel {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+}
+
 .sales-table thead th {
   position: sticky;
   top: 0;
