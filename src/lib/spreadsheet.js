@@ -1,5 +1,5 @@
 import { formatThaiDate } from './dateFormat.js'
-import { MONTH_LABELS } from './monthlySales.js'
+import { MONTH_LABELS, toBuddhistYear } from './monthlySales.js'
 import { MOVEMENT_LABEL, STOCK_STATUS, getStockStatus, signedQuantity } from './stockRules.js'
 
 // ตารางสำหรับ write-excel-file: แถว = array ของ cell { value, type, ... }
@@ -68,7 +68,36 @@ export function monthlySalesSheet(rows) {
   ]
 }
 
-// kind: 'products' | 'movements', today: 'YYYY-MM-DD'
+// สำรองข้อมูลทั้งหมด (admin) เป็นไฟล์เดียวหลายแผ่นงาน: สินค้า (รวมที่ปิดใช้งาน) / ประวัติ / ยอดขายรายเดือน
+// สินค้ามีรหัสเดิม ไฟล์รูป และรหัสระบบเพิ่ม เพื่อใช้กู้คืนหรือตรวจสอบภายหลัง
+export function backupSheets({ products, movements, sales }) {
+  const byId = new Map(products.map((p) => [p.id, p]))
+  const productRows = productSheet(products).map((row, i) => {
+    if (i === 0) return [...row, ...header(['รหัสเดิม', 'ไฟล์รูป', 'รหัสระบบ'])]
+    const p = products[i - 1]
+    return [...row, text(p.legacySku), text(p.imagePath), text(p.id)]
+  })
+  const salesRows = [
+    header(['รหัสสินค้า', 'ชื่อสินค้า', 'ปี (พ.ศ.)', 'เดือน', 'จำนวน']),
+    ...sales.map((s) => {
+      const p = byId.get(s.productId)
+      return [
+        text(p?.sku ?? s.productId),
+        text(p?.name),
+        number(toBuddhistYear(s.year)),
+        text(MONTH_LABELS[s.month - 1]),
+        number(s.quantity),
+      ]
+    }),
+  ]
+  return [
+    { data: productRows, sheet: 'สินค้า', stickyRowsCount: 1 },
+    { data: movementSheet(movements), sheet: 'ประวัติ', stickyRowsCount: 1 },
+    { data: salesRows, sheet: 'ยอดขายรายเดือน', stickyRowsCount: 1 },
+  ]
+}
+
+// kind: 'products' | 'movements' | 'backup', today: 'YYYY-MM-DD'
 export function exportFileName(kind, today) {
   return `inventory-${kind}-${today}.xlsx`
 }

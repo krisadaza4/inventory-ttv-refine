@@ -2032,3 +2032,20 @@ td.mono,
   outline: 2px solid var(--stat-text);
   outline-offset: 2px;
 }
+
+/* ปุ่มสำรองข้อมูล (หน้าจัดการ): สีเทาอมฟ้า ไม่ซ้ำปุ่มอื่น */
+.btn.btn-backup {
+  color: #334155;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.btn.btn-backup:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+:root[data-theme='dark'] .btn.btn-backup {
+  color: #cbd5e1;
+  background: #1e293b;
+  border-color: #334155;
+}

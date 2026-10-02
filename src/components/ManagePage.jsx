@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PAGE } from '../lib/menu.js'
 import { filterByCategory, listCategories, searchProducts } from '../lib/stockRules.js'
+import BackupButton from './BackupButton.jsx'
 import BulkCategoryBar from './BulkCategoryBar.jsx'
 import PageHead from './PageHead.jsx'
 import ProductForm from './ProductForm.jsx'
@@ -102,6 +103,7 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
             <button type="button" className="btn btn-reorder" onClick={() => setImporting('reorder')} disabled={importing !== null}>
               ตั้งจุดสั่งซื้อ
             </button>
+            <BackupButton repository={repository} />
             <button type="button" className="btn primary" onClick={startNew}>
               + เพิ่มสินค้าใหม่
             </button>
