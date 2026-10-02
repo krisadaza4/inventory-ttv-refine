@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { backupReminder, readLastBackup, saveLastBackup } from '../lib/backupReminder.js'
+import { toIsoDate } from '../lib/dateFormat.js'
 import { PAGE } from '../lib/menu.js'
 import { filterByCategory, listCategories, searchProducts } from '../lib/stockRules.js'
 import BackupButton from './BackupButton.jsx'
@@ -24,6 +26,9 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
   // null | 'express' (รายการจาก Express) | 'stock' (ไฟล์สต็อก รูป + ยอด) | 'reorder' (ตั้งจุดสั่งซื้อ)
   const [importing, setImporting] = useState(null)
   const formRef = useRef(null)
+  // วันที่สำรองข้อมูลล่าสุดของเครื่องนี้ เกิน 7 วัน (หรือไม่เคย) แสดงแถบเตือน
+  const [lastBackup, setLastBackup] = useState(() => readLastBackup())
+  const reminder = backupReminder(lastBackup, toIsoDate(new Date()))
   // id สินค้าที่เลือกไว้ตั้งหมวดหมู่ทีละหลายรายการ
   const [selected, setSelected] = useState(() => new Set())
 
@@ -103,13 +108,25 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
             <button type="button" className="btn btn-reorder" onClick={() => setImporting('reorder')} disabled={importing !== null}>
               ตั้งจุดสั่งซื้อ
             </button>
-            <BackupButton repository={repository} />
+            <BackupButton
+              repository={repository}
+              onBackedUp={(date) => {
+                saveLastBackup(date)
+                setLastBackup(date)
+              }}
+            />
             <button type="button" className="btn primary" onClick={startNew}>
               + เพิ่มสินค้าใหม่
             </button>
           </div>
         }
       />
+
+      {reminder && (
+        <p className="notice backup-reminder" role="status">
+          {reminder}
+        </p>
+      )}
 
       {notice && (
         <p className="notice" role="status">

@@ -2049,3 +2049,10 @@ td.mono,
   background: #1e293b;
   border-color: #334155;
 }
+
+/* หน้าจัดการ: แถบเตือนให้สำรองข้อมูล (สีอำพัน ต่างจากข้อความบันทึกสำเร็จ) */
+.notice.backup-reminder {
+  border-color: var(--low-border);
+  background: var(--low-bg);
+  color: var(--low);
+}

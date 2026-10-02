@@ -4,7 +4,8 @@ import { backupSheets, exportFileName } from '../lib/spreadsheet.js'
 
 // สำรองข้อมูล (admin): ดึงสินค้า (รวมที่ปิดใช้งาน) ประวัติ และยอดขายรายเดือนทั้งหมด แล้วบันทึกเป็น Excel ไฟล์เดียว
 // Supabase แบบฟรีไม่มีสำรองอัตโนมัติ ให้กดเก็บไว้เป็นระยะ
-export default function BackupButton({ repository }) {
+// onBackedUp(วันที่ YYYY-MM-DD) เรียกเมื่อบันทึกไฟล์สำเร็จ ใช้จำวันสำรองล่าสุด
+export default function BackupButton({ repository, onBackedUp }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [done, setDone] = useState(null)
@@ -29,7 +30,9 @@ export default function BackupButton({ repository }) {
           sales: salesResult.sales,
         })
         const { default: writeExcelFile } = await import('write-excel-file/browser')
-        await writeExcelFile(sheets).toFile(exportFileName('backup', toIsoDate(new Date())))
+        const today = toIsoDate(new Date())
+        await writeExcelFile(sheets).toFile(exportFileName('backup', today))
+        onBackedUp?.(today)
         setDone(
           `สำรองแล้ว: สินค้า ${productsResult.products.length} / ประวัติ ${movementsResult.movements.length} / ยอดขาย ${salesResult.sales.length} แถว`,
         )
