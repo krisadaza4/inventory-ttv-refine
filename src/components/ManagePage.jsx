@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { PAGE } from '../lib/menu.js'
-import { listCategories, searchProducts } from '../lib/stockRules.js'
+import { filterByCategory, listCategories, searchProducts } from '../lib/stockRules.js'
 import PageHead from './PageHead.jsx'
 import ProductForm from './ProductForm.jsx'
 import ProductImport from './ProductImport.jsx'
@@ -11,6 +11,7 @@ import StockSheetImport from './StockSheetImport.jsx'
 // allProducts รวมสินค้าที่ปิดใช้งานแล้ว
 export default function ManagePage({ allProducts, imageUrls, loadState, loadError, onRetry, repository, onChanged }) {
   const [query, setQuery] = useState('')
+  const [category, setCategory] = useState('')
   const [showInactive, setShowInactive] = useState(false)
   // null = เพิ่มใหม่
   const [editingId, setEditingId] = useState(null)
@@ -21,9 +22,12 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
   const [importing, setImporting] = useState(null)
 
   const editing = allProducts.find((p) => p.id === editingId) ?? null
-  const visible = searchProducts(
-    allProducts.filter((p) => showInactive || p.active),
-    query,
+  const visible = filterByCategory(
+    searchProducts(
+      allProducts.filter((p) => showInactive || p.active),
+      query,
+    ),
+    category,
   ).toSorted((a, b) => a.sku.localeCompare(b.sku, 'th'))
 
   const startNew = () => {
@@ -112,6 +116,14 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
+            <select aria-label="กรองหมวดหมู่" value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">ทุกหมวดหมู่</option>
+              {listCategories(allProducts).map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
             <label className="check">
               <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />{' '}
               แสดงที่ปิดใช้งาน

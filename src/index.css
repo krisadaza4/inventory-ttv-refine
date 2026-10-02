@@ -559,7 +559,8 @@ td.actions .btn + .btn {
   grid-template-columns: 110px minmax(0, 1fr);
 }
 
-.form-grid.compact input {
+.form-grid.compact input,
+.form-grid.compact select {
   width: 100%;
 }
 
@@ -1878,4 +1879,9 @@ td.mono,
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+}
+
+/* ฟอร์มสินค้า: ช่องพิมพ์หมวดหมู่ใหม่อยู่ใต้ช่องเลือกหมวดหมู่ */
+.category-new {
+  margin-top: 6px;
 }
