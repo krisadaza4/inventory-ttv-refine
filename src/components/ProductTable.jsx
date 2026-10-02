@@ -1,18 +1,12 @@
-import { formatQuantity } from "../lib/numberFormat.js";
-import { MOVEMENT_TYPE, getStockStatus } from "../lib/stockRules.js";
-import ProductThumb from "./ProductThumb.jsx";
-import SortHead from "./SortHead.jsx";
-import StockBadge from "./StockBadge.jsx";
+import { formatQuantity } from '../lib/numberFormat.js'
+import { MOVEMENT_TYPE, getStockStatus } from '../lib/stockRules.js'
+import ProductThumb from './ProductThumb.jsx'
+import SortHead from './SortHead.jsx'
+import StockBadge from './StockBadge.jsx'
 
 // ตารางสินค้าคงคลัง (เรียงมาแล้วจากหน้าที่เรียกใช้ กดหัวคอลัมน์เพื่อเปลี่ยนการเรียง) hide-sm = ซ่อนบนมือถือ
-export default function ProductTable({
-  products,
-  imageUrls,
-  onMove,
-  sort,
-  onSort,
-}) {
-  const head = { sort, onSort };
+export default function ProductTable({ products, imageUrls, onMove, sort, onSort }) {
+  const head = { sort, onSort }
   return (
     <div className="table-wrap">
       <table>
@@ -63,11 +57,7 @@ export default function ProductTable({
           {products.map((p) => (
             <tr key={p.id}>
               <td className="thumb-col">
-                <ProductThumb
-                  url={imageUrls[p.imagePath]}
-                  name={p.name}
-                  size="row"
-                />
+                <ProductThumb url={imageUrls[p.imagePath]} name={p.name} size="row" />
               </td>
               <td className="mono">{p.sku}</td>
               <td>
@@ -80,27 +70,15 @@ export default function ProductTable({
                 <b>{formatQuantity(p.onHand)}</b>
                 <span className="show-sm dim"> {p.unit}</span>
               </td>
-              <td className="num hide-sm">
-                {p.repairQty > 0 ? formatQuantity(p.repairQty) : "–"}
-              </td>
+              <td className="num hide-sm">{p.repairQty > 0 ? formatQuantity(p.repairQty) : '–'}</td>
               <td className="hide-sm">{p.unit}</td>
-              <td className="num hide-sm dim">
-                {formatQuantity(p.reorderPoint)}
-              </td>
-              <td className="num hide-sm">
-                {p.avgMonthlySales === null
-                  ? "–"
-                  : formatQuantity(p.avgMonthlySales)}
-              </td>
+              <td className="num hide-sm dim">{formatQuantity(p.reorderPoint)}</td>
+              <td className="num hide-sm">{p.avgMonthlySales === null ? '–' : formatQuantity(p.avgMonthlySales)}</td>
               <td>
                 <StockBadge status={getStockStatus(p.onHand, p.reorderPoint)} />
               </td>
               <td className="num hide-sm actions">
-                <button
-                  type="button"
-                  className="btn sm btn-in"
-                  onClick={() => onMove(p, MOVEMENT_TYPE.IN)}
-                >
+                <button type="button" className="btn sm btn-in" onClick={() => onMove(p, MOVEMENT_TYPE.IN)}>
                   <span aria-hidden="true">＋</span> รับเข้า
                 </button>
                 <button
@@ -108,7 +86,7 @@ export default function ProductTable({
                   className="btn sm btn-out"
                   onClick={() => onMove(p, MOVEMENT_TYPE.OUT)}
                   disabled={p.onHand <= 0}
-                  title={p.onHand <= 0 ? "สินค้าหมด เบิกออกไม่ได้" : undefined}
+                  title={p.onHand <= 0 ? 'สินค้าหมด เบิกออกไม่ได้' : undefined}
                 >
                   <span aria-hidden="true">－</span> เบิกออก
                 </button>
@@ -118,5 +96,5 @@ export default function ProductTable({
         </tbody>
       </table>
     </div>
-  );
+  )
 }
