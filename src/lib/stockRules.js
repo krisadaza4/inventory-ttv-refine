@@ -193,6 +193,56 @@ export function listCategories(products) {
   return [...new Set(products.map((p) => p.category))].sort((a, b) => a.localeCompare(b, 'th'))
 }
 
+// ตัวกรอง "ที่เก็บ": สินค้าที่ยังไม่ระบุที่เก็บ
+export const NO_LOCATION = '__none__'
+
+// ตัวเลือกของตัวกรองที่เก็บ (ไม่รวมค่าว่าง)
+export function listLocations(products) {
+  const locations = products.map((p) => String(p.location ?? '').trim()).filter(Boolean)
+  return [...new Set(locations)].sort((a, b) => a.localeCompare(b, 'th'))
+}
+
+// ตัวเลือกของตัวกรองหน่วย
+export function listUnits(products) {
+  return [...new Set(products.map((p) => p.unit))].sort((a, b) => a.localeCompare(b, 'th'))
+}
+
+// กรองหลายเงื่อนไขพร้อมกัน ค่าว่างหมายถึงไม่กรองช่องนั้น
+// filters: { category, status, location (NO_LOCATION = ไม่ระบุ), unit, repairOnly }
+export function filterProducts(products, filters = {}) {
+  const { category, status, location, unit, repairOnly } = filters
+  return products.filter((p) => {
+    if (category && p.category !== category) return false
+    if (status && getStockStatus(p.onHand, p.reorderPoint) !== status) return false
+    if (location) {
+      const own = String(p.location ?? '').trim()
+      if (location === NO_LOCATION ? own !== '' : own !== location) return false
+    }
+    if (unit && p.unit !== unit) return false
+    if (repairOnly && !(toAmount(p.repairQty ?? 0) > 0)) return false
+    return true
+  })
+}
+
+// เรียงตามหัวคอลัมน์ key: 'status' | 'sku' | 'name' | 'category' | 'onHand' | 'repairQty' | 'reorderPoint' | 'avgMonthlySales'
+// dir: 'asc' | 'desc' สถานะ asc = หมด → ใกล้หมด → ปกติ ค่าว่าง (เช่น ไม่มียอดเฉลี่ย) อยู่ท้ายเสมอ
+export function sortProducts(products, key, dir) {
+  const sign = dir === 'desc' ? -1 : 1
+  const value = (p) => {
+    if (key === 'status') return STATUS_ORDER.indexOf(getStockStatus(p.onHand, p.reorderPoint))
+    if (key === 'sku' || key === 'name' || key === 'category') return String(p[key] ?? '')
+    return p[key] === null || p[key] === undefined ? null : Number(p[key])
+  }
+  return [...products].sort((a, b) => {
+    const va = value(a)
+    const vb = value(b)
+    let cmp
+    if (va === null || vb === null) cmp = va === vb ? 0 : va === null ? 1 : -1
+    else cmp = (typeof va === 'string' ? va.localeCompare(vb, 'th') : va - vb) * sign
+    return cmp || a.name.localeCompare(b.name, 'th')
+  })
+}
+
 // ยอดหลังบันทึก { onHand, repairQty } สำหรับแสดงก่อนกดบันทึก จำนวนหรือประเภทยังไม่ถูกต้อง คืน null
 export function stockAfter(stock, type, quantity) {
   const amount = parseAmount(quantity)

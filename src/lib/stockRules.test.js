@@ -10,8 +10,13 @@ import {
   getStockStatus,
   countByStockStatus,
   filterByCategory,
+  filterProducts,
   listCategories,
+  listLocations,
+  listUnits,
+  NO_LOCATION,
   quantityAfter,
+  sortProducts,
   searchProducts,
   signedQuantity,
   sortByStockStatus,
@@ -266,6 +271,77 @@ describe('searchProducts', () => {
 
   it('สินค้าไม่มีบาร์โค้ด ไม่ error', () => {
     expect(searchProducts(products, 'ไม่มีสินค้านี้')).toEqual([])
+  })
+})
+
+describe('filterProducts', () => {
+  const products = [
+    { sku: 'A', name: 'A', category: 'X', unit: 'ชิ้น', location: 'C1', onHand: 0, reorderPoint: 0, repairQty: 2 },
+    { sku: 'B', name: 'B', category: 'Y', unit: 'กล่อง', location: '', onHand: 3, reorderPoint: 5, repairQty: 0 },
+    { sku: 'C', name: 'C', category: 'X', unit: 'ชิ้น', location: null, onHand: 10, reorderPoint: 5, repairQty: 0 },
+  ]
+  const skus = (list) => list.map((p) => p.sku)
+
+  it('ไม่ใส่เงื่อนไข คืนทั้งหมด', () => {
+    expect(filterProducts(products)).toEqual(products)
+    expect(filterProducts(products, { category: '', status: '', location: '', unit: '', repairOnly: false })).toEqual(
+      products,
+    )
+  })
+
+  it('กรองตามสถานะ', () => {
+    expect(skus(filterProducts(products, { status: STOCK_STATUS.OUT }))).toEqual(['A'])
+    expect(skus(filterProducts(products, { status: STOCK_STATUS.LOW }))).toEqual(['B'])
+    expect(skus(filterProducts(products, { status: STOCK_STATUS.OK }))).toEqual(['C'])
+  })
+
+  it('กรองตามที่เก็บ และที่ยังไม่ระบุ', () => {
+    expect(skus(filterProducts(products, { location: 'C1' }))).toEqual(['A'])
+    expect(skus(filterProducts(products, { location: NO_LOCATION }))).toEqual(['B', 'C'])
+  })
+
+  it('กรองหน่วย และเฉพาะที่มีของรอซ่อม', () => {
+    expect(skus(filterProducts(products, { unit: 'ชิ้น' }))).toEqual(['A', 'C'])
+    expect(skus(filterProducts(products, { repairOnly: true }))).toEqual(['A'])
+  })
+
+  it('หลายเงื่อนไขพร้อมกัน', () => {
+    expect(skus(filterProducts(products, { category: 'X', status: STOCK_STATUS.OK }))).toEqual(['C'])
+  })
+
+  it('listLocations ไม่รวมค่าว่าง และ listUnits ไม่ซ้ำ', () => {
+    expect(listLocations(products)).toEqual(['C1'])
+    expect(listUnits(products)).toEqual(['กล่อง', 'ชิ้น'])
+  })
+})
+
+describe('sortProducts', () => {
+  const products = [
+    { sku: 'B', name: 'ข', onHand: 10, reorderPoint: 5, avgMonthlySales: null },
+    { sku: 'A', name: 'ก', onHand: 0, reorderPoint: 0, avgMonthlySales: 4 },
+    { sku: 'C', name: 'ค', onHand: 3, reorderPoint: 5, avgMonthlySales: 9 },
+  ]
+  const skus = (list) => list.map((p) => p.sku)
+
+  it('สถานะ: หมด → ใกล้หมด → ปกติ และกลับด้านได้', () => {
+    expect(skus(sortProducts(products, 'status', 'asc'))).toEqual(['A', 'C', 'B'])
+    expect(skus(sortProducts(products, 'status', 'desc'))).toEqual(['B', 'C', 'A'])
+  })
+
+  it('ตัวเลขและข้อความ', () => {
+    expect(skus(sortProducts(products, 'onHand', 'desc'))).toEqual(['B', 'C', 'A'])
+    expect(skus(sortProducts(products, 'sku', 'asc'))).toEqual(['A', 'B', 'C'])
+  })
+
+  it('ค่าว่างอยู่ท้ายเสมอ', () => {
+    expect(skus(sortProducts(products, 'avgMonthlySales', 'desc'))).toEqual(['C', 'A', 'B'])
+    expect(skus(sortProducts(products, 'avgMonthlySales', 'asc'))).toEqual(['A', 'C', 'B'])
+  })
+
+  it('ไม่แก้ array เดิม', () => {
+    const before = skus(products)
+    sortProducts(products, 'sku', 'asc')
+    expect(skus(products)).toEqual(before)
   })
 })
 

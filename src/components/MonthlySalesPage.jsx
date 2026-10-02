@@ -9,22 +9,10 @@ import ExportButton from './ExportButton.jsx'
 import PageHead from './PageHead.jsx'
 import ProductThumb from './ProductThumb.jsx'
 import RefreshIcon from './RefreshIcon.jsx'
+import SortHead from './SortHead.jsx'
 
 // คลิกหัวคอลัมน์เพื่อเรียง: ตัวเลขเริ่มจากมาก → น้อย รหัสเริ่มจาก ก → ฮ
 const firstDir = (key) => (key === 'sku' ? 'asc' : 'desc')
-
-// หัวคอลัมน์ที่กดเรียงได้
-function SortHead({ sortKey, sort, onSort, children, className }) {
-  const active = sort.key === sortKey
-  return (
-    <th className={className} aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}>
-      <button type="button" className="sort-head" onClick={() => onSort(sortKey)}>
-        {children}
-        <span aria-hidden="true">{active ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : ''}</span>
-      </button>
-    </th>
-  )
-}
 
 // หน้ายอดขายรายเดือน: ตาราง สินค้า × 12 เดือน ค่าจากไฟล์สต็อกของร้าน (นำเข้าในหน้าจัดการสินค้า)
 export default function MonthlySalesPage({ allProducts, imageUrls, loadState, repository }) {
