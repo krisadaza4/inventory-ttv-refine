@@ -31,6 +31,16 @@ const DEFAULT_SORT = { key: 'status', dir: 'asc' }
 const TEXT_KEYS = ['status', 'sku', 'name', 'category']
 const firstDir = (key) => (TEXT_KEYS.includes(key) ? 'asc' : 'desc')
 
+// กล่องสรุปที่กดเพื่อกรองได้
+function StatButton({ label, count, tone, pressed, onClick }) {
+  return (
+    <button type="button" className={['panel stat stat-btn', tone].filter(Boolean).join(' ')} aria-pressed={pressed} onClick={onClick}>
+      <span>{label}</span>
+      <b>{count}</b>
+    </button>
+  )
+}
+
 // หน้าสินค้าคงคลัง: กล่องสรุป, ค้นหา, ตัวกรอง (หมวดหมู่ สถานะ ที่เก็บ หน่วย รอซ่อม), ตาราง (design.md ข้อ 7)
 export default function ProductsPage({ products, imageUrls, loadState, loadError, onRetry, onMove }) {
   const [query, setQuery] = useState('')
@@ -42,6 +52,10 @@ export default function ProductsPage({ products, imageUrls, loadState, loadError
   const units = listUnits(products)
   const visible = sortProducts(filterProducts(searchProducts(products, query), filters), sort.key, sort.dir)
   const filtered = query.trim() !== '' || Object.keys(NO_FILTERS).some((k) => filters[k] !== NO_FILTERS[k])
+
+  // กดกล่องสถานะเดิมซ้ำ = กลับไปดูทั้งหมด
+  const showStatus = (status) =>
+    setFilters((current) => ({ ...current, status: current.status === status ? '' : status }))
 
   const setFilter = (key) => (e) => setFilters((current) => ({ ...current, [key]: e.target.value }))
   const sortBy = (key) =>
@@ -69,19 +83,23 @@ export default function ProductsPage({ products, imageUrls, loadState, loadError
         }
       />
 
+      {/* กดกล่องเพื่อกรองตามสถานะ กดซ้ำหรือกด "สินค้าทั้งหมด" เพื่อดูทั้งหมด */}
       <div className="stats">
-        <div className="panel stat">
-          <span>สินค้าทั้งหมด</span>
-          <b>{counts.total}</b>
-        </div>
-        <div className="panel stat low">
-          <span>ใกล้หมด</span>
-          <b>{counts[STOCK_STATUS.LOW]}</b>
-        </div>
-        <div className="panel stat out">
-          <span>หมด</span>
-          <b>{counts[STOCK_STATUS.OUT]}</b>
-        </div>
+        <StatButton label="สินค้าทั้งหมด" count={counts.total} pressed={filters.status === ''} onClick={() => showStatus('')} />
+        <StatButton
+          label="ใกล้หมด"
+          count={counts[STOCK_STATUS.LOW]}
+          tone="low"
+          pressed={filters.status === STOCK_STATUS.LOW}
+          onClick={() => showStatus(STOCK_STATUS.LOW)}
+        />
+        <StatButton
+          label="หมด"
+          count={counts[STOCK_STATUS.OUT]}
+          tone="out"
+          pressed={filters.status === STOCK_STATUS.OUT}
+          onClick={() => showStatus(STOCK_STATUS.OUT)}
+        />
       </div>
 
       <div className="panel">
