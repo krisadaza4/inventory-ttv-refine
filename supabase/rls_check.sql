@@ -1,4 +1,4 @@
--- Inventory TTV: ตรวจ RLS ตาม design.md ข้อ 9 (T2.6)
+-- Inventory TTV: ตรวจ RLS ตาม design.md ข้อ 9 (T2.6) + ประเภทรายการซ่อม (ส่งซ่อม / ซ่อมเสร็จ / ตัดจำหน่าย)
 -- รันใน Supabase SQL Editor ทั้งไฟล์ ข้อมูลทดสอบทั้งหมดถูกย้อนกลับ ไม่เหลือในฐานข้อมูล
 -- ต้องมี profile admin และ staff อย่างละ 1 แถวก่อน
 -- ผลลัพธ์: ตาราง rls_results ทุกแถวต้องได้ pass = true
@@ -81,7 +81,34 @@ begin
     ['ผู้ไม่มี profile ไม่เห็นสินค้า', 'nobody',
       $t$select 1 from public.products$t$, 'ok rows=0'],
     ['ผู้ไม่มี profile บันทึกไม่ได้', 'nobody',
-      $t$select public.record_movement(gen_random_uuid(), 'in', 1)$t$, '%no_profile']
+      $t$select public.record_movement(gen_random_uuid(), 'in', 1)$t$, '%no_profile'],
+    -- สินค้ารอซ่อม (migration_repair.sql) ตอนนี้ RLS-TEST-A ของดี 3 รอซ่อม 0
+    ['ส่งซ่อมไม่มีเหตุผลไม่ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'to_repair', 1)$t$, '%needs_note'],
+    ['ส่งซ่อมเกินของดีไม่ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'to_repair', 10, null, 'สปาร์คเสีย')$t$, '%insufficient_stock'],
+    ['staff ส่งซ่อม 2 ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'to_repair', 2, null, 'สปาร์คเสีย')$t$, 'ok rows=1'],
+    ['product_stock ของดี 1 รอซ่อม 2', 'staff',
+      $t$select 1 from public.product_stock where sku = 'RLS-TEST-A' and on_hand = 1 and repair_qty = 2$t$, 'ok rows=1'],
+    ['ซ่อมเสร็จไม่มีเหตุผลไม่ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'repaired', 1)$t$, '%needs_note'],
+    ['ซ่อมเสร็จเกินรอซ่อมไม่ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'repaired', 5, null, 'ซ่อมแล้ว')$t$, '%insufficient_repair'],
+    ['staff ซ่อมเสร็จ 1 ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'repaired', 1, null, 'ซ่อมแล้ว')$t$, 'ok rows=1'],
+    ['staff ตัดจำหน่ายไม่ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'write_off', 1, null, 'ซ่อมไม่ได้')$t$, '%write_off_admin_only'],
+    ['ตัดจำหน่ายไม่มีเหตุผลไม่ได้', 'admin',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'write_off', 1)$t$, '%needs_note'],
+    ['ตัดจำหน่ายเกินรอซ่อมไม่ได้', 'admin',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'write_off', 5, null, 'ซ่อมไม่ได้')$t$, '%insufficient_repair'],
+    ['admin ตัดจำหน่าย 1 ได้', 'admin',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'write_off', 1, null, 'ซ่อมไม่ได้')$t$, 'ok rows=1'],
+    ['product_stock ของดี 2 รอซ่อม 0', 'staff',
+      $t$select 1 from public.product_stock where sku = 'RLS-TEST-A' and on_hand = 2 and repair_qty = 0$t$, 'ok rows=1'],
+    ['ประเภทรายการที่ไม่มีไม่ได้', 'admin',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'lost', 1, null, 'x')$t$, '%invalid_type']
   ];
 
   -- ทุกอย่างในบล็อกนี้ถูกย้อนกลับตอนจบด้วย exception P0999
