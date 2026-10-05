@@ -1,3 +1,5 @@
+import { MOVEMENT_TYPE, validateMovement } from './stockRules.js'
+
 // คลังย่อย: คลังใหญ่ = สินค้าคงคลังเดิม (ไม่มีแถวในตาราง warehouses) คลังย่อย = Online / ขายส่ง / อะไหล่ …
 // ยอดคลังใหญ่ = ของดีรวม (onHand) - ของดีในคลังย่อยทั้งหมด (subQty)
 // คลังย่อยขายได้ = ยอดในคลังนั้น + คลังใหญ่ (ขายแล้วตัดคลังย่อยก่อน ส่วนที่ขาดตัดคลังใหญ่)
@@ -76,4 +78,21 @@ export function validateWarehouseName(name, warehouses, editingId = null) {
 // ลำดับถัดไปสำหรับคลังใหม่ (ต่อท้าย)
 export function nextSortOrder(warehouses) {
   return warehouses.reduce((max, w) => Math.max(max, w.sortOrder), 0) + 1
+}
+
+// โอนเข้าคลังย่อยหลายรายการ quantities = { [productId]: ข้อความจำนวน } ช่องว่างข้าม
+// ตรวจทีละรายการด้วยกติกาเดียวกับหน้ารับ-เบิก คืน { moves: [{ productId, quantity }], errors: { [productId]: ข้อความ } }
+export function planBulkTransfer(quantities, products, warehouseId, role, today) {
+  const moves = []
+  const errors = {}
+  for (const [productId, text] of Object.entries(quantities)) {
+    if (String(text ?? '').trim() === '') continue
+    const product = products.find((p) => p.id === productId)
+    if (!product) continue
+    const movement = { type: MOVEMENT_TYPE.TRANSFER_IN, quantity: text, movementDate: today, note: '', warehouseId }
+    const found = validateMovement(movement, stockFor(product, warehouseId), role, today)
+    if (found.quantity) errors[productId] = found.quantity
+    else moves.push({ productId, quantity: String(text).trim() })
+  }
+  return { moves, errors }
 }

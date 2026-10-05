@@ -14,6 +14,7 @@ import {
 } from '../lib/stockRules.js'
 import { exportFileName, productSheet, warehouseSheet } from '../lib/spreadsheet.js'
 import { productsInWarehouse } from '../lib/warehouses.js'
+import BulkTransferPanel from './BulkTransferPanel.jsx'
 import ExportButton from './ExportButton.jsx'
 import PageHead from './PageHead.jsx'
 import ProductTable from './ProductTable.jsx'
@@ -57,8 +58,14 @@ export default function ProductsPage({
   loadError,
   onRetry,
   onMove,
+  role,
+  today,
+  repository,
 }) {
   const [query, setQuery] = useState('')
+  // คลังย่อย: แผงโอนเข้าหลายรายการ
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [notice, setNotice] = useState(null)
   const [filters, setFilters] = useState(NO_FILTERS)
   const [sort, setSort] = useState(DEFAULT_SORT)
 
@@ -96,6 +103,19 @@ export default function ProductsPage({
         title={warehouse ? `คลัง ${warehouse.name}` : undefined}
         actions={
           <div className="head-actions">
+            {warehouse && repository && (
+              <button
+                type="button"
+                className="btn btn-in"
+                onClick={() => {
+                  setBulkOpen(true)
+                  setNotice(null)
+                }}
+                disabled={bulkOpen || loadState !== 'ready'}
+              >
+                <span aria-hidden="true">⇢</span> โอนเข้าหลายรายการ
+              </button>
+            )}
             <ExportButton
               fileName={exportFileName(warehouse ? `warehouse-${warehouse.name}` : 'products', toIsoDate(new Date()))}
               sheetName={warehouse ? `คลัง ${warehouse.name}` : 'สินค้าคงคลัง'}
@@ -127,6 +147,32 @@ export default function ProductsPage({
             </button>
           ))}
         </div>
+      )}
+
+      {notice && (
+        <p className="notice" role="status">
+          {notice}
+        </p>
+      )}
+
+      {warehouse && bulkOpen && (
+        <BulkTransferPanel
+          warehouse={warehouse}
+          products={allActive}
+          imageUrls={imageUrls}
+          role={role}
+          today={today}
+          repository={repository}
+          onSaved={(message) => {
+            // message = null คือบันทึกได้บางส่วน (ข้อความผิดพลาดแสดงในแผง) แผงยังเปิดอยู่
+            if (message) {
+              setNotice(message)
+              setBulkOpen(false)
+            }
+            onRetry()
+          }}
+          onClose={() => setBulkOpen(false)}
+        />
       )}
 
       {warehouse && (
@@ -255,7 +301,7 @@ export default function ProductsPage({
             {filtered
               ? 'ไม่พบสินค้าที่ตรงกับเงื่อนไข'
               : warehouse
-                ? 'ยังไม่มีสินค้าในคลังนี้ (เพิ่มได้ที่หน้าจัดการสินค้า หรือโอนเข้าจากหน้ารับเข้า / เบิกออก)'
+                ? 'ยังไม่มีสินค้าในคลังนี้ (กด "โอนเข้าหลายรายการ" ด้านบน หรือตั้ง "แสดงในคลัง" ที่หน้าจัดการสินค้า)'
                 : 'ยังไม่มีสินค้า'}
           </p>
         )}

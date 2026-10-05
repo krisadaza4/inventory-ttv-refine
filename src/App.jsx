@@ -398,6 +398,9 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
           loadError={loadError}
           onRetry={reloadProducts}
           onMove={handleMove}
+          role={profile.role}
+          today={today}
+          repository={repository}
         />
       )}
       <Suspense

@@ -3,6 +3,7 @@ import {
   activeWarehouses,
   attachWarehouses,
   nextSortOrder,
+  planBulkTransfer,
   productsInWarehouse,
   quantityIn,
   stockFor,
@@ -104,5 +105,24 @@ describe('nextSortOrder', () => {
   it('ต่อท้ายลำดับสูงสุด', () => {
     expect(nextSortOrder(warehouses)).toBe(3)
     expect(nextSortOrder([])).toBe(1)
+  })
+})
+
+describe('planBulkTransfer', () => {
+  const all = attachWarehouses(products, links, stockRows)
+  const today = '2026-10-05'
+
+  it('ข้ามช่องว่าง เก็บรายการที่ถูกต้อง', () => {
+    expect(planBulkTransfer({ p1: '2', p2: '', p3: ' ' }, all, 'w1', 'staff', today)).toEqual({
+      moves: [{ productId: 'p1', quantity: '2' }],
+      errors: {},
+    })
+  })
+
+  it('เกินคลังใหญ่ / ไม่ใช่ตัวเลข / 0 เป็นข้อผิดพลาดของรายการนั้น', () => {
+    const { moves, errors } = planBulkTransfer({ p1: '7', p2: 'abc', p3: '0' }, all, 'w1', 'staff', today)
+    expect(moves).toEqual([])
+    expect(errors.p1).toBe('คลังใหญ่คงเหลือไม่พอ (คงเหลือ 6)')
+    expect(Object.keys(errors).toSorted()).toEqual(['p1', 'p2', 'p3'])
   })
 })

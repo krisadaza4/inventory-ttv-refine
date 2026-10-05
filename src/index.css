@@ -2222,3 +2222,26 @@ td.mono,
   background: #042f2e;
   color: #99f6e4;
 }
+
+/* โอนเข้าคลังย่อยหลายรายการ: ตารางเลื่อนในกรอบ ช่องจำนวนแคบ */
+.bulk-transfer {
+  margin-bottom: 16px;
+}
+
+.bulk-transfer-table {
+  max-height: 55vh;
+  overflow: auto;
+}
+
+.bulk-transfer .qty-input {
+  width: 90px;
+  text-align: right;
+}
+
+.bulk-transfer tr.row-error td {
+  background: color-mix(in srgb, #ef4444 8%, transparent);
+}
+
+.bulk-transfer .form-actions .grow {
+  flex: 1 1 220px;
+}
