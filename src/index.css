@@ -2101,3 +2101,124 @@ td.mono,
   font-weight: 400;
   color: var(--muted);
 }
+
+/* คลังย่อย (v1.1.0) ------------------------------------------------------- */
+
+/* เมนูคลังย่อย: เยื้องใต้ "สินค้าคงคลัง" ไม่มีไอคอน */
+.nav-item.nav-sub {
+  padding: 7px 12px 7px 54px;
+  font-size: 14px;
+  position: relative;
+}
+
+.nav-item.nav-sub::before {
+  content: '';
+  position: absolute;
+  left: 26px;
+  top: 50%;
+  width: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* ดูคลังย่อยอยู่: เมนูแม่ไม่ทึบ (คอมพิวเตอร์) */
+.nav-item.on.parent-of-on {
+  background: transparent;
+  color: inherit;
+}
+
+/* แถบเลือกคลังในหน้าสินค้า: เฉพาะมือถือ (คอมพิวเตอร์ใช้เมนูซ้าย) */
+.wh-tabs {
+  display: none;
+}
+
+.wh-tabs .btn[aria-pressed='true'] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.wh-hint {
+  margin: 0 0 12px;
+}
+
+@media (max-width: 760px) {
+  .nav-item.nav-sub {
+    display: none;
+  }
+
+  .nav-item.on.parent-of-on {
+    background: var(--accent-bg);
+    color: var(--primary);
+  }
+
+  :root[data-theme='dark'] .nav-item.on.parent-of-on {
+    color: #a7f3d0;
+  }
+
+  .wh-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin: 0 0 12px;
+    padding-bottom: 2px;
+  }
+
+  .wh-tabs .btn {
+    flex: none;
+  }
+}
+
+/* ปุ่มคลังย่อยในหน้าจัดการ: ฟ้าอมเขียว */
+.btn.btn-warehouse {
+  background: #f0fdfa;
+  border-color: #5eead4;
+  color: #115e59;
+}
+
+:root[data-theme='dark'] .btn.btn-warehouse {
+  background: #042f2e;
+  border-color: #115e59;
+  color: #99f6e4;
+}
+
+.wh-manager {
+  margin-bottom: 16px;
+}
+
+.wh-list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.wh-row,
+.wh-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.wh-row input,
+.wh-add input {
+  flex: 1 1 180px;
+  max-width: 280px;
+}
+
+.wh-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.badge.wh-chip {
+  background: #f0fdfa;
+  color: #115e59;
+}
+
+:root[data-theme='dark'] .badge.wh-chip {
+  background: #042f2e;
+  color: #99f6e4;
+}

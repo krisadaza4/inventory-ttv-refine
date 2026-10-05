@@ -18,6 +18,12 @@ export const ERROR_MESSAGE = {
   PRODUCT_INACTIVE: 'สินค้านี้ถูกปิดใช้งานแล้ว',
   INSUFFICIENT_STOCK: 'จำนวนคงเหลือไม่พอ',
   INSUFFICIENT_REPAIR: 'ยอดรอซ่อมไม่พอ',
+  INSUFFICIENT_WAREHOUSE: 'คลังย่อยคงเหลือไม่พอ',
+  WAREHOUSE_REQUIRED: 'กรุณาเลือกคลังย่อย',
+  WAREHOUSE_NOT_ALLOWED: 'รายการนี้ทำได้ที่คลังใหญ่เท่านั้น',
+  WAREHOUSE_NOT_FOUND: 'ไม่พบคลังย่อย',
+  WAREHOUSE_INACTIVE: 'คลังย่อยนี้ถูกปิดใช้งานแล้ว',
+  DUPLICATE_WAREHOUSE: 'ชื่อคลังนี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น',
   DUPLICATE_SKU: 'รหัสสินค้านี้มีอยู่แล้ว กรุณาใช้รหัสอื่น',
   DUPLICATE_BARCODE: 'บาร์โค้ดนี้มีอยู่แล้ว กรุณาตรวจสอบอีกครั้ง',
   DUPLICATE: 'ข้อมูลนี้มีอยู่แล้ว',
@@ -42,6 +48,11 @@ const BY_HINT = {
   product_inactive: ERROR_MESSAGE.PRODUCT_INACTIVE,
   insufficient_stock: ERROR_MESSAGE.INSUFFICIENT_STOCK,
   insufficient_repair: ERROR_MESSAGE.INSUFFICIENT_REPAIR,
+  insufficient_warehouse: ERROR_MESSAGE.INSUFFICIENT_WAREHOUSE,
+  warehouse_required: ERROR_MESSAGE.WAREHOUSE_REQUIRED,
+  warehouse_not_allowed: ERROR_MESSAGE.WAREHOUSE_NOT_ALLOWED,
+  warehouse_not_found: ERROR_MESSAGE.WAREHOUSE_NOT_FOUND,
+  warehouse_inactive: ERROR_MESSAGE.WAREHOUSE_INACTIVE,
 }
 
 // code จาก Supabase Auth และ Postgres/PostgREST -> ข้อความไทย
@@ -70,6 +81,7 @@ function duplicateMessage(error) {
   const text = `${error.message ?? ''} ${error.details ?? ''}`
   if (text.includes('products_sku_unique')) return ERROR_MESSAGE.DUPLICATE_SKU
   if (text.includes('products_barcode_unique')) return ERROR_MESSAGE.DUPLICATE_BARCODE
+  if (text.includes('warehouses_name_unique')) return ERROR_MESSAGE.DUPLICATE_WAREHOUSE
   return ERROR_MESSAGE.DUPLICATE
 }
 

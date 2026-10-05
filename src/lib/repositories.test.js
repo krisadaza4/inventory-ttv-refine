@@ -10,7 +10,7 @@ const fakeClient = (result) => {
   const builder = {
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
   }
-  for (const method of ['select', 'insert', 'upsert', 'update', 'delete', 'eq', 'in', 'order', 'range', 'single', 'maybeSingle']) {
+  for (const method of ['select', 'insert', 'upsert', 'update', 'delete', 'eq', 'in', 'is', 'order', 'range', 'single', 'maybeSingle']) {
     builder[method] = (...args) => {
       calls.push([method, ...args])
       return builder
@@ -76,16 +76,22 @@ describe('createRepository', () => {
   it('มีเฉพาะฟังก์ชันตามที่ออกแบบ ไม่มีฟังก์ชันลบ', () => {
     const repo = createRepository(fakeClient({ data: [], error: null }))
     expect(Object.keys(repo).sort()).toEqual([
+      'addProductsToWarehouse',
       'getLogoUrl',
       'getMyProfile',
       'insertProducts',
       'listAllMovements',
       'listMonthlySales',
       'listMovements',
+      'listProductWarehouses',
       'listProducts',
+      'listWarehouseStock',
+      'listWarehouses',
       'recordMovement',
       'removeProductImage',
+      'removeProductsFromWarehouse',
       'saveProduct',
+      'saveWarehouse',
       'setProductActive',
       'setProductsCategory',
       'setReorderPoints',
@@ -259,8 +265,21 @@ describe('recordMovement', () => {
     expect(client.calls[0]).toEqual([
       'rpc',
       'record_movement',
-      { p_product_id: 'p1', p_type: 'in', p_quantity: 3, p_movement_date: '2026-09-29', p_note: null },
+      {
+        p_product_id: 'p1',
+        p_type: 'in',
+        p_quantity: 3,
+        p_movement_date: '2026-09-29',
+        p_note: null,
+        p_warehouse_id: null,
+      },
     ])
+  })
+
+  it('ส่งคลังย่อยเมื่อเลือก', async () => {
+    const client = fakeClient({ data: movementRow, error: null })
+    await createRepository(client).recordMovement({ ...outMovement, warehouseId: 'w1' })
+    expect(client.calls[0][2]).toMatchObject({ p_warehouse_id: 'w1' })
   })
 
   it('ตัดช่องว่างหมายเหตุ และปรับยอดติดลบได้', async () => {
@@ -623,5 +642,83 @@ describe('ตัวกรองรายการซ่อมทั้งหม�
     const client = fakeClient({ data: [], error: null })
     await createRepository(client).listAllMovements({ type: REPAIR_FILTER })
     expect(client.calls).toContainEqual(['in', 'type', ['to_repair', 'repaired', 'write_off']])
+  })
+})
+
+describe('คลังย่อย', () => {
+  it('listWarehouses เรียงตามลำดับแล้วชื่อ', async () => {
+    const client = fakeClient({ data: [{ id: 'w1', name: 'Online', sort_order: 1, active: true }], error: null })
+    const { warehouses, error } = await createRepository(client).listWarehouses()
+    expect(error).toBeNull()
+    expect(warehouses).toEqual([{ id: 'w1', name: 'Online', sortOrder: 1, active: true }])
+    expect(client.calls).toEqual([
+      ['from', 'warehouses'],
+      ['select', 'id, name, sort_order, active'],
+      ['order', 'sort_order', { ascending: true }],
+      ['order', 'name', { ascending: true }],
+    ])
+  })
+
+  it('saveWarehouse: ไม่มี id เพิ่มใหม่, มี id แก้ไข', async () => {
+    const client = fakeClient({ data: { id: 'w9' }, error: null })
+    const repo = createRepository(client)
+    expect(await repo.saveWarehouse({ name: ' หน้าร้าน ', sortOrder: 4 })).toEqual({ id: 'w9', error: null })
+    expect(client.calls[1]).toEqual(['insert', { name: 'หน้าร้าน', sort_order: 4, active: true }])
+    await repo.saveWarehouse({ id: 'w1', name: 'Online', sortOrder: 1, active: false })
+    expect(client.calls).toContainEqual(['eq', 'id', 'w1'])
+  })
+
+  it('ชื่อคลังซ้ำ คืนข้อความไทย', async () => {
+    const client = fakeClient({ data: null, error: { code: '23505', message: 'warehouses_name_unique' } })
+    expect((await createRepository(client).saveWarehouse({ name: 'Online' })).error).toBe(
+      ERROR_MESSAGE.DUPLICATE_WAREHOUSE,
+    )
+  })
+
+  it('listProductWarehouses / listWarehouseStock แปลงเป็น camelCase', async () => {
+    const links = fakeClient({ data: [{ product_id: 'p1', warehouse_id: 'w1' }], error: null })
+    expect((await createRepository(links).listProductWarehouses()).links).toEqual([{ productId: 'p1', warehouseId: 'w1' }])
+    const stock = fakeClient({ data: [{ warehouse_id: 'w1', product_id: 'p1', quantity: '2.00' }], error: null })
+    expect((await createRepository(stock).listWarehouseStock()).stock).toEqual([
+      { warehouseId: 'w1', productId: 'p1', quantity: 2 },
+    ])
+    expect(stock.calls[0]).toEqual(['from', 'warehouse_stock'])
+  })
+
+  it('addProductsToWarehouse ใช้ upsert ข้ามที่มีอยู่แล้ว', async () => {
+    const client = fakeClient({ data: null, error: null })
+    expect(await createRepository(client).addProductsToWarehouse(['p1', 'p2'], 'w1')).toEqual({ saved: 2, error: null })
+    expect(client.calls[1]).toEqual([
+      'upsert',
+      [
+        { product_id: 'p1', warehouse_id: 'w1' },
+        { product_id: 'p2', warehouse_id: 'w1' },
+      ],
+      { onConflict: 'product_id,warehouse_id', ignoreDuplicates: true },
+    ])
+  })
+
+  it('removeProductsFromWarehouse ลบเฉพาะคลังนั้น นับแถวที่ลบจริง', async () => {
+    const client = fakeClient({ data: [{ product_id: 'p1' }], error: null })
+    expect(await createRepository(client).removeProductsFromWarehouse(['p1', 'p2'], 'w1')).toEqual({
+      removed: 1,
+      error: null,
+    })
+    expect(client.calls).toEqual([
+      ['from', 'product_warehouses'],
+      ['delete'],
+      ['eq', 'warehouse_id', 'w1'],
+      ['in', 'product_id', ['p1', 'p2']],
+      ['select', 'product_id'],
+    ])
+  })
+
+  it('listMovements กรองคลังใหญ่ (warehouse_id is null) หรือคลังย่อย', async () => {
+    const central = fakeClient({ data: [], error: null })
+    await createRepository(central).listMovements({ warehouse: 'central' })
+    expect(central.calls).toContainEqual(['is', 'warehouse_id', null])
+    const online = fakeClient({ data: [], error: null })
+    await createRepository(online).listAllMovements({ warehouse: 'w1' })
+    expect(online.calls).toContainEqual(['eq', 'warehouse_id', 'w1'])
   })
 })

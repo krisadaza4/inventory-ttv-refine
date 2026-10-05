@@ -9,6 +9,9 @@ export const MOVEMENT_TYPE = {
   TO_REPAIR: 'to_repair',
   REPAIRED: 'repaired',
   WRITE_OFF: 'write_off',
+  // คลังย่อย: โอนเข้า (คลังใหญ่ → คลังย่อย), โอนกลับ (คลังย่อย → คลังใหญ่) ยอดรวมไม่เปลี่ยน
+  TRANSFER_IN: 'transfer_in',
+  TRANSFER_OUT: 'transfer_out',
 }
 
 export const MOVEMENT_LABEL = {
@@ -18,7 +21,13 @@ export const MOVEMENT_LABEL = {
   [MOVEMENT_TYPE.TO_REPAIR]: 'ส่งซ่อม',
   [MOVEMENT_TYPE.REPAIRED]: 'ซ่อมเสร็จ',
   [MOVEMENT_TYPE.WRITE_OFF]: 'ตัดจำหน่าย',
+  [MOVEMENT_TYPE.TRANSFER_IN]: 'โอนเข้าคลังย่อย',
+  [MOVEMENT_TYPE.TRANSFER_OUT]: 'โอนกลับคลังใหญ่',
 }
+
+// ประเภทที่ต้องเลือกคลังย่อย และประเภทที่เลือกคลังย่อยได้ (เบิกออก = ขายผ่านคลังย่อย ไม่เลือก = คลังใหญ่)
+export const TRANSFER_TYPES = [MOVEMENT_TYPE.TRANSFER_IN, MOVEMENT_TYPE.TRANSFER_OUT]
+export const WAREHOUSE_TYPES = [MOVEMENT_TYPE.OUT, ...TRANSFER_TYPES]
 
 // รายการเกี่ยวกับการซ่อม และค่าตัวกรอง "รายการซ่อมทั้งหมด" ในหน้าประวัติ
 export const REPAIR_TYPES = [MOVEMENT_TYPE.TO_REPAIR, MOVEMENT_TYPE.REPAIRED, MOVEMENT_TYPE.WRITE_OFF]
@@ -70,22 +79,43 @@ export function movementEffect(type, quantity) {
       return { good: amount, repair: -amount }
     case MOVEMENT_TYPE.WRITE_OFF:
       return { good: 0, repair: -amount }
+    case MOVEMENT_TYPE.TRANSFER_IN:
+    case MOVEMENT_TYPE.TRANSFER_OUT:
+      return { good: 0, repair: 0 }
     default:
       throw new Error(`ประเภทรายการไม่ถูกต้อง: ${type}`)
   }
 }
 
+// ผลต่อยอดของคลังย่อยที่เลือก (ตรงกับ view warehouse_stock) warehouseQty = ยอดในคลังนั้นก่อนบันทึก
+// ขายผ่านคลังย่อยตัดของคลังนั้นก่อน ส่วนที่ขาดตัดจากคลังใหญ่
+export function warehouseEffect(type, quantity, warehouseQty = 0) {
+  const amount = toAmount(quantity)
+  if (type === MOVEMENT_TYPE.TRANSFER_IN) return amount
+  if (type === MOVEMENT_TYPE.TRANSFER_OUT) return -amount
+  if (type === MOVEMENT_TYPE.OUT) return -Math.max(0, Math.min(toAmount(warehouseQty), amount))
+  return 0
+}
+
 // จำนวน +/− ที่แสดงในประวัติและไฟล์ส่งออก: ผลต่อของดี ยกเว้นตัดจำหน่ายแสดงเป็นลบ (ออกจากยอดรอซ่อม)
+// โอนระหว่างคลังไม่เปลี่ยนยอดรวม แสดงจำนวนที่โอน (ไม่มีเครื่องหมาย)
 export function signedQuantity(type, quantity) {
+  if (TRANSFER_TYPES.includes(type)) return toAmount(quantity)
   const { good, repair } = movementEffect(type, quantity)
   return type === MOVEMENT_TYPE.WRITE_OFF ? repair : good
 }
 
-// stock เป็นตัวเลข (ของดี) หรือ { onHand, repairQty }
+// stock เป็นตัวเลข (ของดี) หรือ { onHand, repairQty, subQty, warehouseQty }
+// subQty = ของดีที่อยู่ในคลังย่อยทั้งหมด, warehouseQty = ในคลังย่อยที่เลือก
 const toStock = (stock) =>
   typeof stock === 'object' && stock !== null
-    ? { onHand: toAmount(stock.onHand ?? 0), repairQty: toAmount(stock.repairQty ?? 0) }
-    : { onHand: toAmount(stock ?? 0), repairQty: 0 }
+    ? {
+        onHand: toAmount(stock.onHand ?? 0),
+        repairQty: toAmount(stock.repairQty ?? 0),
+        subQty: toAmount(stock.subQty ?? 0),
+        warehouseQty: toAmount(stock.warehouseQty ?? 0),
+      }
+    : { onHand: toAmount(stock ?? 0), repairQty: 0, subQty: 0, warehouseQty: 0 }
 
 export function getStockStatus(onHand, reorderPoint) {
   const amount = toAmount(onHand)
@@ -132,10 +162,13 @@ export function validateProduct(product) {
 
 // ตรวจก่อนส่ง record_movement (ฐานข้อมูลตรวจซ้ำอีกชั้น) today เป็น 'YYYY-MM-DD'
 // stock เป็นตัวเลข (ของดี) หรือ { onHand, repairQty }
+// movement.warehouseId = คลังย่อย ('' = คลังใหญ่)
 export function validateMovement(movement, stock, role, today = toIsoDate(new Date())) {
   const errors = {}
   const { type } = movement
-  const { onHand, repairQty } = toStock(stock)
+  const warehouseId = movement.warehouseId ?? ''
+  const current = toStock(stock)
+  const central = toAmount(current.onHand - current.subQty)
 
   if (!Object.values(MOVEMENT_TYPE).includes(type)) {
     errors.type = 'ประเภทรายการไม่ถูกต้อง'
@@ -151,10 +184,18 @@ export function validateMovement(movement, stock, role, today = toIsoDate(new Da
   } else if (type === MOVEMENT_TYPE.ADJUST ? quantity === 0 : quantity <= 0) {
     errors.quantity = type === MOVEMENT_TYPE.ADJUST ? 'จำนวนปรับยอดต้องไม่เป็น 0' : 'จำนวนต้องมากกว่า 0'
   } else if (!errors.type) {
-    const effect = movementEffect(type, quantity)
-    if (toAmount(onHand + effect.good) < 0) errors.quantity = `คงเหลือไม่พอ (คงเหลือ ${onHand})`
-    else if (toAmount(repairQty + effect.repair) < 0) errors.quantity = `ยอดรอซ่อมไม่พอ (รอซ่อม ${repairQty})`
+    const after = stockAfter(current, type, quantity, warehouseId)
+    const centralLabel = current.subQty > 0 ? 'คลังใหญ่คงเหลือไม่พอ' : 'คงเหลือไม่พอ'
+    if (warehouseId && type === MOVEMENT_TYPE.OUT && after.central < 0) {
+      errors.quantity = `จำนวนที่ขายได้ไม่พอ (ขายได้ ${toAmount(central + current.warehouseQty)})`
+    } else if (after.central < 0) errors.quantity = `${centralLabel} (คงเหลือ ${central})`
+    else if (after.warehouse !== null && after.warehouse < 0) {
+      errors.quantity = `คลังย่อยคงเหลือไม่พอ (คงเหลือ ${current.warehouseQty})`
+    } else if (after.repairQty < 0) errors.quantity = `ยอดรอซ่อมไม่พอ (รอซ่อม ${current.repairQty})`
   }
+
+  if (TRANSFER_TYPES.includes(type) && !warehouseId) errors.warehouseId = 'กรุณาเลือกคลังย่อย'
+  else if (warehouseId && !WAREHOUSE_TYPES.includes(type)) errors.warehouseId = 'รายการนี้ทำได้ที่คลังใหญ่เท่านั้น'
 
   const date = movement.movementDate ?? ''
   if (!ISO_DATE.test(date)) errors.movementDate = 'กรุณาเลือกวันที่'
@@ -243,13 +284,21 @@ export function sortProducts(products, key, dir) {
   })
 }
 
-// ยอดหลังบันทึก { onHand, repairQty } สำหรับแสดงก่อนกดบันทึก จำนวนหรือประเภทยังไม่ถูกต้อง คืน null
-export function stockAfter(stock, type, quantity) {
+// ยอดหลังบันทึกสำหรับแสดงก่อนกดบันทึก จำนวนหรือประเภทยังไม่ถูกต้อง คืน null
+// { onHand: ของดีรวม, repairQty, central: คลังใหญ่, warehouse: คลังย่อยที่เลือก (null = ไม่ได้เลือก) }
+export function stockAfter(stock, type, quantity, warehouseId = '') {
   const amount = parseAmount(quantity)
   if (amount === null || !Object.values(MOVEMENT_TYPE).includes(type)) return null
-  const { onHand, repairQty } = toStock(stock)
+  const { onHand, repairQty, subQty, warehouseQty } = toStock(stock)
   const effect = movementEffect(type, amount)
-  return { onHand: toAmount(onHand + effect.good), repairQty: toAmount(repairQty + effect.repair) }
+  const sub = warehouseId ? warehouseEffect(type, amount, warehouseQty) : 0
+  const good = toAmount(onHand + effect.good)
+  return {
+    onHand: good,
+    repairQty: toAmount(repairQty + effect.repair),
+    central: toAmount(good - subQty - sub),
+    warehouse: warehouseId ? toAmount(warehouseQty + sub) : null,
+  }
 }
 
 // ของดีหลังบันทึก

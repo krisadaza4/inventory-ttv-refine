@@ -8,12 +8,15 @@ import {
   NOTE_REQUIRED_TYPES,
   REPAIR_REASONS,
   REPAIR_TYPES,
+  TRANSFER_TYPES,
+  WAREHOUSE_TYPES,
   allowedMovementTypes,
   getStockStatus,
   searchProducts,
   stockAfter,
   validateMovement,
 } from '../lib/stockRules.js'
+import { quantityIn, stockFor } from '../lib/warehouses.js'
 import PageHead from './PageHead.jsx'
 import ProductThumb from './ProductThumb.jsx'
 import StockBadge from './StockBadge.jsx'
@@ -37,11 +40,24 @@ function FieldError({ id, message }) {
   )
 }
 
-// หน้ารับเข้า / เบิกออก (design.md ข้อ 7) intent = สินค้าและประเภทที่เลือกมาจากตารางสินค้า
-export default function MovementPage({ products, imageUrls, loadState, role, today, intent, repository, onSaved }) {
+// หน้ารับเข้า / เบิกออก (design.md ข้อ 7) intent = สินค้า ประเภท และคลังที่เลือกมาจากตารางสินค้า
+// warehouses = คลังย่อยที่ใช้งานอยู่ เลือกคลังได้เฉพาะเบิกออก (ขายผ่านคลังย่อย) และโอน
+export default function MovementPage({
+  products,
+  warehouses = [],
+  imageUrls,
+  loadState,
+  role,
+  today,
+  intent,
+  repository,
+  onSaved,
+}) {
   const [productQuery, setProductQuery] = useState('')
   const [productId, setProductId] = useState(intent?.productId ?? '')
   const [type, setType] = useState(intent?.type ?? MOVEMENT_TYPE.IN)
+  // '' = คลังใหญ่
+  const [warehouseId, setWarehouseId] = useState(intent?.warehouseId ?? '')
   const [quantity, setQuantity] = useState('')
   const [movementDate, setMovementDate] = useState(today)
   const [note, setNote] = useState('')
@@ -55,7 +71,18 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
   // สินค้าที่เลือกอยู่แสดงเสมอ แม้ไม่ตรงคำค้น
   const options = searchProducts(products, productQuery)
   const shownOptions = product && !options.includes(product) ? [product, ...options] : options
-  const after = product ? stockAfter(product, type, quantity) : null
+  // ประเภทที่ทำได้เฉพาะคลังใหญ่ ไม่ส่งคลังที่เลือกค้างไว้
+  const canPickWarehouse = WAREHOUSE_TYPES.includes(type) && warehouses.length > 0
+  const isTransfer = TRANSFER_TYPES.includes(type)
+  // โอนกลับ: ยังไม่ได้เลือก และมีของอยู่คลังย่อยเดียว เลือกคลังนั้นให้เลย
+  const holding = product ? warehouses.filter((w) => quantityIn(product, w.id) > 0) : []
+  const autoSource = type === MOVEMENT_TYPE.TRANSFER_OUT && holding.length === 1 ? holding[0].id : ''
+  const chosenWarehouse = canPickWarehouse ? warehouseId || autoSource : ''
+  const warehouse = warehouses.find((w) => w.id === chosenWarehouse) ?? null
+  const stock = product ? stockFor(product, chosenWarehouse) : null
+  const after = product ? stockAfter(stock, type, quantity, chosenWarehouse) : null
+  // แสดงยอดคลังใหญ่แยกเมื่อมีของอยู่ในคลังย่อย หรือเลือกคลังย่อย
+  const showCentral = Boolean(product) && (product.subQty > 0 || chosenWarehouse !== '')
   const noteRequired = NOTE_REQUIRED_TYPES.includes(type)
   const isRepairType = REPAIR_TYPES.includes(type)
   // แสดงยอดรอซ่อมเมื่อเกี่ยวข้อง
@@ -74,8 +101,8 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
     e.preventDefault()
     setNotice(null)
     setServerError(null)
-    const movement = { productId, type, quantity, movementDate, note }
-    const found = product ? validateMovement(movement, product, role, today) : {}
+    const movement = { productId, type, quantity, movementDate, note, warehouseId: chosenWarehouse }
+    const found = product ? validateMovement(movement, stock, role, today) : {}
     if (!product) found.productId = 'กรุณาเลือกสินค้า'
     setErrors(found)
     if (Object.keys(found).length > 0) return
@@ -88,7 +115,7 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
       return
     }
     setNotice(
-      `บันทึก${TYPE_LABEL[type]} ${product.name} ${formatQuantity(quantity, { signed: type === MOVEMENT_TYPE.ADJUST })} ${product.unit} แล้ว`,
+      `บันทึก${TYPE_LABEL[type]}${warehouse ? ` (คลัง ${warehouse.name})` : ''} ${product.name} ${formatQuantity(quantity, { signed: type === MOVEMENT_TYPE.ADJUST })} ${product.unit} แล้ว`,
     )
     clearForm()
     onSaved()
@@ -96,7 +123,7 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
 
   return (
     <>
-      <PageHead page={PAGE.MOVE} title="บันทึกรับเข้า / เบิกออก / ส่งซ่อม" />
+      <PageHead page={PAGE.MOVE} title="บันทึกรับเข้า / เบิกออก / โอน / ส่งซ่อม" />
 
       {notice && (
         <p className="notice" role="status">
@@ -160,6 +187,51 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
             <FieldError message={errors.type} />
           </div>
 
+          {canPickWarehouse && (
+            <>
+              <label className={isTransfer ? 'req' : undefined} htmlFor="move-warehouse">
+                {type === MOVEMENT_TYPE.TRANSFER_IN
+                  ? 'โอนเข้าคลัง'
+                  : type === MOVEMENT_TYPE.TRANSFER_OUT
+                    ? 'โอนออกจากคลัง'
+                    : 'ขายผ่านคลัง'}
+              </label>
+              <div>
+                <select
+                  id="move-warehouse"
+                  value={chosenWarehouse}
+                  onChange={(e) => setWarehouseId(e.target.value)}
+                  aria-invalid={Boolean(errors.warehouseId)}
+                  aria-describedby="move-warehouse-hint"
+                >
+                  <option value="">
+                    {type === MOVEMENT_TYPE.TRANSFER_IN
+                      ? '— เลือกคลังย่อยปลายทาง —'
+                      : type === MOVEMENT_TYPE.TRANSFER_OUT
+                        ? '— เลือกคลังย่อยที่จะโอนออก —'
+                        : 'คลังใหญ่'}
+                  </option>
+                  {warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                      {product ? ` (มี ${formatQuantity(quantityIn(product, w.id))})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <div className="hint" id="move-warehouse-hint">
+                  {type === MOVEMENT_TYPE.TRANSFER_IN
+                    ? `คลังใหญ่ → ${warehouse?.name ?? 'คลังย่อย'} เช่น ประกอบเสร็จแล้ว (ยอดรวมไม่เปลี่ยน)`
+                    : type === MOVEMENT_TYPE.TRANSFER_OUT
+                      ? `${warehouse?.name ?? 'คลังย่อย'} → คลังใหญ่ (ปลายทางเป็นคลังใหญ่เสมอ ยอดรวมไม่เปลี่ยน)`
+                      : chosenWarehouse
+                        ? 'ขายผ่านคลังนี้: ตัดของในคลังนี้ก่อน ไม่พอจึงตัดคลังใหญ่'
+                        : 'เบิกจากคลังใหญ่ ถ้าขายผ่าน Online / ขายส่ง ให้เลือกคลังนั้น'}
+                </div>
+                <FieldError message={errors.warehouseId} />
+              </div>
+            </>
+          )}
+
           <label className="req" htmlFor="move-qty">
             จำนวน
           </label>
@@ -183,7 +255,9 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
                     ? 'ย้ายจากรอซ่อมกลับเป็นของดี'
                     : type === MOVEMENT_TYPE.WRITE_OFF
                       ? 'ตัดออกจากยอดรอซ่อม (ซ่อมไม่ได้)'
-                      : 'ทศนิยมไม่เกิน 2 ตำแหน่ง'}
+                      : REPAIR_TYPES.includes(type) || type === MOVEMENT_TYPE.IN
+                        ? 'ทศนิยมไม่เกิน 2 ตำแหน่ง · ทำที่คลังใหญ่'
+                        : 'ทศนิยมไม่เกิน 2 ตำแหน่ง'}
             </div>
             <FieldError message={errors.quantity} />
           </div>
@@ -241,6 +315,18 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
                 <span>
                   หลังบันทึก <b>{after === null ? '–' : formatQuantity(after.onHand)}</b> {product.unit}
                 </span>
+                {showCentral && (
+                  <span>
+                    คลังใหญ่ <b>{formatQuantity(product.centralQty)}</b> →{' '}
+                    <b>{after === null ? '–' : formatQuantity(after.central)}</b>
+                  </span>
+                )}
+                {warehouse && (
+                  <span>
+                    คลัง {warehouse.name} <b>{formatQuantity(stock.warehouseQty)}</b> →{' '}
+                    <b>{after === null ? '–' : formatQuantity(after.warehouse)}</b>
+                  </span>
+                )}
                 {showRepair && (
                   <span>
                     รอซ่อม <b>{formatQuantity(product.repairQty)}</b> →{' '}
@@ -249,7 +335,7 @@ export default function MovementPage({ products, imageUrls, loadState, role, tod
                 )}
                 {product.location && <span className="dim">ที่เก็บ: {product.location}</span>}
                 {after !== null &&
-                  (after.onHand < 0 || after.repairQty < 0 ? (
+                  (after.onHand < 0 || after.repairQty < 0 || after.central < 0 || after.warehouse < 0 ? (
                     <span className="badge out">ติดลบ บันทึกไม่ได้</span>
                   ) : (
                     <StockBadge status={getStockStatus(after.onHand, product.reorderPoint)} />

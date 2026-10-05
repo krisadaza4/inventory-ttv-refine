@@ -1,10 +1,11 @@
 // คอลัมน์ที่อ่าน (แถวฐานข้อมูลเป็น snake_case, ในแอปเป็น camelCase)
-export const PRODUCT_COLUMNS = 'id, sku, barcode, name, category, unit, reorder_point, active, on_hand, image_path, location, avg_monthly_sales, repair_qty, legacy_sku'
+export const PRODUCT_COLUMNS = 'id, sku, barcode, name, category, unit, reorder_point, active, on_hand, image_path, location, avg_monthly_sales, repair_qty, legacy_sku, sub_qty'
 export const MOVEMENT_COLUMNS =
-  'id, product_id, type, quantity, movement_date, note, created_by, created_at, ' +
-  'product:products(name, sku, unit), recorder:profiles(display_name)'
+  'id, product_id, type, quantity, movement_date, note, created_by, created_at, warehouse_id, warehouse_qty, ' +
+  'product:products(name, sku, unit), recorder:profiles(display_name), warehouse:warehouses(name)'
 export const PROFILE_COLUMNS = 'id, display_name, role'
 export const MONTHLY_SALES_COLUMNS = 'product_id, year, month, quantity'
+export const WAREHOUSE_COLUMNS = 'id, name, sort_order, active'
 
 const trimText = (value) => String(value ?? '').trim()
 
@@ -25,6 +26,8 @@ export function toProduct(row) {
     // on_hand = ของดี (เบิกได้), repair_qty = รอซ่อม
     onHand: toNumber(row.on_hand),
     repairQty: toNumber(row.repair_qty),
+    // ของดีที่อยู่ในคลังย่อยทั้งหมด (คลังใหญ่ = onHand - subQty)
+    subQty: toNumber(row.sub_qty),
     // รหัสเดิมก่อนแก้ชื่อ (ใช้จับคู่ตอนนำเข้าไฟล์สต็อก) ไม่มี = ''
     legacySku: row.legacy_sku ?? '',
     // ที่อยู่ไฟล์ใน bucket product-images (null = ไม่มีรูป) ใช้ signImageUrls แปลงเป็นลิงก์
@@ -70,12 +73,29 @@ export function toMovement(row) {
     productSku: row.product?.sku ?? '',
     unit: row.product?.unit ?? '',
     recordedByName: row.recorder?.display_name ?? '',
+    // คลังย่อย (null = คลังใหญ่) warehouseQty = ส่วนที่ตัดจากคลังย่อยตอนขาย
+    warehouseId: row.warehouse_id ?? null,
+    warehouseQty: row.warehouse_qty === null || row.warehouse_qty === undefined ? null : toNumber(row.warehouse_qty),
+    warehouseName: row.warehouse?.name ?? '',
   }
 }
 
 export function toProfile(row) {
   if (!row) return null
   return { id: row.id, displayName: row.display_name, role: row.role }
+}
+
+export function toWarehouse(row) {
+  return { id: row.id, name: row.name, sortOrder: Number(row.sort_order ?? 0), active: row.active }
+}
+
+// ส่งเฉพาะคอลัมน์ที่ grant ไว้ (name, sort_order, active)
+export function toWarehouseRow(warehouse) {
+  return {
+    name: trimText(warehouse.name),
+    sort_order: Math.trunc(toNumber(warehouse.sortOrder)),
+    active: warehouse.active !== false,
+  }
 }
 
 // แถวจาก product_monthly_sales (year เป็น ค.ศ.)

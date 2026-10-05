@@ -5,25 +5,41 @@ import { PAGE } from '../lib/menu.js'
 import { filterByCategory, listCategories, searchProducts } from '../lib/stockRules.js'
 import BackupButton from './BackupButton.jsx'
 import BulkCategoryBar from './BulkCategoryBar.jsx'
+import BulkWarehouseBar from './BulkWarehouseBar.jsx'
 import PageHead from './PageHead.jsx'
 import ProductForm from './ProductForm.jsx'
 import ProductImport from './ProductImport.jsx'
 import ProductThumb from './ProductThumb.jsx'
 import ReorderPlanner from './ReorderPlanner.jsx'
 import StockSheetImport from './StockSheetImport.jsx'
+import WarehouseManager from './WarehouseManager.jsx'
+
+// ตัวกรองคลัง: สินค้าที่ยังไม่อยู่คลังย่อยไหนเลย
+const NO_WAREHOUSE = '__none__'
 
 // หน้าจัดการสินค้า (admin): ซ้ายตารางสินค้า ขวาฟอร์มเพิ่ม/แก้ไข (design.md ข้อ 7)
-// allProducts รวมสินค้าที่ปิดใช้งานแล้ว
-export default function ManagePage({ allProducts, imageUrls, loadState, loadError, onRetry, repository, onChanged }) {
+// allProducts รวมสินค้าที่ปิดใช้งานแล้ว warehouses = คลังย่อยทั้งหมด รวมที่ปิดใช้งาน
+export default function ManagePage({
+  allProducts,
+  warehouses = [],
+  imageUrls,
+  loadState,
+  loadError,
+  onRetry,
+  repository,
+  onChanged,
+}) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
+  // '' = ทุกคลัง, NO_WAREHOUSE = ยังไม่อยู่คลังย่อย, id = อยู่ในคลังนั้น
+  const [warehouseFilter, setWarehouseFilter] = useState('')
   const [showInactive, setShowInactive] = useState(false)
   // null = เพิ่มใหม่
   const [editingId, setEditingId] = useState(null)
   // ใช้เป็น key ให้ฟอร์มเริ่มใหม่หลังบันทึกหรือกดเพิ่มใหม่
   const [formSeq, setFormSeq] = useState(0)
   const [notice, setNotice] = useState(null)
-  // null | 'express' (รายการจาก Express) | 'stock' (ไฟล์สต็อก รูป + ยอด) | 'reorder' (ตั้งจุดสั่งซื้อ)
+  // null | 'express' (รายการจาก Express) | 'stock' (ไฟล์สต็อก รูป + ยอด) | 'reorder' (ตั้งจุดสั่งซื้อ) | 'warehouses' (คลังย่อย)
   const [importing, setImporting] = useState(null)
   const formRef = useRef(null)
   // วันที่สำรองข้อมูลล่าสุดของเครื่องนี้ เกิน 7 วัน (หรือไม่เคย) แสดงแถบเตือน
@@ -45,7 +61,15 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
       query,
     ),
     category,
-  ).toSorted((a, b) => a.sku.localeCompare(b.sku, 'th'))
+  )
+    .filter((p) => {
+      if (!warehouseFilter) return true
+      const ids = p.warehouseIds ?? []
+      return warehouseFilter === NO_WAREHOUSE ? ids.length === 0 : ids.includes(warehouseFilter)
+    })
+    .toSorted((a, b) => a.sku.localeCompare(b.sku, 'th'))
+  const warehouseName = new Map(warehouses.map((w) => [w.id, w.name]))
+  const activeOnes = warehouses.filter((w) => w.active)
 
   const startNew = () => {
     setEditingId(null)
@@ -108,6 +132,9 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
             <button type="button" className="btn btn-reorder" onClick={() => setImporting('reorder')} disabled={importing !== null}>
               ตั้งจุดสั่งซื้อ
             </button>
+            <button type="button" className="btn btn-warehouse" onClick={() => setImporting('warehouses')} disabled={importing !== null}>
+              คลังย่อย
+            </button>
             <BackupButton
               repository={repository}
               onBackedUp={(date) => {
@@ -143,6 +170,19 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
               setNotice(message)
               setImporting(null)
             }
+            onChanged()
+          }}
+          onClose={() => setImporting(null)}
+        />
+      )}
+
+      {importing === 'warehouses' && (
+        <WarehouseManager
+          warehouses={warehouses}
+          allProducts={allProducts}
+          repository={repository}
+          onSaved={(message) => {
+            setNotice(message)
             onChanged()
           }}
           onClose={() => setImporting(null)}
@@ -195,6 +235,18 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
                 </option>
               ))}
             </select>
+            {warehouses.length > 0 && (
+              <select aria-label="กรองคลังย่อย" value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)}>
+                <option value="">ทุกคลัง</option>
+                {warehouses.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    อยู่ในคลัง {w.name}
+                    {w.active ? '' : ' (ปิดใช้งาน)'}
+                  </option>
+                ))}
+                <option value={NO_WAREHOUSE}>ยังไม่อยู่คลังย่อย</option>
+              </select>
+            )}
             <label className="check">
               <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />{' '}
               แสดงที่ปิดใช้งาน
@@ -211,6 +263,17 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
                 if (message) setSelected(new Set())
               }}
               onClear={() => setSelected(new Set())}
+            />
+          )}
+          {selected.size > 0 && activeOnes.length > 0 && (
+            <BulkWarehouseBar
+              ids={[...selected]}
+              warehouses={activeOnes}
+              repository={repository}
+              onSaved={(message) => {
+                handleBulkSaved(message)
+                if (message) setSelected(new Set())
+              }}
             />
           )}
 
@@ -249,6 +312,7 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
                     <th>รหัส</th>
                     <th>ชื่อสินค้า</th>
                     <th className="hide-sm">หมวดหมู่</th>
+                    <th className="hide-sm">คลังย่อย</th>
                     <th>สถานะ</th>
                     <th>
                       <span className="sr-only">แก้ไข</span>
@@ -272,6 +336,19 @@ export default function ManagePage({ allProducts, imageUrls, loadState, loadErro
                       <td className="mono">{p.sku}</td>
                       <td className={p.active ? undefined : 'dim'}>{p.name}</td>
                       <td className="hide-sm dim">{p.category}</td>
+                      <td className="hide-sm">
+                        {(p.warehouseIds ?? []).length === 0 ? (
+                          <span className="dim">–</span>
+                        ) : (
+                          <span className="wh-chips">
+                            {p.warehouseIds.map((id) => (
+                              <span key={id} className="badge wh-chip">
+                                {warehouseName.get(id) ?? 'คลัง'}
+                              </span>
+                            ))}
+                          </span>
+                        )}
+                      </td>
                       <td>
                         <span className={p.active ? 'badge ok' : 'badge off'}>{p.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</span>
                       </td>

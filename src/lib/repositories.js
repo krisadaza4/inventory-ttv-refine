@@ -3,17 +3,21 @@ import {
   MOVEMENT_COLUMNS,
   PRODUCT_COLUMNS,
   PROFILE_COLUMNS,
+  WAREHOUSE_COLUMNS,
   toMonthlySale,
   toMonthlySaleRow,
   toMovement,
   toProduct,
   toProductRow,
   toProfile,
+  toWarehouse,
+  toWarehouseRow,
 } from './mappers.js'
 import { groupIdsByValue } from './bulkEdit.js'
 import { IMAGE_BUCKET, IMAGE_URL_TTL, LOGO_PATH, imagePathFor } from './productImages.js'
 import { REPAIR_FILTER, REPAIR_TYPES } from './stockRules.js'
 import { ERROR_MESSAGE, toThaiError } from './supabaseErrors.js'
+import { CENTRAL } from './warehouses.js'
 
 export const PAGE_SIZE = 50
 // ส่งออก Excel: ดึงทีละ 1000 แถว (ค่าสูงสุดต่อครั้งของ Supabase) กันไฟล์ใหญ่เกินด้วย EXPORT_MAX_ROWS
@@ -48,6 +52,24 @@ async function updateByIds(client, ids, row) {
   return { updated, error: null }
 }
 
+// ดึงทุกแถวทีละ EXPORT_PAGE_SIZE build(from, to) คืนคำสั่งที่เรียงแน่นอนแล้ว
+async function fetchAll(build) {
+  const all = []
+  for (let from = 0; from < EXPORT_MAX_ROWS; from += EXPORT_PAGE_SIZE) {
+    const { data, error } = await run(() => build(from, from + EXPORT_PAGE_SIZE - 1))
+    if (error) return { rows: [], error }
+    all.push(...data)
+    if (data.length < EXPORT_PAGE_SIZE) break
+  }
+  return { rows: all, error: null }
+}
+
+// ตัวกรองคลังในหน้าประวัติ: CENTRAL = คลังใหญ่ (ไม่มีคลังย่อย), id = คลังย่อยนั้น
+const filterWarehouse = (query, warehouse) => {
+  if (!warehouse) return query
+  return warehouse === CENTRAL ? query.is('warehouse_id', null) : query.eq('warehouse_id', warehouse)
+}
+
 // ตัวกรองประเภทในหน้าประวัติ: REPAIR_FILTER = ส่งซ่อม/ซ่อมเสร็จ/ตัดจำหน่าย รวมกัน
 const filterType = (query, type) => {
   if (!type) return query
@@ -55,7 +77,7 @@ const filterType = (query, type) => {
 }
 
 // client รับเป็นพารามิเตอร์ เพื่อให้ทดสอบด้วย client จำลองได้
-// ตั้งใจไม่มีฟังก์ชันลบ และบันทึกรายการเคลื่อนไหวผ่าน record_movement เท่านั้น
+// ตั้งใจไม่มีฟังก์ชันลบข้อมูลหลัก (ลบได้เฉพาะการผูกสินค้ากับคลังย่อย) และบันทึกรายการเคลื่อนไหวผ่าน record_movement เท่านั้น
 export function createRepository(client) {
   return {
     // ดึงทีละ EXPORT_PAGE_SIZE เพราะ Supabase คืนได้สูงสุด 1000 แถวต่อครั้ง (เรียงด้วย id ด้วยให้แบ่งหน้าได้แน่นอน)
@@ -189,6 +211,7 @@ export function createRepository(client) {
           p_quantity: Number(movement.quantity),
           p_movement_date: movement.movementDate,
           p_note: note || null,
+          p_warehouse_id: movement.warehouseId || null,
         }),
       )
       return { movement: error ? null : toMovement(data), error }
@@ -229,12 +252,12 @@ export function createRepository(client) {
     },
 
     // page เริ่มที่ 0 ล่าสุดก่อน
-    async listMovements({ productId, type, page = 0 } = {}) {
+    async listMovements({ productId, type, warehouse, page = 0 } = {}) {
       const from = page * PAGE_SIZE
       const { data, error } = await run(() => {
         let query = client.from('stock_movements').select(MOVEMENT_COLUMNS)
         if (productId) query = query.eq('product_id', productId)
-        query = filterType(query, type)
+        query = filterWarehouse(filterType(query, type), warehouse)
         return query
           .order('movement_date', { ascending: false })
           .order('created_at', { ascending: false })
@@ -245,13 +268,13 @@ export function createRepository(client) {
     },
 
     // ทุกรายการตามตัวกรอง (สำหรับส่งออก Excel) ล่าสุดก่อน
-    async listAllMovements({ productId, type } = {}) {
+    async listAllMovements({ productId, type, warehouse } = {}) {
       const all = []
       for (let from = 0; from < EXPORT_MAX_ROWS; from += EXPORT_PAGE_SIZE) {
         const { data, error } = await run(() => {
           let query = client.from('stock_movements').select(MOVEMENT_COLUMNS)
           if (productId) query = query.eq('product_id', productId)
-          query = filterType(query, type)
+          query = filterWarehouse(filterType(query, type), warehouse)
           return query
             .order('movement_date', { ascending: false })
             .order('created_at', { ascending: false })
@@ -262,6 +285,94 @@ export function createRepository(client) {
         if (data.length < EXPORT_PAGE_SIZE) break
       }
       return { movements: all, error: null }
+    },
+
+    // คลังย่อยทั้งหมด (รวมที่ปิดใช้งาน) เรียงตามลำดับที่ตั้งไว้
+    async listWarehouses() {
+      const { data, error } = await run(() =>
+        client
+          .from('warehouses')
+          .select(WAREHOUSE_COLUMNS)
+          .order('sort_order', { ascending: true })
+          .order('name', { ascending: true }),
+      )
+      return { warehouses: error ? [] : data.map(toWarehouse), error }
+    },
+
+    // ไม่มี id = เพิ่มใหม่ (admin)
+    async saveWarehouse(warehouse) {
+      const row = toWarehouseRow(warehouse)
+      const { data, error } = await run(() => {
+        const table = client.from('warehouses')
+        const query = warehouse.id ? table.update(row).eq('id', warehouse.id) : table.insert(row)
+        return query.select('id').single()
+      })
+      return { id: error ? null : data.id, error }
+    },
+
+    // สินค้าที่ผูกกับคลังย่อย [{ productId, warehouseId }]
+    async listProductWarehouses() {
+      const { rows, error } = await fetchAll((from, to) =>
+        client
+          .from('product_warehouses')
+          .select('product_id, warehouse_id')
+          .order('warehouse_id', { ascending: true })
+          .order('product_id', { ascending: true })
+          .range(from, to),
+      )
+      return { links: rows.map((r) => ({ productId: r.product_id, warehouseId: r.warehouse_id })), error }
+    },
+
+    // ยอดในคลังย่อย [{ warehouseId, productId, quantity }]
+    async listWarehouseStock() {
+      const { rows, error } = await fetchAll((from, to) =>
+        client
+          .from('warehouse_stock')
+          .select('warehouse_id, product_id, quantity')
+          .order('warehouse_id', { ascending: true })
+          .order('product_id', { ascending: true })
+          .range(from, to),
+      )
+      return {
+        stock: rows.map((r) => ({ warehouseId: r.warehouse_id, productId: r.product_id, quantity: Number(r.quantity) })),
+        error,
+      }
+    },
+
+    // เพิ่มสินค้าหลายรายการเข้าคลังย่อย (admin) ที่มีอยู่แล้วข้าม
+    async addProductsToWarehouse(productIds, warehouseId) {
+      let saved = 0
+      for (let i = 0; i < productIds.length; i += IMPORT_BATCH_SIZE) {
+        const batch = productIds.slice(i, i + IMPORT_BATCH_SIZE)
+        const { error } = await run(() =>
+          client.from('product_warehouses').upsert(
+            batch.map((productId) => ({ product_id: productId, warehouse_id: warehouseId })),
+            { onConflict: 'product_id,warehouse_id', ignoreDuplicates: true },
+          ),
+        )
+        if (error) return { saved, error }
+        saved += batch.length
+      }
+      return { saved, error: null }
+    },
+
+    // เอาสินค้าออกจากคลังย่อย (admin) ไม่แตะยอด สินค้าที่ยังมียอดในคลังนั้นยังแสดงอยู่
+    async removeProductsFromWarehouse(productIds, warehouseId) {
+      let removed = 0
+      for (let i = 0; i < productIds.length; i += UPDATE_BATCH_SIZE) {
+        const batch = productIds.slice(i, i + UPDATE_BATCH_SIZE)
+        const { data, error } = await run(() =>
+          client
+            .from('product_warehouses')
+            .delete()
+            .eq('warehouse_id', warehouseId)
+            .in('product_id', batch)
+            .select('product_id'),
+        )
+        if (error) return { removed, error }
+        removed += data.length
+      }
+      return { removed, error: null }
     },
 
     // ไม่มี profile คืน profile: null (หน้าจอแสดง "ยังไม่ได้กำหนดบทบาท")

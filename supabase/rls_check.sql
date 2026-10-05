@@ -1,4 +1,4 @@
--- Inventory TTV: ตรวจ RLS ตาม design.md ข้อ 9 (T2.6) + ประเภทรายการซ่อม (ส่งซ่อม / ซ่อมเสร็จ / ตัดจำหน่าย)
+-- Inventory TTV: ตรวจ RLS ตาม design.md ข้อ 9 (T2.6) + ประเภทรายการซ่อม (ส่งซ่อม / ซ่อมเสร็จ / ตัดจำหน่าย) + คลังย่อย
 -- รันใน Supabase SQL Editor ทั้งไฟล์ ข้อมูลทดสอบทั้งหมดถูกย้อนกลับ ไม่เหลือในฐานข้อมูล
 -- ต้องมี profile admin และ staff อย่างละ 1 แถวก่อน
 -- ผลลัพธ์: ตาราง rls_results ทุกแถวต้องได้ pass = true
@@ -108,7 +108,50 @@ begin
     ['product_stock ของดี 2 รอซ่อม 0', 'staff',
       $t$select 1 from public.product_stock where sku = 'RLS-TEST-A' and on_hand = 2 and repair_qty = 0$t$, 'ok rows=1'],
     ['ประเภทรายการที่ไม่มีไม่ได้', 'admin',
-      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'lost', 1, null, 'x')$t$, '%invalid_type']
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'lost', 1, null, 'x')$t$, '%invalid_type'],
+    -- คลังย่อย (migration_warehouses.sql) ตอนนี้ RLS-TEST-A ของดี 2 อยู่คลังใหญ่ทั้งหมด
+    ['โอนไม่ระบุคลังไม่ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'transfer_in', 1, null, null, null)$t$, '%warehouse_required'],
+    ['รับเข้าระบุคลังย่อยไม่ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'in', 1, null, null, (select id from public.warehouses where name = 'Online'))$t$, '%warehouse_not_allowed'],
+    ['โอนเข้าเกินคลังใหญ่ไม่ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'transfer_in', 10, null, null, (select id from public.warehouses where name = 'Online'))$t$, '%insufficient_stock'],
+    ['staff โอนเข้า Online 2 ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'transfer_in', 2, null, null, (select id from public.warehouses where name = 'Online'))$t$, 'ok rows=1'],
+    ['product_stock รวม 2 คลังย่อย 2', 'staff',
+      $t$select 1 from public.product_stock where sku = 'RLS-TEST-A' and on_hand = 2 and sub_qty = 2$t$, 'ok rows=1'],
+    ['โอนเข้าแล้วสินค้าอยู่ในคลัง Online', 'staff',
+      $t$select 1 from public.product_warehouses pw join public.warehouses w on w.id = pw.warehouse_id join public.products p on p.id = pw.product_id where p.sku = 'RLS-TEST-A' and w.name = 'Online'$t$, 'ok rows=1'],
+    ['เบิกจากคลังใหญ่ที่เหลือ 0 ไม่ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'out', 1)$t$, '%insufficient_stock'],
+    ['staff รับเข้าคลังใหญ่ 3', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'in', 3)$t$, 'ok rows=1'],
+    ['ขายส่งเห็นของ Online ไม่ได้: ขาย 4 ไม่ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'out', 4, null, null, (select id from public.warehouses where name = 'ขายส่ง'))$t$, '%insufficient_stock'],
+    ['ขายผ่าน Online 4 ได้ (ตัดคลังย่อย 2 + คลังใหญ่ 2)', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'out', 4, null, null, (select id from public.warehouses where name = 'Online'))$t$, 'ok rows=1'],
+    ['บันทึกส่วนที่ตัดจากคลังย่อย = 2', 'staff',
+      $t$select 1 from public.stock_movements m join public.products p on p.id = m.product_id where p.sku = 'RLS-TEST-A' and m.type = 'out' and m.warehouse_qty = 2$t$, 'ok rows=1'],
+    ['product_stock รวม 1 คลังย่อย 0', 'staff',
+      $t$select 1 from public.product_stock where sku = 'RLS-TEST-A' and on_hand = 1 and sub_qty = 0$t$, 'ok rows=1'],
+    ['โอนกลับเกินคลังย่อยไม่ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'transfer_out', 1, null, null, (select id from public.warehouses where name = 'Online'))$t$, '%insufficient_warehouse'],
+    ['ส่งซ่อมระบุคลังย่อยไม่ได้', 'staff',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-A'), 'to_repair', 1, null, 'x', (select id from public.warehouses where name = 'Online'))$t$, '%warehouse_not_allowed'],
+    ['staff เพิ่มคลังไม่ได้', 'staff',
+      $t$insert into public.warehouses (name) values ('RLS-คลัง-S')$t$, 'ERR 42501%'],
+    ['staff ผูกสินค้ากับคลังไม่ได้', 'staff',
+      $t$insert into public.product_warehouses (product_id, warehouse_id) select p.id, w.id from public.products p, public.warehouses w where p.sku = 'RLS-TEST-A' and w.name = 'ขายส่ง'$t$, 'ERR 42501%'],
+    ['staff เอาสินค้าออกจากคลังไม่ได้ (0 แถว)', 'staff',
+      $t$delete from public.product_warehouses where product_id = (select id from public.products where sku = 'RLS-TEST-A')$t$, 'ok rows=0'],
+    ['admin เพิ่มคลังได้', 'admin',
+      $t$insert into public.warehouses (name, sort_order) values ('RLS-คลัง-A', 99)$t$, 'ok rows=1'],
+    ['admin ผูกสินค้ากับคลังได้', 'admin',
+      $t$insert into public.product_warehouses (product_id, warehouse_id) select p.id, w.id from public.products p, public.warehouses w where p.sku = 'RLS-TEST-A' and w.name = 'ขายส่ง'$t$, 'ok rows=1'],
+    ['admin เอาสินค้าออกจากคลังได้', 'admin',
+      $t$delete from public.product_warehouses where product_id = (select id from public.products where sku = 'RLS-TEST-A')$t$, 'ok rows=2'],
+    ['admin ลบคลังไม่ได้', 'admin',
+      $t$delete from public.warehouses where name = 'RLS-คลัง-A'$t$, 'ERR 42501%']
   ];
 
   -- ทุกอย่างในบล็อกนี้ถูกย้อนกลับตอนจบด้วย exception P0999

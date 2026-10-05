@@ -20,7 +20,7 @@ const optionalNumber = (value) => (value === null || value === undefined ? text(
 
 export function productSheet(products) {
   return [
-    header(['รหัสสินค้า', 'บาร์โค้ด', 'ชื่อสินค้า', 'หมวดหมู่', 'หน่วย', 'โลเคชั่น', 'คงเหลือ (ของดี)', 'รอซ่อม', 'จุดสั่งซื้อ', 'ขายเฉลี่ย/เดือน', 'สถานะสต็อก', 'การใช้งาน']),
+    header(['รหัสสินค้า', 'บาร์โค้ด', 'ชื่อสินค้า', 'หมวดหมู่', 'หน่วย', 'โลเคชั่น', 'คงเหลือ (ของดี)', 'รอซ่อม', 'จุดสั่งซื้อ', 'ขายเฉลี่ย/เดือน', 'สถานะสต็อก', 'การใช้งาน', 'คลังใหญ่', 'ในคลังย่อย']),
     ...products.map((p) => [
       text(p.sku),
       text(p.barcode),
@@ -34,13 +34,33 @@ export function productSheet(products) {
       optionalNumber(p.avgMonthlySales),
       text(STOCK_LABEL[getStockStatus(p.onHand, p.reorderPoint)]),
       text(p.active ? 'ใช้งาน' : 'ปิดใช้งาน'),
+      number(p.centralQty ?? p.onHand),
+      number(p.subQty ?? 0),
+    ]),
+  ]
+}
+
+// คลังย่อย: rows จาก productsInWarehouse (onHand = ขายได้)
+export function warehouseSheet(rows) {
+  return [
+    header(['รหัสสินค้า', 'บาร์โค้ด', 'ชื่อสินค้า', 'หมวดหมู่', 'หน่วย', 'โลเคชั่น', 'ในคลังนี้', 'ขายได้ (รวมคลังใหญ่)', 'สถานะสต็อก']),
+    ...rows.map((p) => [
+      text(p.sku),
+      text(p.barcode),
+      text(p.name),
+      text(p.category),
+      text(p.unit),
+      text(p.location),
+      number(p.inWarehouse),
+      number(p.onHand),
+      text(STOCK_LABEL[getStockStatus(p.onHand, p.reorderPoint)]),
     ]),
   ]
 }
 
 export function movementSheet(movements) {
   return [
-    header(['วันที่', 'รหัสสินค้า', 'ชื่อสินค้า', 'ประเภท', 'จำนวน (+/−)', 'หน่วย', 'ผู้บันทึก', 'หมายเหตุ']),
+    header(['วันที่', 'รหัสสินค้า', 'ชื่อสินค้า', 'ประเภท', 'จำนวน (+/−)', 'หน่วย', 'ผู้บันทึก', 'หมายเหตุ', 'คลัง']),
     ...movements.map((m) => [
       text(formatThaiDate(m.movementDate)),
       text(m.productSku),
@@ -50,6 +70,7 @@ export function movementSheet(movements) {
       text(m.unit),
       text(m.recordedByName),
       text(m.note),
+      text(m.warehouseName || 'คลังใหญ่'),
     ]),
   ]
 }

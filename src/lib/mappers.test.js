@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toMovement, toProduct, toProductRow, toProfile } from './mappers.js'
+import { toMovement, toProduct, toProductRow, toProfile, toWarehouse, toWarehouseRow } from './mappers.js'
 
 describe('toProduct', () => {
   it('แปลงแถวจาก product_stock และแปลง numeric เป็นตัวเลข', () => {
@@ -18,6 +18,7 @@ describe('toProduct', () => {
       avg_monthly_sales: '64.75',
       repair_qty: '800.00',
       legacy_sku: 'GL-101 R',
+      sub_qty: '3.00',
     }
     expect(toProduct(row)).toEqual({
       id: 'p1',
@@ -30,6 +31,7 @@ describe('toProduct', () => {
       active: true,
       onHand: 12.5,
       repairQty: 800,
+      subQty: 3,
       legacySku: 'GL-101 R',
       imagePath: 'p1/1.jpg',
       location: 'แลค A4',
@@ -117,6 +119,9 @@ describe('toMovement', () => {
     created_at: '2026-09-29T03:00:00Z',
     product: { name: 'น้ำดื่ม', sku: 'DR-001', unit: 'ขวด' },
     recorder: { display_name: 'สมชาย' },
+    warehouse_id: 'w1',
+    warehouse_qty: '1.00',
+    warehouse: { name: 'Online' },
   }
 
   it('แปลงแถวพร้อมข้อมูลสินค้าและผู้บันทึก', () => {
@@ -133,6 +138,9 @@ describe('toMovement', () => {
       productSku: 'DR-001',
       unit: 'ขวด',
       recordedByName: 'สมชาย',
+      warehouseId: 'w1',
+      warehouseQty: 1,
+      warehouseName: 'Online',
     })
   })
 
@@ -141,6 +149,31 @@ describe('toMovement', () => {
     const movement = toMovement(plain)
     expect(movement.productName).toBe('')
     expect(movement.recordedByName).toBe('')
+  })
+
+  it('รายการคลังใหญ่: ไม่มีคลังย่อย', () => {
+    const movement = toMovement({ ...row, warehouse_id: null, warehouse_qty: null, warehouse: null })
+    expect(movement).toMatchObject({ warehouseId: null, warehouseQty: null, warehouseName: '' })
+  })
+})
+
+describe('toWarehouse / toWarehouseRow', () => {
+  it('แปลงแถวคลัง', () => {
+    expect(toWarehouse({ id: 'w1', name: 'Online', sort_order: 1, active: true })).toEqual({
+      id: 'w1',
+      name: 'Online',
+      sortOrder: 1,
+      active: true,
+    })
+  })
+
+  it('ส่งเฉพาะ name, sort_order, active (ตัดช่องว่าง)', () => {
+    expect(toWarehouseRow({ id: 'w1', name: ' หน้าร้าน ', sortOrder: '4', active: true })).toEqual({
+      name: 'หน้าร้าน',
+      sort_order: 4,
+      active: true,
+    })
+    expect(toWarehouseRow({ name: 'x', sortOrder: 1 }).active).toBe(true)
   })
 })
 

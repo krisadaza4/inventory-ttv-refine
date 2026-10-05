@@ -6,6 +6,7 @@ import {
   allowedMovementTypes,
   movementEffect,
   stockAfter,
+  warehouseEffect,
   STOCK_STATUS,
   getStockStatus,
   countByStockStatus,
@@ -441,7 +442,7 @@ describe('สินค้ารอซ่อม', () => {
 
   it('allowedMovementTypes: staff ไม่มีปรับยอดและตัดจำหน่าย', () => {
     expect(allowedMovementTypes(ROLE.ADMIN)).toEqual(Object.values(MOVEMENT_TYPE))
-    expect(allowedMovementTypes(ROLE.STAFF)).toEqual(['in', 'out', 'to_repair', 'repaired'])
+    expect(allowedMovementTypes(ROLE.STAFF)).toEqual(['in', 'out', 'to_repair', 'repaired', 'transfer_in', 'transfer_out'])
   })
 
   it('ส่งซ่อม/ซ่อมเสร็จ/ตัดจำหน่าย ต้องมีเหตุผล', () => {
@@ -472,9 +473,91 @@ describe('สินค้ารอซ่อม', () => {
   })
 
   it('stockAfter คืนทั้งของดีและรอซ่อม', () => {
-    expect(stockAfter(stock, MOVEMENT_TYPE.TO_REPAIR, '3')).toEqual({ onHand: 7, repairQty: 7 })
-    expect(stockAfter(stock, MOVEMENT_TYPE.WRITE_OFF, '4')).toEqual({ onHand: 10, repairQty: 0 })
-    expect(stockAfter(10, MOVEMENT_TYPE.IN, '1')).toEqual({ onHand: 11, repairQty: 0 })
+    expect(stockAfter(stock, MOVEMENT_TYPE.TO_REPAIR, '3')).toMatchObject({ onHand: 7, repairQty: 7 })
+    expect(stockAfter(stock, MOVEMENT_TYPE.WRITE_OFF, '4')).toMatchObject({ onHand: 10, repairQty: 0 })
+    expect(stockAfter(10, MOVEMENT_TYPE.IN, '1')).toEqual({ onHand: 11, repairQty: 0, central: 11, warehouse: null })
     expect(stockAfter(stock, MOVEMENT_TYPE.IN, '')).toBeNull()
+  })
+})
+
+describe('คลังย่อย', () => {
+  const today = '2026-10-05'
+  // ของดีรวม 10: คลังใหญ่ 6, อยู่ในคลังย่อยทั้งหมด 4 (ในคลังที่เลือก 3)
+  const stock = { onHand: 10, repairQty: 0, subQty: 4, warehouseQty: 3 }
+  const move = (type, quantity, warehouseId = 'wh-online') => ({ type, quantity, movementDate: today, note: '', warehouseId })
+
+  it('warehouseEffect: โอนเข้า +, โอนกลับ −, ขายตัดคลังย่อยได้ไม่เกินที่มี', () => {
+    expect(warehouseEffect(MOVEMENT_TYPE.TRANSFER_IN, 2)).toBe(2)
+    expect(warehouseEffect(MOVEMENT_TYPE.TRANSFER_OUT, 2, 3)).toBe(-2)
+    expect(warehouseEffect(MOVEMENT_TYPE.OUT, 2, 3)).toBe(-2)
+    expect(warehouseEffect(MOVEMENT_TYPE.OUT, 5, 3)).toBe(-3)
+    expect(warehouseEffect(MOVEMENT_TYPE.OUT, 5, 0)).toBe(-0)
+    expect(warehouseEffect(MOVEMENT_TYPE.IN, 5, 3)).toBe(0)
+  })
+
+  it('โอนเข้า: คลังใหญ่ลด คลังย่อยเพิ่ม ยอดรวมเท่าเดิม', () => {
+    expect(stockAfter(stock, MOVEMENT_TYPE.TRANSFER_IN, '2', 'wh-online')).toEqual({
+      onHand: 10,
+      repairQty: 0,
+      central: 4,
+      warehouse: 5,
+    })
+  })
+
+  it('โอนกลับ: คลังย่อยลด คลังใหญ่เพิ่ม', () => {
+    expect(stockAfter(stock, MOVEMENT_TYPE.TRANSFER_OUT, '3', 'wh-online')).toMatchObject({ central: 9, warehouse: 0 })
+  })
+
+  it('ขายผ่านคลังย่อย: ตัดคลังย่อยก่อน ไม่พอตัดคลังใหญ่', () => {
+    expect(stockAfter(stock, MOVEMENT_TYPE.OUT, '2', 'wh-online')).toMatchObject({ onHand: 8, central: 6, warehouse: 1 })
+    expect(stockAfter(stock, MOVEMENT_TYPE.OUT, '5', 'wh-online')).toMatchObject({ onHand: 5, central: 4, warehouse: 0 })
+  })
+
+  it('เบิกออกจากคลังใหญ่ ใช้ได้เฉพาะยอดคลังใหญ่', () => {
+    expect(validateMovement(move(MOVEMENT_TYPE.OUT, '6', ''), stock, ROLE.STAFF, today)).toEqual({})
+    expect(validateMovement(move(MOVEMENT_TYPE.OUT, '7', ''), stock, ROLE.STAFF, today).quantity).toBe(
+      'คลังใหญ่คงเหลือไม่พอ (คงเหลือ 6)',
+    )
+  })
+
+  it('ขายผ่านคลังย่อย ได้ไม่เกิน ในคลังนี้ + คลังใหญ่', () => {
+    expect(validateMovement(move(MOVEMENT_TYPE.OUT, '9'), stock, ROLE.STAFF, today)).toEqual({})
+    expect(validateMovement(move(MOVEMENT_TYPE.OUT, '10'), stock, ROLE.STAFF, today).quantity).toBe(
+      'จำนวนที่ขายได้ไม่พอ (ขายได้ 9)',
+    )
+  })
+
+  it('โอนเข้าเกินคลังใหญ่ / โอนกลับเกินคลังย่อย ไม่ได้', () => {
+    expect(validateMovement(move(MOVEMENT_TYPE.TRANSFER_IN, '6'), stock, ROLE.STAFF, today)).toEqual({})
+    expect(validateMovement(move(MOVEMENT_TYPE.TRANSFER_IN, '7'), stock, ROLE.STAFF, today)).toHaveProperty('quantity')
+    expect(validateMovement(move(MOVEMENT_TYPE.TRANSFER_OUT, '4'), stock, ROLE.STAFF, today).quantity).toBe(
+      'คลังย่อยคงเหลือไม่พอ (คงเหลือ 3)',
+    )
+  })
+
+  it('โอนต้องเลือกคลังย่อย', () => {
+    expect(validateMovement(move(MOVEMENT_TYPE.TRANSFER_IN, '1', ''), stock, ROLE.STAFF, today).warehouseId).toBe(
+      'กรุณาเลือกคลังย่อย',
+    )
+  })
+
+  it('รับเข้า / ส่งซ่อม / ปรับยอด ทำที่คลังใหญ่เท่านั้น', () => {
+    expect(validateMovement(move(MOVEMENT_TYPE.IN, '1'), stock, ROLE.STAFF, today).warehouseId).toBe(
+      'รายการนี้ทำได้ที่คลังใหญ่เท่านั้น',
+    )
+    expect(validateMovement({ ...move(MOVEMENT_TYPE.TO_REPAIR, '1'), note: 'x' }, stock, ROLE.STAFF, today)).toHaveProperty(
+      'warehouseId',
+    )
+  })
+
+  it('ส่งซ่อมใช้ได้เฉพาะยอดคลังใหญ่', () => {
+    expect(
+      validateMovement({ ...move(MOVEMENT_TYPE.TO_REPAIR, '7', ''), note: 'x' }, stock, ROLE.STAFF, today),
+    ).toHaveProperty('quantity')
+  })
+
+  it('ประวัติ: โอนแสดงจำนวนที่โอน', () => {
+    expect(signedQuantity(MOVEMENT_TYPE.TRANSFER_IN, 3)).toBe(3)
+    expect(signedQuantity(MOVEMENT_TYPE.TRANSFER_OUT, 3)).toBe(3)
   })
 })
