@@ -3,7 +3,7 @@ import {
   activeWarehouses,
   attachWarehouses,
   nextSortOrder,
-  planBulkTransfer,
+  planBulkMovements,
   productsInWarehouse,
   quantityIn,
   stockFor,
@@ -108,21 +108,42 @@ describe('nextSortOrder', () => {
   })
 })
 
-describe('planBulkTransfer', () => {
+describe('planBulkMovements', () => {
   const all = attachWarehouses(products, links, stockRows)
   const today = '2026-10-05'
+  const transferIn = { type: 'transfer_in', warehouseId: 'w1' }
 
   it('ข้ามช่องว่าง เก็บรายการที่ถูกต้อง', () => {
-    expect(planBulkTransfer({ p1: '2', p2: '', p3: ' ' }, all, 'w1', 'staff', today)).toEqual({
+    expect(planBulkMovements({ p1: '2', p2: '', p3: ' ' }, all, transferIn, 'staff', today)).toEqual({
       moves: [{ productId: 'p1', quantity: '2' }],
       errors: {},
     })
   })
 
   it('เกินคลังใหญ่ / ไม่ใช่ตัวเลข / 0 เป็นข้อผิดพลาดของรายการนั้น', () => {
-    const { moves, errors } = planBulkTransfer({ p1: '7', p2: 'abc', p3: '0' }, all, 'w1', 'staff', today)
+    const { moves, errors } = planBulkMovements({ p1: '7', p2: 'abc', p3: '0' }, all, transferIn, 'staff', today)
     expect(moves).toEqual([])
     expect(errors.p1).toBe('คลังใหญ่คงเหลือไม่พอ (คงเหลือ 6)')
     expect(Object.keys(errors).toSorted()).toEqual(['p1', 'p2', 'p3'])
+  })
+})
+
+describe('planBulkMovements รับเข้า', () => {
+  const all = attachWarehouses(products, links, stockRows)
+  const receive = { type: 'in' }
+
+  it('รับเข้าคลังใหญ่ ไม่จำกัดตามยอดคงเหลือ', () => {
+    expect(planBulkMovements({ p1: '100', p2: '1.5' }, all, receive, 'staff', '2026-10-05')).toEqual({
+      moves: [
+        { productId: 'p1', quantity: '100' },
+        { productId: 'p2', quantity: '1.5' },
+      ],
+      errors: {},
+    })
+  })
+
+  it('จำนวนไม่ถูกต้อง เป็นข้อผิดพลาดของรายการนั้น', () => {
+    const { errors } = planBulkMovements({ p1: '-1', p2: '1.255' }, all, receive, 'staff', '2026-10-05')
+    expect(Object.keys(errors).toSorted()).toEqual(['p1', 'p2'])
   })
 })

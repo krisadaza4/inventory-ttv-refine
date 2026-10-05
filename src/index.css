@@ -2245,3 +2245,21 @@ td.mono,
 .bulk-transfer .form-actions .grow {
   flex: 1 1 220px;
 }
+
+/* เมนูซ้ายยาวขึ้นจากคลังย่อย: จอเตี้ยให้เลื่อนในเมนูเอง ไม่ให้เมนูท้าย ๆ (จัดการสินค้า) ตกขอบจอ
+   และลดระยะห่างของกลุ่มเมนูลง (เฉพาะคอมพิวเตอร์ มือถือเป็นแถบล่าง) */
+@media (min-width: 761px) {
+  .sidebar {
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .nav-group-label {
+    padding-top: 10px;
+  }
+
+  .nav-item.nav-sub {
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+}

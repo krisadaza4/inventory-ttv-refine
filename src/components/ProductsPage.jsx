@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { toIsoDate } from '../lib/dateFormat.js'
 import { PAGE } from '../lib/menu.js'
 import {
+  MOVEMENT_TYPE,
   NO_LOCATION,
   STOCK_STATUS,
   countByStockStatus,
@@ -63,7 +64,7 @@ export default function ProductsPage({
   repository,
 }) {
   const [query, setQuery] = useState('')
-  // คลังย่อย: แผงโอนเข้าหลายรายการ
+  // แผงบันทึกหลายรายการ: คลังใหญ่ = รับเข้า, คลังย่อย = โอนเข้า
   const [bulkOpen, setBulkOpen] = useState(false)
   const [notice, setNotice] = useState(null)
   const [filters, setFilters] = useState(NO_FILTERS)
@@ -103,7 +104,7 @@ export default function ProductsPage({
         title={warehouse ? `คลัง ${warehouse.name}` : undefined}
         actions={
           <div className="head-actions">
-            {warehouse && repository && (
+            {repository && (
               <button
                 type="button"
                 className="btn btn-in"
@@ -113,7 +114,15 @@ export default function ProductsPage({
                 }}
                 disabled={bulkOpen || loadState !== 'ready'}
               >
-                <span aria-hidden="true">⇢</span> โอนเข้าหลายรายการ
+                {warehouse ? (
+                  <>
+                    <span aria-hidden="true">⇢</span> โอนเข้าหลายรายการ
+                  </>
+                ) : (
+                  <>
+                    <span aria-hidden="true">＋</span> รับเข้าหลายรายการ
+                  </>
+                )}
               </button>
             )}
             <ExportButton
@@ -155,8 +164,9 @@ export default function ProductsPage({
         </p>
       )}
 
-      {warehouse && bulkOpen && (
+      {bulkOpen && (
         <BulkTransferPanel
+          type={warehouse ? MOVEMENT_TYPE.TRANSFER_IN : MOVEMENT_TYPE.IN}
           warehouse={warehouse}
           products={allActive}
           imageUrls={imageUrls}
