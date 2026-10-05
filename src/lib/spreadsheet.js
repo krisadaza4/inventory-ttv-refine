@@ -91,7 +91,44 @@ export function monthlySalesSheet(rows) {
 
 // สำรองข้อมูลทั้งหมด (admin) เป็นไฟล์เดียวหลายแผ่นงาน: สินค้า (รวมที่ปิดใช้งาน) / ประวัติ / ยอดขายรายเดือน
 // สินค้ามีรหัสเดิม ไฟล์รูป และรหัสระบบเพิ่ม เพื่อใช้กู้คืนหรือตรวจสอบภายหลัง
-export function backupSheets({ products, movements, sales }) {
+// คลังย่อย: หนึ่งแถวต่อ (คลัง, สินค้า) ที่ผูกไว้หรือมียอดในคลังนั้น คลังที่ยังไม่มีสินค้าแสดงแถวเดียวไม่มีสินค้า
+// links = [{ productId, warehouseId }], stock = [{ warehouseId, productId, quantity }]
+export function warehouseBackupSheet({ warehouses, links, stock, products }) {
+  const byId = new Map(products.map((p) => [p.id, p]))
+  const rows = []
+  for (const w of warehouses) {
+    const linked = new Set(links.filter((l) => l.warehouseId === w.id).map((l) => l.productId))
+    const qty = new Map(stock.filter((s) => s.warehouseId === w.id).map((s) => [s.productId, Number(s.quantity)]))
+    const productIds = [...new Set([...linked, ...[...qty].filter(([, q]) => q !== 0).map(([id]) => id)])]
+    const status = text(w.active ? 'ใช้งาน' : 'ปิดใช้งาน')
+    if (productIds.length === 0) rows.push([text(w.name), status, text(''), text(''), text(''), text(''), text(w.id)])
+    for (const id of productIds) {
+      const p = byId.get(id)
+      rows.push([
+        text(w.name),
+        status,
+        text(p?.sku ?? id),
+        text(p?.name),
+        text(linked.has(id) ? 'ใช่' : 'ไม่'),
+        number(qty.get(id) ?? 0),
+        text(w.id),
+      ])
+    }
+  }
+  return [header(['คลัง', 'สถานะคลัง', 'รหัสสินค้า', 'ชื่อสินค้า', 'แสดงในคลัง', 'ยอดในคลังนี้', 'รหัสระบบคลัง']), ...rows]
+}
+
+// ยอดขาย/เบิกออกแยกตามคลัง: result จาก salesByWarehouse
+export function warehouseSalesSheet({ rows, totals }) {
+  return [
+    header(['คลัง', ...MONTH_LABELS, 'รวม']),
+    ...rows.map((r) => [text(r.name), ...r.months.map(number), number(r.total)]),
+    [text('รวมทุกคลัง'), ...totals.months.map(number), number(totals.total)],
+  ]
+}
+
+// warehouses / links / warehouseStock ไม่ส่งมา = ไม่มีแผ่นคลังย่อย
+export function backupSheets({ products, movements, sales, warehouses, links = [], warehouseStock = [] }) {
   const byId = new Map(products.map((p) => [p.id, p]))
   const productRows = productSheet(products).map((row, i) => {
     if (i === 0) return [...row, ...header(['รหัสเดิม', 'ไฟล์รูป', 'รหัสระบบ'])]
@@ -115,6 +152,15 @@ export function backupSheets({ products, movements, sales }) {
     { data: productRows, sheet: 'สินค้า', stickyRowsCount: 1 },
     { data: movementSheet(movements), sheet: 'ประวัติ', stickyRowsCount: 1 },
     { data: salesRows, sheet: 'ยอดขายรายเดือน', stickyRowsCount: 1 },
+    ...(warehouses
+      ? [
+          {
+            data: warehouseBackupSheet({ warehouses, links, stock: warehouseStock, products }),
+            sheet: 'คลังย่อย',
+            stickyRowsCount: 1,
+          },
+        ]
+      : []),
   ]
 }
 

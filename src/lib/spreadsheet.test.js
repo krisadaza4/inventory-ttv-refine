@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { backupSheets, exportFileName, movementSheet, productSheet, warehouseSheet } from './spreadsheet.js'
+import {
+  backupSheets,
+  exportFileName,
+  movementSheet,
+  productSheet,
+  warehouseSalesSheet,
+  warehouseSheet,
+} from './spreadsheet.js'
 
 const values = (row) => row.map((cell) => cell.value)
 
@@ -206,5 +213,48 @@ describe('movementSheet คลัง', () => {
       { movementDate: '2026-10-05', productSku: 'A', productName: 'เอ', type: 'transfer_in', quantity: 3, unit: 'ชิ้น', recordedByName: 'ก', note: null, warehouseName: 'Online' },
     ])
     expect(values(row).slice(3)).toEqual(['โอนเข้าคลังย่อย', 3, 'ชิ้น', 'ก', '', 'Online'])
+  })
+})
+
+describe('backupSheets คลังย่อย', () => {
+  const products = [
+    { id: 'p1', sku: 'A-1', name: 'เอ', category: 'x', unit: 'ชิ้น', reorderPoint: 0, onHand: 5, active: true },
+    { id: 'p2', sku: 'B-2', name: 'บี', category: 'x', unit: 'ชิ้น', reorderPoint: 0, onHand: 1, active: true },
+  ]
+  const warehouses = [
+    { id: 'w1', name: 'Online', active: true },
+    { id: 'w2', name: 'อะไหล่', active: false },
+  ]
+  const links = [{ productId: 'p1', warehouseId: 'w1' }]
+  // p2 ไม่ได้ผูกแต่ยังมียอดค้างใน Online
+  const warehouseStock = [
+    { warehouseId: 'w1', productId: 'p1', quantity: 2 },
+    { warehouseId: 'w1', productId: 'p2', quantity: 1 },
+  ]
+
+  it('เพิ่มแผ่นคลังย่อย: สินค้าที่ผูกหรือมียอด และคลังที่ยังไม่มีสินค้า', () => {
+    const sheets = backupSheets({ products, movements: [], sales: [], warehouses, links, warehouseStock })
+    expect(sheets.map((s) => s.sheet)).toEqual(['สินค้า', 'ประวัติ', 'ยอดขายรายเดือน', 'คลังย่อย'])
+    const [head, ...rows] = sheets[3].data
+    expect(values(head)).toEqual(['คลัง', 'สถานะคลัง', 'รหัสสินค้า', 'ชื่อสินค้า', 'แสดงในคลัง', 'ยอดในคลังนี้', 'รหัสระบบคลัง'])
+    expect(rows.map(values)).toEqual([
+      ['Online', 'ใช้งาน', 'A-1', 'เอ', 'ใช่', 2, 'w1'],
+      ['Online', 'ใช้งาน', 'B-2', 'บี', 'ไม่', 1, 'w1'],
+      ['อะไหล่', 'ปิดใช้งาน', '', '', '', '', 'w2'],
+    ])
+  })
+})
+
+describe('warehouseSalesSheet', () => {
+  it('แถวละคลัง 12 เดือน + รวม และแถวรวมทุกคลัง', () => {
+    const months = Array(12).fill(0)
+    const sheet = warehouseSalesSheet({
+      rows: [{ id: '', name: 'คลังใหญ่', months: [2, ...months.slice(1)], total: 2 }],
+      totals: { months: [2, ...months.slice(1)], total: 2 },
+    })
+    expect(values(sheet[0])).toHaveLength(14)
+    expect(values(sheet[1])[0]).toBe('คลังใหญ่')
+    expect(values(sheet[2])[0]).toBe('รวมทุกคลัง')
+    expect(values(sheet[2])[13]).toBe(2)
   })
 })

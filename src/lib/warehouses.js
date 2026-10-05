@@ -97,3 +97,49 @@ export function planBulkMovements(quantities, products, { type, warehouseId = ''
   }
   return { moves, errors }
 }
+
+// ปีที่มีรายการเบิกออก (ค.ศ.) ล่าสุดก่อน รวมปีปัจจุบันเสมอ
+export function outYears(movements, currentYear) {
+  const years = new Set([currentYear])
+  for (const m of movements) if (m.type === 'out') years.add(Number(m.movementDate.slice(0, 4)))
+  return [...years].toSorted((a, b) => b - a)
+}
+
+// ยอดขาย/เบิกออกจากประวัติ แยกตามคลัง รายเดือน (year เป็น ค.ศ.)
+// คลังใหญ่ = เบิกออกที่ไม่ระบุคลัง, ขายผ่านคลังย่อยนับเต็มจำนวนให้คลังนั้น (แม้ตัดของจากคลังใหญ่บางส่วน)
+// warehouses รวมที่ปิดใช้งาน: แสดงคลังที่ใช้งานอยู่เสมอ ที่ปิดแล้วแสดงเมื่อมียอด
+// คืน { rows: [{ id, name, months[12], total }], totals: { months[12], total } }
+export function salesByWarehouse(movements, warehouses, year) {
+  const rows = [
+    { id: '', name: 'คลังใหญ่', active: true, months: Array(12).fill(0) },
+    ...activeWarehouses(warehouses).map((w) => ({ id: w.id, name: w.name, active: true, months: Array(12).fill(0) })),
+  ]
+  const byId = new Map(rows.map((r) => [r.id, r]))
+  for (const m of movements) {
+    if (m.type !== 'out' || Number(m.movementDate.slice(0, 4)) !== year) continue
+    const id = m.warehouseId ?? ''
+    if (!byId.has(id)) {
+      const known = warehouses.find((w) => w.id === id)
+      const row = { id, name: known?.name ?? m.warehouseName ?? 'คลังย่อย', active: false, months: Array(12).fill(0) }
+      rows.push(row)
+      byId.set(id, row)
+    }
+    byId.get(id).months[Number(m.movementDate.slice(5, 7)) - 1] += Number(m.quantity)
+  }
+  const done = rows.map((r) => {
+    const months = r.months.map(toAmount)
+    return { id: r.id, name: r.name, months, total: toAmount(months.reduce((sum, q) => sum + q, 0)) }
+  })
+  const months = Array.from({ length: 12 }, (_, i) => toAmount(done.reduce((sum, r) => sum + r.months[i], 0)))
+  return { rows: done, totals: { months, total: toAmount(months.reduce((sum, q) => sum + q, 0)) } }
+}
+
+// ช่องติ๊กคลังย่อยในฟอร์มสินค้า: คลังที่ต้องเพิ่มและเอาออก เทียบกับค่าเดิม
+export function warehouseChanges(initialIds, checkedIds) {
+  const before = new Set(initialIds)
+  const after = new Set(checkedIds)
+  return {
+    add: [...after].filter((id) => !before.has(id)),
+    remove: [...before].filter((id) => !after.has(id)),
+  }
+}

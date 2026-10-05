@@ -2263,3 +2263,29 @@ td.mono,
     padding-bottom: 5px;
   }
 }
+
+/* สลับมุมมองในหน้ายอดขาย (ตามสินค้า / แยกตามคลัง) */
+.view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.view-tabs .btn[aria-pressed='true'] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.wh-sales-table tfoot th {
+  border-top: 2px solid var(--border);
+}
+
+/* ฟอร์มสินค้า: ติ๊กคลังย่อยที่จะแสดง */
+.wh-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding-top: 6px;
+}

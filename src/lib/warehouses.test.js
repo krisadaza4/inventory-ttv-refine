@@ -3,7 +3,10 @@ import {
   activeWarehouses,
   attachWarehouses,
   nextSortOrder,
+  outYears,
   planBulkMovements,
+  salesByWarehouse,
+  warehouseChanges,
   productsInWarehouse,
   quantityIn,
   stockFor,
@@ -145,5 +148,44 @@ describe('planBulkMovements รับเข้า', () => {
   it('จำนวนไม่ถูกต้อง เป็นข้อผิดพลาดของรายการนั้น', () => {
     const { errors } = planBulkMovements({ p1: '-1', p2: '1.255' }, all, receive, 'staff', '2026-10-05')
     expect(Object.keys(errors).toSorted()).toEqual(['p1', 'p2'])
+  })
+})
+
+describe('salesByWarehouse', () => {
+  const movements = [
+    { type: 'out', quantity: 2, movementDate: '2026-01-15', warehouseId: null },
+    { type: 'out', quantity: 3, movementDate: '2026-01-20', warehouseId: 'w1', warehouseName: 'Online' },
+    { type: 'out', quantity: 1.5, movementDate: '2026-02-01', warehouseId: 'w1', warehouseName: 'Online' },
+    { type: 'out', quantity: 4, movementDate: '2026-03-01', warehouseId: 'w3', warehouseName: 'เก่า' },
+    { type: 'in', quantity: 9, movementDate: '2026-01-01', warehouseId: null },
+    { type: 'out', quantity: 7, movementDate: '2025-12-31', warehouseId: null },
+  ]
+
+  it('แยกตามคลังรายเดือน เฉพาะเบิกออกของปีที่เลือก', () => {
+    const { rows, totals } = salesByWarehouse(movements, warehouses, 2026)
+    expect(rows.map((r) => [r.name, r.total])).toEqual([
+      ['คลังใหญ่', 2],
+      ['Online', 4.5],
+      ['ขายส่ง', 0],
+      ['เก่า', 4],
+    ])
+    expect(rows[1].months.slice(0, 3)).toEqual([3, 1.5, 0])
+    expect(totals.months.slice(0, 3)).toEqual([5, 1.5, 4])
+    expect(totals.total).toBe(10.5)
+  })
+
+  it('คลังที่ปิดใช้งานและไม่มียอด ไม่แสดง', () => {
+    expect(salesByWarehouse([], warehouses, 2026).rows.map((r) => r.name)).toEqual(['คลังใหญ่', 'Online', 'ขายส่ง'])
+  })
+
+  it('outYears: ปีที่มีเบิกออก + ปีปัจจุบัน ล่าสุดก่อน', () => {
+    expect(outYears(movements, 2027)).toEqual([2027, 2026, 2025])
+  })
+})
+
+describe('warehouseChanges', () => {
+  it('คืนคลังที่ต้องเพิ่มและเอาออก', () => {
+    expect(warehouseChanges(['w1', 'w2'], ['w2', 'w3'])).toEqual({ add: ['w3'], remove: ['w1'] })
+    expect(warehouseChanges([], [])).toEqual({ add: [], remove: [] })
   })
 })

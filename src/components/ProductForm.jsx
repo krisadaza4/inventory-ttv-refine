@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { checkImageFile, resizeImage } from '../lib/productImages.js'
 import { validateProduct } from '../lib/stockRules.js'
+import { quantityIn, warehouseChanges } from '../lib/warehouses.js'
 import ProductThumb from './ProductThumb.jsx'
 
 const EMPTY = {
@@ -72,8 +73,12 @@ const toFields = (product) =>
 const NEW_CATEGORY = '__new__'
 
 // ฟอร์มเพิ่ม/แก้ไขสินค้า product = null คือเพิ่มใหม่ (App ใส่ key ตามสินค้า ฟอร์มจึงเริ่มใหม่ทุกครั้งที่เปลี่ยน)
-export default function ProductForm({ product, imageUrl, categories, repository, onSaved, onCancel }) {
+// warehouses = คลังย่อยที่ใช้งานอยู่ ติ๊กเลือกคลังที่จะแสดงสินค้านี้
+export default function ProductForm({ product, imageUrl, categories, warehouses = [], repository, onSaved, onCancel }) {
   const [fields, setFields] = useState(() => toFields(product))
+  // คลังที่แสดงสินค้านี้อยู่ (รวมคลังที่ยังมีของค้าง) เทียบตอนบันทึกเพื่อเพิ่ม/เอาออก
+  const initialWarehouses = warehouses.filter((w) => product?.warehouseIds?.includes(w.id)).map((w) => w.id)
+  const [checkedWarehouses, setCheckedWarehouses] = useState(initialWarehouses)
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
   const [serverError, setServerError] = useState(null)
@@ -94,10 +99,28 @@ export default function ProductForm({ product, imageUrl, categories, repository,
       ...fields,
       id: product?.id,
     })
+    if (error) {
+      setBusy(false)
+      setServerError(error)
+      return
+    }
+
+    // คลังย่อย: บันทึกหลังสินค้า (สินค้าใหม่ต้องมี id ก่อน)
+    const { add, remove } = warehouseChanges(initialWarehouses, checkedWarehouses)
+    let warehouseError = null
+    for (const warehouseId of add) {
+      warehouseError ??= (await repository.addProductsToWarehouse([id], warehouseId)).error
+    }
+    for (const warehouseId of remove) {
+      warehouseError ??= (await repository.removeProductsFromWarehouse([id], warehouseId)).error
+    }
     setBusy(false)
-    if (error) setServerError(error)
-    else onSaved(id, product ? `บันทึกการแก้ไข ${fields.name.trim()} แล้ว` : `เพิ่มสินค้า ${fields.name.trim()} แล้ว`)
+    const saved = product ? `บันทึกการแก้ไข ${fields.name.trim()} แล้ว` : `เพิ่มสินค้า ${fields.name.trim()} แล้ว`
+    onSaved(id, warehouseError ? `${saved} แต่ตั้งคลังย่อยไม่สำเร็จ: ${warehouseError}` : saved)
   }
+
+  const toggleWarehouse = (id) =>
+    setCheckedWarehouses((current) => (current.includes(id) ? current.filter((w) => w !== id) : [...current, id]))
 
   // เลือกรูป/ถ่ายรูป: ย่อในเบราว์เซอร์ แล้วอัปโหลดแทนรูปเดิม
   const handleImage = async (e) => {
@@ -201,6 +224,33 @@ export default function ProductForm({ product, imageUrl, categories, repository,
             </div>
           </div>
         ))}
+
+        {warehouses.length > 0 && (
+          <div className="form-row">
+            <span className="label">แสดงในคลังย่อย</span>
+            <div>
+              <div className="wh-checks">
+                {warehouses.map((w) => {
+                  // ยังมีของในคลังนั้น: เอาออกไม่ได้จนกว่าจะโอนกลับคลังใหญ่
+                  const held = product ? quantityIn(product, w.id) : 0
+                  return (
+                    <label key={w.id} className="check" title={held > 0 ? 'ยังมีของในคลังนี้ โอนกลับคลังใหญ่ก่อนจึงเอาออกได้' : undefined}>
+                      <input
+                        type="checkbox"
+                        checked={checkedWarehouses.includes(w.id)}
+                        onChange={() => toggleWarehouse(w.id)}
+                        disabled={busy || held > 0}
+                      />{' '}
+                      {w.name}
+                      {held > 0 && <span className="dim"> (มี {formatQuantity(held)})</span>}
+                    </label>
+                  )
+                })}
+              </div>
+              <div className="hint">ไม่บังคับ จำนวนในคลังย่อยใช้ "โอนเข้า" ในหน้าคลังนั้น</div>
+            </div>
+          </div>
+        )}
 
         <div className="form-row">
           <span className="label">รูปสินค้า</span>

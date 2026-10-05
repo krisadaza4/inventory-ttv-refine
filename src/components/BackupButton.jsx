@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { toIsoDate } from '../lib/dateFormat.js'
 import { backupSheets, exportFileName } from '../lib/spreadsheet.js'
 
-// สำรองข้อมูล (admin): ดึงสินค้า (รวมที่ปิดใช้งาน) ประวัติ และยอดขายรายเดือนทั้งหมด แล้วบันทึกเป็น Excel ไฟล์เดียว
+// สำรองข้อมูล (admin): ดึงสินค้า (รวมที่ปิดใช้งาน) ประวัติ ยอดขายรายเดือน และคลังย่อยทั้งหมด แล้วบันทึกเป็น Excel ไฟล์เดียว
 // Supabase แบบฟรีไม่มีสำรองอัตโนมัติ ให้กดเก็บไว้เป็นระยะ
 // onBackedUp(วันที่ YYYY-MM-DD) เรียกเมื่อบันทึกไฟล์สำเร็จ ใช้จำวันสำรองล่าสุด
 export default function BackupButton({ repository, onBackedUp }) {
@@ -15,12 +15,21 @@ export default function BackupButton({ repository, onBackedUp }) {
     setError(null)
     setDone(null)
     try {
-      const [productsResult, movementsResult, salesResult] = await Promise.all([
+      const [productsResult, movementsResult, salesResult, warehousesResult, linksResult, stockResult] = await Promise.all([
         repository.listProducts({ includeInactive: true }),
         repository.listAllMovements(),
         repository.listMonthlySales(),
+        repository.listWarehouses(),
+        repository.listProductWarehouses(),
+        repository.listWarehouseStock(),
       ])
-      const failed = productsResult.error ?? movementsResult.error ?? salesResult.error
+      const failed =
+        productsResult.error ??
+        movementsResult.error ??
+        salesResult.error ??
+        warehousesResult.error ??
+        linksResult.error ??
+        stockResult.error
       if (failed) {
         setError(`ดึงข้อมูลไม่สำเร็จ: ${failed}`)
       } else {
@@ -28,13 +37,16 @@ export default function BackupButton({ repository, onBackedUp }) {
           products: productsResult.products,
           movements: movementsResult.movements,
           sales: salesResult.sales,
+          warehouses: warehousesResult.warehouses,
+          links: linksResult.links,
+          warehouseStock: stockResult.stock,
         })
         const { default: writeExcelFile } = await import('write-excel-file/browser')
         const today = toIsoDate(new Date())
         await writeExcelFile(sheets).toFile(exportFileName('backup', today))
         onBackedUp?.(today)
         setDone(
-          `สำรองแล้ว: สินค้า ${productsResult.products.length} / ประวัติ ${movementsResult.movements.length} / ยอดขาย ${salesResult.sales.length} แถว`,
+          `สำรองแล้ว: สินค้า ${productsResult.products.length} / ประวัติ ${movementsResult.movements.length} / ยอดขาย ${salesResult.sales.length} / คลังย่อย ${warehousesResult.warehouses.length} คลัง`,
         )
       }
     } catch {
@@ -50,7 +62,7 @@ export default function BackupButton({ repository, onBackedUp }) {
         className="btn btn-backup"
         onClick={handleClick}
         disabled={busy}
-        title="ดาวน์โหลดสินค้า ประวัติ และยอดขายทั้งหมดเป็นไฟล์ Excel"
+        title="ดาวน์โหลดสินค้า ประวัติ ยอดขาย และคลังย่อยทั้งหมดเป็นไฟล์ Excel"
       >
         <span aria-hidden="true">⤓</span> {busy ? 'กำลังสำรอง…' : 'สำรองข้อมูล'}
       </button>

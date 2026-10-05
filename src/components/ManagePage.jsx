@@ -371,6 +371,7 @@ export default function ManagePage({
             product={editing}
             imageUrl={editing ? imageUrls[editing.imagePath] : null}
             categories={listCategories(allProducts)}
+            warehouses={activeOnes}
             repository={repository}
             onSaved={handleSaved}
             onCancel={startNew}

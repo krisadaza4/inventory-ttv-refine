@@ -440,7 +440,13 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
           <HistoryPage allProducts={allProducts} warehouses={warehouses} repository={repository} />
         )}
         {currentPage === PAGE.SALES && (
-          <MonthlySalesPage allProducts={allProducts} imageUrls={imageUrls} loadState={loadState} repository={repository} />
+          <MonthlySalesPage
+            allProducts={allProducts}
+            warehouses={warehouses}
+            imageUrls={imageUrls}
+            loadState={loadState}
+            repository={repository}
+          />
         )}
       </Suspense>
     </AppShell>
