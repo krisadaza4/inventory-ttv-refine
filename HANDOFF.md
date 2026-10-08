@@ -1,8 +1,21 @@
 # Inventory TTV: Handoff
 
-อัปเดตล่าสุด: 2026-10-05
+อัปเดตล่าสุด: 2026-10-08
 
 อ่าน [CONTEXT.md](./CONTEXT.md), [design.md](./design.md), [Tasks.md](./Tasks.md) ก่อนเริ่มงาน
+
+## Fork (2026-10-08)
+
+repo นี้คือ fork `krisadaza4/inventory-ttv-refine` จากต้นทาง `nutcharat123/inventory-ttv` (v1.4.0 `1b53f78`) ใช้ Vercel และ Supabase **ชุดใหม่แยกจากต้นทาง** ประวัติด้านล่างตั้งแต่หัวข้อ "สถานะ" เป็นของต้นทาง (ฐานข้อมูลเดิม, https://inventory-ttv.vercel.app) ใช้อ้างอิงตรรกะ ไม่ใช่สถานะของ fork
+
+- **เว็บ:** https://inventory-ttv-refine.vercel.app (Vercel project `inventory-ttv-refine` team "TrinityAngle's projects" `team_qfceeVb6CNXkKy3HkbmdWAqI`) push `main` แล้ว deploy อัตโนมัติ
+- **Supabase:** project `supabase-byzantium-school` ref `pgzmfiuyhpgvnfypnvxx` (us-east-1) สร้างผ่าน Supabase integration บน Vercel จึงอยู่ใน org ของ Vercel (`vercel_icfg_…`) ไม่ใช่ "Work_TTV's Org"
+- **ฐานข้อมูล (2026-10-08):** รัน `schema.sql` ทั้งไฟล์ (migration name `inventory_ttv_schema`) + `migration_product_images.sql` **เฉพาะส่วน 2–3** (bucket + นโยบาย, migration `product_images_bucket`) ห้ามรันส่วน 1 ของไฟล์นั้นกับฐานใหม่ เพราะเขียน view `product_stock` ทับด้วยเวอร์ชันเก่า | migration อื่น (`migration_*.sql`) ไม่ต้องรัน schema.sql รวมไว้แล้ว (`migration_legacy_sku.sql` มีข้อมูลของร้านเดิม ห้ามรัน) | `rls_check.sql` ผ่าน 59/59 | advisor เตือน security definer ของ `record_movement`/`current_app_role` ตั้งใจ ไม่ต้องแก้
+- **บัญชี:** `admin@ttv.com` (Admin, admin) และ `user01@ttv.com` (User01, staff) ยังไม่มีสินค้า
+- **ค้าง: เปิดสมัครเองอยู่** `disable_signup = false` (ตรวจ `/auth/v1/settings` 2026-10-08) ให้ผู้ใช้ปิดที่ Supabase Dashboard → Authentication → Sign In / Providers → ปิด "Allow new users to sign up" (คนสมัครเองไม่มี profile จึงไม่เห็นข้อมูล แต่ควรปิด)
+- **env บน Vercel:** ไม่ได้ตั้ง `VITE_` เอง ใช้ `NEXT_PUBLIC_SUPABASE_*` ที่ integration ใส่ให้ (`f13e056`: `supabaseClient.js` อ่าน `VITE_` ก่อน แล้ว `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`; `vite.config.js` `envPrefix: ['VITE_', 'NEXT_PUBLIC_']` ห้ามเพิ่ม prefix อื่นที่อาจมี secret) ตรวจแล้วเว็บชี้ไป `pgzmfiuyhpgvnfypnvxx` ถูกต้อง
+- **อื่น ๆ:** `4daf440` npm audit fix (`source-map-js` 1.2.2, GHSA-68fv-2mgg-jv7q) audit 0 | เทสต์ 311 ข้อผ่าน
+- **MCP:** Supabase MCP เชื่อมแล้ว (เห็น project นี้) | Vercel MCP อ่านได้อย่างเดียว (สร้าง project / อ่าน-เขียน env ได้ 403) ตั้ง env หรือสั่ง deploy ต้องทำผ่านเว็บ Vercel | GitHub MCP fork ไม่ได้ (403) | เครื่องนี้ไม่มี `gh`, Vercel CLI ยังไม่ login
 
 ## สถานะ
 
@@ -41,19 +54,19 @@
 
 ## Git
 
-- repo private `nutcharat123/inventory-ttv` branch `main`
-- commit ล่าสุด (2026-10-05): `923566e` v1.3.0 (รับเข้าหลายรายการ), `b117803` v1.2.0 (โอนเข้าหลายรายการ), `370f7ff` v1.1.0 (คลังย่อย) push แล้วทั้งหมด; ไฟล์ที่ไม่ขึ้น git ตั้งใจ: `docs/design-options.html`, `docs/แก้ชื่อสินค้า.xlsx` ดู commit ล่าสุดจริงด้วย `git log --oneline -5`
-- push: Claude Code มักเปิดที่โฟลเดอร์แม่ (`claude-code-secret-mission`) ให้ผู้ใช้พิมพ์ `! git -C inventory-ttv push` และรอยืนยันว่า commit เสร็จก่อน push
-- งาน git ทำผ่าน agent git-manager เท่านั้น
+- `origin` = fork `krisadaza4/inventory-ttv-refine` (public) branch `main`; `upstream` = ต้นทาง `nutcharat123/inventory-ttv` ดึงอัปเดตด้วย `git pull upstream main`
+- ผู้ commit ใน repo นี้ (config เฉพาะ repo): `krisadaza4` / `17237733+krisadaza4@users.noreply.github.com`
+- commit ของ fork: `f13e056` (env จาก Vercel integration), `4daf440` (npm audit fix) ดู commit ล่าสุดจริงด้วย `git log --oneline -5`; ไฟล์ที่ไม่ขึ้น git ตั้งใจ: `docs/design-options.html`, `docs/แก้ชื่อสินค้า.xlsx` (ไม่มีใน fork)
+- โฟลเดอร์ในเครื่อง: `Documents\MarkDown\TTV-Stock\inventory-ttv` (Claude Code มักเปิดที่ `TTV-Stock` ซึ่งมี `.claude/launch.json` สั่ง `npm --prefix inventory-ttv run dev` พอร์ต 5173)
 
 ## สิ่งที่ต้องรู้
 
-- **env:** `.env.local` ใช้ `VITE_SUPABASE_URL` และ `VITE_SUPABASE_PUBLISHABLE_KEY` (ไม่ใช่ ANON_KEY) ห้ามแสดงค่าในแชท ตรวจคีย์ด้วย prefix เท่านั้น (`sb_publishable_` ถูก, `sb_secret_` ห้ามใช้)
-- **ปิดสมัครเอง:** `disable_signup = true` ตรวจแล้วผ่าน `/auth/v1/settings`
+- **env:** `.env.local` ใช้ `VITE_SUPABASE_URL` และ `VITE_SUPABASE_PUBLISHABLE_KEY` (บน Vercel ใช้ `NEXT_PUBLIC_SUPABASE_*` จาก integration ดูหัวข้อ Fork) fork ยังไม่มี `.env.local` ในเครื่อง ค่าดูได้จาก Supabase MCP `get_publishable_keys` ห้ามแสดงค่าในแชท ตรวจคีย์ด้วย prefix เท่านั้น (`sb_publishable_` ถูก, `sb_secret_` ห้ามใช้)
+- **ปิดสมัครเอง:** ฐานเดิมของต้นทาง `disable_signup = true`; **ฐานของ fork ยังเปิดอยู่** (ดูหัวข้อ Fork)
 - **ชื่อฟังก์ชัน:** `current_app_role()` แทน `current_role()` เพราะ `current_role` เป็นคำสงวนของ Postgres (แก้ design.md แล้ว)
 - **ห้ามวันในอนาคต:** ตรวจใน `record_movement` ไม่ใช่ check constraint
 - **ข้อผิดพลาดจาก `record_movement`:** ข้อความไทย + รหัสใน `hint` ให้ `supabaseErrors.js` (T3.6) ใช้แยกกรณี: `no_profile`, `invalid_type`, `adjust_admin_only`, `invalid_quantity`, `future_date`, `adjust_needs_note`, `product_not_found`, `product_inactive`, `insufficient_stock` ส่วน SKU/บาร์โค้ดซ้ำเป็น SQLSTATE `23505` และไม่มีสิทธิ์เป็น `42501`
 - **`products`:** grant insert/update เฉพาะคอลัมน์ `sku, barcode, name, category, unit, reorder_point, active` (`repositories.js` ต้องไม่ส่ง `id`, `created_at`, `updated_at`)
 - **`rls_check.sql`:** รันซ้ำได้ ข้อมูลทดสอบย้อนกลับหมด Supabase จะถามเรื่อง RLS ของตารางชั่วคราว ให้กด "Run without RLS"
-- **Supabase MCP:** ยังไม่ได้เพิ่ม ถ้าจะเพิ่มให้จำกัดด้วย `project_ref` ของโปรเจกต์นี้
+- **Supabase MCP:** เชื่อมแล้ว ใช้ project ref `pgzmfiuyhpgvnfypnvxx` เท่านั้น | `rls_check.sql` ผ่าน MCP ได้ (ไม่ถามเรื่อง RLS ของตารางชั่วคราว)
 - **หน้าตา UI:** ตั้งแต่ 2026-10-01 ใช้ดีไซน์ A (ดูหัวข้องานถัดไป) แทนแบบโปรแกรมโทนกรมท่าของ `docs/mockup.html` สไตล์ดีไซน์ A อยู่ท้าย `src/index.css` (ทับสไตล์เดิม จึงต้องอยู่ท้ายไฟล์) ไม่ใช้สไตล์ Borrow Buddy ส่วน `docs/reference/` ใช้ดูแค่ตรรกะ (session, supabase client/errors) ไม่ใช่สี/CSS
