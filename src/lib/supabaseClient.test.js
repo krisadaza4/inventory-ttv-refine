@@ -26,6 +26,26 @@ describe('readSupabaseConfig', () => {
       error: SECRET_KEY_ERROR,
     })
   })
+
+  it('ใช้ชื่อ env จาก Supabase integration บน Vercel ได้ เมื่อไม่มี VITE_', () => {
+    const env = { NEXT_PUBLIC_SUPABASE_URL: URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_v' }
+    expect(readSupabaseConfig(env).config).toEqual({ url: URL, key: 'sb_publishable_v' })
+  })
+
+  it('ไม่มี publishable key ใช้ anon key จาก integration แทน', () => {
+    const env = { NEXT_PUBLIC_SUPABASE_URL: URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJanon' }
+    expect(readSupabaseConfig(env).config).toEqual({ url: URL, key: 'eyJanon' })
+  })
+
+  it('VITE_ มาก่อนชื่อจาก integration', () => {
+    const env = {
+      VITE_SUPABASE_URL: URL,
+      VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_mine',
+      NEXT_PUBLIC_SUPABASE_URL: 'https://other.supabase.co',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_other',
+    }
+    expect(readSupabaseConfig(env).config).toEqual({ url: URL, key: 'sb_publishable_mine' })
+  })
 })
 
 describe('getSupabase', () => {

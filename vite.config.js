@@ -29,6 +29,8 @@ function versionFile() {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), versionFile()],
+  // NEXT_PUBLIC_ = ชื่อที่ Supabase integration บน Vercel ใส่ให้ (เป็นค่าสาธารณะอยู่แล้ว) ห้ามเพิ่ม prefix ที่มี secret
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   define: {
     __APP_VERSION__: JSON.stringify(APP_VERSION),
     __APP_RELEASE__: JSON.stringify(APP_RELEASE),
