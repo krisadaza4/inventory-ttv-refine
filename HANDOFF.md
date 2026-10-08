@@ -12,7 +12,7 @@ repo นี้คือ fork `krisadaza4/inventory-ttv-refine` จากต้�
 - **Supabase:** project `supabase-byzantium-school` ref `pgzmfiuyhpgvnfypnvxx` (us-east-1) สร้างผ่าน Supabase integration บน Vercel จึงอยู่ใน org ของ Vercel (`vercel_icfg_…`) ไม่ใช่ "Work_TTV's Org"
 - **ฐานข้อมูล (2026-10-08):** รัน `schema.sql` ทั้งไฟล์ (migration name `inventory_ttv_schema`) + `migration_product_images.sql` **เฉพาะส่วน 2–3** (bucket + นโยบาย, migration `product_images_bucket`) ห้ามรันส่วน 1 ของไฟล์นั้นกับฐานใหม่ เพราะเขียน view `product_stock` ทับด้วยเวอร์ชันเก่า | migration อื่น (`migration_*.sql`) ไม่ต้องรัน schema.sql รวมไว้แล้ว (`migration_legacy_sku.sql` มีข้อมูลของร้านเดิม ห้ามรัน) | `rls_check.sql` ผ่าน 59/59 | advisor เตือน security definer ของ `record_movement`/`current_app_role` ตั้งใจ ไม่ต้องแก้
 - **บัญชี:** `admin@ttv.com` (Admin, admin) และ `user01@ttv.com` (User01, staff) ยังไม่มีสินค้า
-- **ค้าง: เปิดสมัครเองอยู่** `disable_signup = false` (ตรวจ `/auth/v1/settings` 2026-10-08) ให้ผู้ใช้ปิดที่ Supabase Dashboard → Authentication → Sign In / Providers → ปิด "Allow new users to sign up" (คนสมัครเองไม่มี profile จึงไม่เห็นข้อมูล แต่ควรปิด)
+- **ปิดสมัครเองแล้ว (2026-10-08):** ปิด "Allow new users to sign up" ที่ Authentication → Sign In / Providers ตรวจ `/auth/v1/settings` ได้ `disable_signup = true` และ Email provider ยังเปิด (ต้องเปิดไว้ เข้าสู่ระบบด้วยอีเมล)
 - **env บน Vercel:** ไม่ได้ตั้ง `VITE_` เอง ใช้ `NEXT_PUBLIC_SUPABASE_*` ที่ integration ใส่ให้ (`f13e056`: `supabaseClient.js` อ่าน `VITE_` ก่อน แล้ว `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`; `vite.config.js` `envPrefix: ['VITE_', 'NEXT_PUBLIC_']` ห้ามเพิ่ม prefix อื่นที่อาจมี secret) ตรวจแล้วเว็บชี้ไป `pgzmfiuyhpgvnfypnvxx` ถูกต้อง
 - **อื่น ๆ:** `4daf440` npm audit fix (`source-map-js` 1.2.2, GHSA-68fv-2mgg-jv7q) audit 0 | เทสต์ 311 ข้อผ่าน
 - **MCP:** Supabase MCP เชื่อมแล้ว (เห็น project นี้) | Vercel MCP อ่านได้อย่างเดียว (สร้าง project / อ่าน-เขียน env ได้ 403) ตั้ง env หรือสั่ง deploy ต้องทำผ่านเว็บ Vercel | GitHub MCP fork ไม่ได้ (403) | เครื่องนี้ไม่มี `gh`, Vercel CLI ยังไม่ login
@@ -62,7 +62,7 @@ repo นี้คือ fork `krisadaza4/inventory-ttv-refine` จากต้�
 ## สิ่งที่ต้องรู้
 
 - **env:** `.env.local` ใช้ `VITE_SUPABASE_URL` และ `VITE_SUPABASE_PUBLISHABLE_KEY` (บน Vercel ใช้ `NEXT_PUBLIC_SUPABASE_*` จาก integration ดูหัวข้อ Fork) fork ยังไม่มี `.env.local` ในเครื่อง ค่าดูได้จาก Supabase MCP `get_publishable_keys` ห้ามแสดงค่าในแชท ตรวจคีย์ด้วย prefix เท่านั้น (`sb_publishable_` ถูก, `sb_secret_` ห้ามใช้)
-- **ปิดสมัครเอง:** ฐานเดิมของต้นทาง `disable_signup = true`; **ฐานของ fork ยังเปิดอยู่** (ดูหัวข้อ Fork)
+- **ปิดสมัครเอง:** `disable_signup = true` ทั้งฐานเดิมของต้นทางและฐานของ fork ตรวจด้วย `/auth/v1/settings`
 - **ชื่อฟังก์ชัน:** `current_app_role()` แทน `current_role()` เพราะ `current_role` เป็นคำสงวนของ Postgres (แก้ design.md แล้ว)
 - **ห้ามวันในอนาคต:** ตรวจใน `record_movement` ไม่ใช่ check constraint
 - **ข้อผิดพลาดจาก `record_movement`:** ข้อความไทย + รหัสใน `hint` ให้ `supabaseErrors.js` (T3.6) ใช้แยกกรณี: `no_profile`, `invalid_type`, `adjust_admin_only`, `invalid_quantity`, `future_date`, `adjust_needs_note`, `product_not_found`, `product_inactive`, `insufficient_stock` ส่วน SKU/บาร์โค้ดซ้ำเป็น SQLSTATE `23505` และไม่มีสิทธิ์เป็น `42501`
