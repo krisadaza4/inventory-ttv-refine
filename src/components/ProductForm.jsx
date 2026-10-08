@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { checkImageFile, resizeImage } from '../lib/productImages.js'
 import { validateProduct } from '../lib/stockRules.js'
@@ -74,8 +74,21 @@ const NEW_CATEGORY = '__new__'
 
 // ฟอร์มเพิ่ม/แก้ไขสินค้า product = null คือเพิ่มใหม่ (App ใส่ key ตามสินค้า ฟอร์มจึงเริ่มใหม่ทุกครั้งที่เปลี่ยน)
 // warehouses = คลังย่อยที่ใช้งานอยู่ ติ๊กเลือกคลังที่จะแสดงสินค้านี้
-export default function ProductForm({ product, imageUrl, categories, warehouses = [], repository, onSaved, onCancel }) {
+// onSaved(id, message, { stay }) stay = เปลี่ยน/ลบรูป (ยังแก้ต่อในหน้าต่างเดิม)
+// onDirtyChange(true/false) = มีช่องที่แก้แล้วยังไม่บันทึก, notice = ข้อความแจ้งเหนือฟอร์ม
+export default function ProductForm({
+  product,
+  imageUrl,
+  categories,
+  warehouses = [],
+  repository,
+  onSaved,
+  onCancel,
+  onDirtyChange,
+  notice,
+}) {
   const [fields, setFields] = useState(() => toFields(product))
+  const [initialFields] = useState(fields)
   // คลังที่แสดงสินค้านี้อยู่ (รวมคลังที่ยังมีของค้าง) เทียบตอนบันทึกเพื่อเพิ่ม/เอาออก
   const initialWarehouses = warehouses.filter((w) => product?.warehouseIds?.includes(w.id)).map((w) => w.id)
   const [checkedWarehouses, setCheckedWarehouses] = useState(initialWarehouses)
@@ -84,6 +97,14 @@ export default function ProductForm({ product, imageUrl, categories, warehouses 
   const [serverError, setServerError] = useState(null)
   // หมวดหมู่: เลือกจากที่เคยบันทึกไว้ หรือพิมพ์หมวดหมู่ใหม่ (ยังไม่มีหมวดหมู่ใดเลย = พิมพ์เท่านั้น)
   const [typingCategory, setTypingCategory] = useState(categories.length === 0)
+
+  const dirty =
+    Object.keys(EMPTY).some((key) => fields[key] !== initialFields[key]) ||
+    warehouseChanges(initialWarehouses, checkedWarehouses).add.length > 0 ||
+    warehouseChanges(initialWarehouses, checkedWarehouses).remove.length > 0
+  useEffect(() => {
+    onDirtyChange?.(dirty)
+  }, [dirty, onDirtyChange])
 
   const set = (key) => (e) => setFields((current) => ({ ...current, [key]: e.target.value }))
 
@@ -138,7 +159,7 @@ export default function ProductForm({ product, imageUrl, categories, warehouses 
       const blob = await resizeImage(file)
       const { error } = await repository.uploadProductImage(product, blob)
       if (error) setServerError(error)
-      else onSaved(product.id, `${product.imagePath ? 'เปลี่ยน' : 'เพิ่ม'}รูป ${product.name} แล้ว`)
+      else onSaved(product.id, `${product.imagePath ? 'เปลี่ยน' : 'เพิ่ม'}รูป ${product.name} แล้ว`, { stay: true })
     } catch (thrown) {
       setServerError(thrown.message)
     }
@@ -151,7 +172,7 @@ export default function ProductForm({ product, imageUrl, categories, warehouses 
     const { error } = await repository.removeProductImage(product)
     setBusy(false)
     if (error) setServerError(error)
-    else onSaved(product.id, `ลบรูป ${product.name} แล้ว`)
+    else onSaved(product.id, `ลบรูป ${product.name} แล้ว`, { stay: true })
   }
 
   const handleToggleActive = async () => {
@@ -169,6 +190,11 @@ export default function ProductForm({ product, imageUrl, categories, warehouses 
         {product ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}
         {product && <span className="mono dim">{product.sku}</span>}
       </div>
+      {notice && (
+        <div className="notice form-alert" role="status">
+          {notice}
+        </div>
+      )}
       {serverError && (
         <p className="alert form-alert" role="alert">
           บันทึกไม่สำเร็จ: {serverError}

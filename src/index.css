@@ -649,13 +649,6 @@ td.actions .btn + .btn {
   margin-right: auto;
 }
 
-.split {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: 12px;
-  align-items: start;
-}
-
 .check {
   display: flex;
   gap: 6px;
@@ -1006,10 +999,6 @@ label.btn.disabled {
   }
 
   .form-grid.compact {
-    grid-template-columns: 1fr;
-  }
-
-  .split {
     grid-template-columns: 1fr;
   }
 
@@ -1941,10 +1930,6 @@ td.mono,
 }
 
 /* หน้าจัดการ: เลื่อนถึงฟอร์มแล้วเว้นขอบบนเล็กน้อย */
-.form-anchor {
-  scroll-margin-top: 12px;
-}
-
 /* หน้าจัดการ: เลือกหลายรายการเพื่อตั้งหมวดหมู่ */
 .pick-col {
   width: 36px;
@@ -2328,4 +2313,87 @@ tbody tr.row-off .mono {
 
 .found-elsewhere p {
   margin: 0;
+}
+
+/* หน้าจัดการสินค้า: ฟอร์มเพิ่ม/แก้ไขเป็นหน้าต่างกลางจอ (<dialog>) */
+.product-dialog {
+  width: min(600px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+}
+
+.product-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.product-dialog .panel {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+}
+
+.product-dialog .panel-body {
+  overflow-y: auto;
+}
+
+.product-dialog .panel-head {
+  padding-right: 48px;
+}
+
+.dialog-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dialog-close:hover {
+  background: var(--surface-2);
+}
+
+/* เปิดหน้าต่างอยู่: หน้าหลังไม่เลื่อน */
+html:has(.product-dialog[open]) {
+  overflow: hidden;
+}
+
+tbody tr.flash {
+  animation: row-flash 2.5s ease-out;
+}
+
+@keyframes row-flash {
+  from {
+    background: var(--ok-bg);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+@media (max-width: 760px) {
+  .product-dialog {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+  }
+
+  .product-dialog .panel {
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
 }

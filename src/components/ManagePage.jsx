@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ACTIVE_VIEW, countByActive, filterByActive, readActiveView, saveActiveView } from '../lib/activeView.js'
 import { backupReminder, readLastBackup, saveLastBackup } from '../lib/backupReminder.js'
 import { toIsoDate } from '../lib/dateFormat.js'
@@ -8,6 +8,7 @@ import BackupButton from './BackupButton.jsx'
 import BulkCategoryBar from './BulkCategoryBar.jsx'
 import BulkWarehouseBar from './BulkWarehouseBar.jsx'
 import PageHead from './PageHead.jsx'
+import ProductDialog from './ProductDialog.jsx'
 import ProductForm from './ProductForm.jsx'
 import ProductImport from './ProductImport.jsx'
 import ProductThumb from './ProductThumb.jsx'
@@ -25,7 +26,7 @@ const ACTIVE_TABS = [
 ]
 const tabLabel = Object.fromEntries(ACTIVE_TABS.map((t) => [t.view, t.label]))
 
-// หน้าจัดการสินค้า (admin): ซ้ายตารางสินค้า ขวาฟอร์มเพิ่ม/แก้ไข (design.md ข้อ 7)
+// หน้าจัดการสินค้า (admin): ตารางสินค้าเต็มความกว้าง ฟอร์มเพิ่ม/แก้ไขเปิดเป็นหน้าต่างกลางจอ
 // allProducts รวมสินค้าที่ปิดใช้งานแล้ว warehouses = คลังย่อยทั้งหมด รวมที่ปิดใช้งาน
 export default function ManagePage({
   allProducts,
@@ -47,26 +48,31 @@ export default function ManagePage({
   const [activating, setActivating] = useState(null)
   const [bulkActivating, setBulkActivating] = useState(false)
   const [bulkActiveError, setBulkActiveError] = useState(null)
-  // null = เพิ่มใหม่
-  const [editingId, setEditingId] = useState(null)
-  // ใช้เป็น key ให้ฟอร์มเริ่มใหม่หลังบันทึกหรือกดเพิ่มใหม่
+  // หน้าต่างฟอร์ม: null = ปิด, { mode: 'new' } หรือ { mode: 'edit', id }
+  const [dialog, setDialog] = useState(null)
+  // ใช้เป็น key ให้ฟอร์มเริ่มใหม่ทุกครั้งที่เปิดหรือเพิ่มรายการถัดไป
   const [formSeq, setFormSeq] = useState(0)
+  const [formDirty, setFormDirty] = useState(false)
+  // ข้อความในหน้าต่าง: { text, addedId } addedId = สินค้าที่เพิ่งเพิ่ม (ปุ่มเพิ่มรูปต่อ)
+  const [dialogNotice, setDialogNotice] = useState(null)
+  // แถวที่เพิ่งแก้: ไฮไลต์สั้น ๆ หลังปิดหน้าต่าง
+  const [flashId, setFlashId] = useState(null)
   const [notice, setNotice] = useState(null)
   // null | 'express' (รายการจาก Express) | 'stock' (ไฟล์สต็อก รูป + ยอด) | 'reorder' (ตั้งจุดสั่งซื้อ) | 'warehouses' (คลังย่อย)
   const [importing, setImporting] = useState(null)
-  const formRef = useRef(null)
   // วันที่สำรองข้อมูลล่าสุดของเครื่องนี้ เกิน 7 วัน (หรือไม่เคย) แสดงแถบเตือน
   const [lastBackup, setLastBackup] = useState(() => readLastBackup())
   const reminder = backupReminder(lastBackup, toIsoDate(new Date()))
   // id สินค้าที่เลือกไว้ตั้งหมวดหมู่ทีละหลายรายการ
   const [selected, setSelected] = useState(() => new Set())
 
-  // มือถือ: ฟอร์มอยู่ใต้รายการสินค้า กดแก้ไข/เพิ่มใหม่แล้วเลื่อนลงไปที่ฟอร์มให้เห็นทันที
   useEffect(() => {
-    if (formSeq === 0 || !window.matchMedia('(max-width: 760px)').matches) return
-    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [formSeq])
+    if (!flashId) return undefined
+    const timer = setTimeout(() => setFlashId(null), 2500)
+    return () => clearTimeout(timer)
+  }, [flashId])
 
+  const editingId = dialog?.mode === 'edit' ? dialog.id : null
   const editing = allProducts.find((p) => p.id === editingId) ?? null
   // ตัวกรองอื่นก่อน แล้วนับแต่ละแท็บจากผลนั้น (ค้นหาแล้วเห็นทันทีว่าเจอในแท็บไหน)
   const matching = filterByCategory(searchProducts(allProducts, query), category).filter((p) => {
@@ -83,17 +89,24 @@ export default function ManagePage({
   const warehouseName = new Map(warehouses.map((w) => [w.id, w.name]))
   const activeOnes = warehouses.filter((w) => w.active)
 
-  const startNew = () => {
-    setEditingId(null)
+  const openDialog = (next) => {
+    setDialog(next)
     setFormSeq((n) => n + 1)
+    setFormDirty(false)
+    setDialogNotice(null)
     setNotice(null)
   }
+  const startNew = () => openDialog({ mode: 'new' })
+  const startEdit = (id) => openDialog({ mode: 'edit', id })
 
-  const startEdit = (id) => {
-    setEditingId(id)
-    setFormSeq((n) => n + 1)
-    setNotice(null)
+  // ✕ / Esc / คลิกนอกกล่อง / ยกเลิก: มีช่องที่แก้ค้างอยู่ถามก่อน
+  const closeDialog = () => {
+    if (formDirty && !window.confirm('ข้อมูลที่แก้ไขยังไม่ได้บันทึก ปิดหน้าต่างนี้หรือไม่?')) return
+    setDialog(null)
+    setFormDirty(false)
+    setDialogNotice(null)
   }
+  const handleDirtyChange = useCallback((dirty) => setFormDirty(dirty), [])
 
   const changeActiveView = (view) => {
     setActiveView(view)
@@ -144,15 +157,26 @@ export default function ManagePage({
   // message = null คือบันทึกได้บางส่วน (ข้อความผิดพลาดแสดงในแถบนั้นเอง)
   const handleBulkSaved = (message) => {
     if (message) setNotice(message)
-    setEditingId(null)
     onChanged()
   }
 
-  // ไม่เริ่มฟอร์มใหม่ที่นี่: สินค้ายังเป็นค่าเก่าจนกว่าโหลดใหม่เสร็จ ฟอร์มจะแสดงค่าเก่าแล้วบันทึกทับได้
-  // ฟอร์มแก้ไขคงค่าที่เพิ่งบันทึกไว้ ส่วนสินค้าใหม่ key เปลี่ยนเองเมื่อสินค้าโผล่ในรายการ
-  const handleSaved = (id, message) => {
-    setNotice(message)
-    setEditingId(id)
+  // เปลี่ยน/ลบรูป (stay): แก้ต่อในหน้าต่างเดิม
+  // เพิ่มใหม่: ฟอร์มว่างสำหรับรายการถัดไป พร้อมปุ่มเพิ่มรูปให้รายการที่เพิ่งเพิ่ม
+  // แก้ไข/เปิด-ปิดใช้งาน: ปิดหน้าต่าง แล้วไฮไลต์แถวนั้น
+  const handleSaved = (id, message, { stay = false } = {}) => {
+    if (stay) {
+      setDialogNotice({ text: message })
+    } else if (dialog?.mode === 'new') {
+      setDialogNotice({ text: message, addedId: id })
+      setFormSeq((n) => n + 1)
+      setFormDirty(false)
+    } else {
+      setDialog(null)
+      setFormDirty(false)
+      setDialogNotice(null)
+      setNotice(message)
+      setFlashId(id)
+    }
     onChanged()
   }
 
@@ -255,7 +279,7 @@ export default function ManagePage({
         />
       )}
 
-      <div className="split">
+      <div className="manage-list">
         <div className="panel">
           <div className="toolbar">
             <input
@@ -353,13 +377,19 @@ export default function ManagePage({
               </button>
             </div>
           )}
-          {loadState === 'ready' && visible.length === 0 && foundElsewhere === 0 && (
+          {loadState === 'ready' && allProducts.length === 0 && (
+            <div className="empty">
+              <p className="dim">ยังไม่มีสินค้า</p>
+              <button type="button" className="btn primary" onClick={startNew}>
+                + เพิ่มสินค้าแรก
+              </button>
+            </div>
+          )}
+          {loadState === 'ready' && allProducts.length > 0 && visible.length === 0 && foundElsewhere === 0 && (
             <p className="empty dim">
-              {allProducts.length === 0
-                ? 'ยังไม่มีสินค้า เพิ่มสินค้าแรกจากฟอร์มด้านขวา'
-                : activeView === ACTIVE_VIEW.INACTIVE && !query && !category && !warehouseFilter
-                  ? 'ไม่มีสินค้าที่ปิดใช้งาน'
-                  : 'ไม่พบสินค้า'}
+              {activeView === ACTIVE_VIEW.INACTIVE && !query && !category && !warehouseFilter
+                ? 'ไม่มีสินค้าที่ปิดใช้งาน'
+                : 'ไม่พบสินค้า'}
             </p>
           )}
           {loadState === 'ready' && foundElsewhere > 0 && (
@@ -400,7 +430,11 @@ export default function ManagePage({
                   {visible.map((p) => (
                     <tr
                       key={p.id}
-                      className={[p.id === editingId && 'selected', !p.active && 'row-off'].filter(Boolean).join(' ') || undefined}
+                      className={
+                        [p.id === editingId && 'selected', p.id === flashId && 'flash', !p.active && 'row-off']
+                          .filter(Boolean)
+                          .join(' ') || undefined
+                      }
                     >
                       <td className="pick-col">
                         <input
@@ -455,7 +489,20 @@ export default function ManagePage({
           )}
         </div>
 
-        <div ref={formRef} className="form-anchor">
+      </div>
+
+      <ProductDialog
+        open={dialog !== null}
+        label={dialog?.mode === 'edit' ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}
+        onRequestClose={closeDialog}
+      >
+        {dialog?.mode === 'edit' && !editing ? (
+          <div className="panel">
+            <p className="empty dim" role="status">
+              กำลังโหลดข้อมูลสินค้า…
+            </p>
+          </div>
+        ) : (
           <ProductForm
             key={`${editing?.id ?? 'new'}-${formSeq}`}
             product={editing}
@@ -464,10 +511,31 @@ export default function ManagePage({
             warehouses={activeOnes}
             repository={repository}
             onSaved={handleSaved}
-            onCancel={startNew}
+            onCancel={closeDialog}
+            onDirtyChange={handleDirtyChange}
+            notice={
+              dialogNotice && (
+                <>
+                  ✓ {dialogNotice.text}
+                  {dialogNotice.addedId && (
+                    <>
+                      {' '}
+                      · กรอกรายการถัดไปได้เลย{' '}
+                      <button
+                        type="button"
+                        className="btn sm"
+                        onClick={() => openDialog({ mode: 'edit', id: dialogNotice.addedId })}
+                      >
+                        เพิ่มรูปให้สินค้านี้
+                      </button>
+                    </>
+                  )}
+                </>
+              )
+            }
           />
-        </div>
-      </div>
+        )}
+      </ProductDialog>
     </>
   )
 }
