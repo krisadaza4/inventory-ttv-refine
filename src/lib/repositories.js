@@ -195,6 +195,11 @@ export function createRepository(client) {
       return { updated, error: null }
     },
 
+    // เปิด/ปิดใช้งานหลายรายการ คืนจำนวนที่บันทึกได้ (ชุดไหนผิดพลาดหยุดทันที)
+    async setProductsActive(ids, active) {
+      return updateByIds(client, ids, { active })
+    },
+
     async setProductActive(id, active) {
       const { error } = await run(() =>
         client.from('products').update({ active }).eq('id', id).select('id').single(),

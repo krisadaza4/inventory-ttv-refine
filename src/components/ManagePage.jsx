@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ACTIVE_VIEW, countByActive, filterByActive, readActiveView, saveActiveView } from '../lib/activeView.js'
 import { backupReminder, readLastBackup, saveLastBackup } from '../lib/backupReminder.js'
 import { toIsoDate } from '../lib/dateFormat.js'
 import { PAGE } from '../lib/menu.js'
@@ -17,6 +18,13 @@ import WarehouseManager from './WarehouseManager.jsx'
 // ตัวกรองคลัง: สินค้าที่ยังไม่อยู่คลังย่อยไหนเลย
 const NO_WAREHOUSE = '__none__'
 
+const ACTIVE_TABS = [
+  { view: ACTIVE_VIEW.ACTIVE, label: 'ใช้งาน' },
+  { view: ACTIVE_VIEW.INACTIVE, label: 'ปิดใช้งาน' },
+  { view: ACTIVE_VIEW.ALL, label: 'ทั้งหมด' },
+]
+const tabLabel = Object.fromEntries(ACTIVE_TABS.map((t) => [t.view, t.label]))
+
 // หน้าจัดการสินค้า (admin): ซ้ายตารางสินค้า ขวาฟอร์มเพิ่ม/แก้ไข (design.md ข้อ 7)
 // allProducts รวมสินค้าที่ปิดใช้งานแล้ว warehouses = คลังย่อยทั้งหมด รวมที่ปิดใช้งาน
 export default function ManagePage({
@@ -33,7 +41,12 @@ export default function ManagePage({
   const [category, setCategory] = useState('')
   // '' = ทุกคลัง, NO_WAREHOUSE = ยังไม่อยู่คลังย่อย, id = อยู่ในคลังนั้น
   const [warehouseFilter, setWarehouseFilter] = useState('')
-  const [showInactive, setShowInactive] = useState(false)
+  // แท็บ ใช้งาน / ปิดใช้งาน / ทั้งหมด จำค่าล่าสุดของเครื่องนี้
+  const [activeView, setActiveView] = useState(() => readActiveView())
+  // id สินค้าที่กำลังเปิดใช้งานจากปุ่มในแถว
+  const [activating, setActivating] = useState(null)
+  const [bulkActivating, setBulkActivating] = useState(false)
+  const [bulkActiveError, setBulkActiveError] = useState(null)
   // null = เพิ่มใหม่
   const [editingId, setEditingId] = useState(null)
   // ใช้เป็น key ให้ฟอร์มเริ่มใหม่หลังบันทึกหรือกดเพิ่มใหม่
@@ -55,19 +68,18 @@ export default function ManagePage({
   }, [formSeq])
 
   const editing = allProducts.find((p) => p.id === editingId) ?? null
-  const visible = filterByCategory(
-    searchProducts(
-      allProducts.filter((p) => showInactive || p.active),
-      query,
-    ),
-    category,
-  )
-    .filter((p) => {
-      if (!warehouseFilter) return true
-      const ids = p.warehouseIds ?? []
-      return warehouseFilter === NO_WAREHOUSE ? ids.length === 0 : ids.includes(warehouseFilter)
-    })
-    .toSorted((a, b) => a.sku.localeCompare(b.sku, 'th'))
+  // ตัวกรองอื่นก่อน แล้วนับแต่ละแท็บจากผลนั้น (ค้นหาแล้วเห็นทันทีว่าเจอในแท็บไหน)
+  const matching = filterByCategory(searchProducts(allProducts, query), category).filter((p) => {
+    if (!warehouseFilter) return true
+    const ids = p.warehouseIds ?? []
+    return warehouseFilter === NO_WAREHOUSE ? ids.length === 0 : ids.includes(warehouseFilter)
+  })
+  const tabCounts = countByActive(matching)
+  const visible = filterByActive(matching, activeView).toSorted((a, b) => a.sku.localeCompare(b.sku, 'th'))
+  // แท็บนี้ไม่พบ แต่อีกแท็บมี: ชี้ไปแท็บนั้น
+  const otherView = activeView === ACTIVE_VIEW.ACTIVE ? ACTIVE_VIEW.INACTIVE : ACTIVE_VIEW.ACTIVE
+  const foundElsewhere = activeView !== ACTIVE_VIEW.ALL && visible.length === 0 ? tabCounts[otherView] : 0
+  const selectedInactive = allProducts.filter((p) => selected.has(p.id) && !p.active).map((p) => p.id)
   const warehouseName = new Map(warehouses.map((w) => [w.id, w.name]))
   const activeOnes = warehouses.filter((w) => w.active)
 
@@ -81,6 +93,33 @@ export default function ManagePage({
     setEditingId(id)
     setFormSeq((n) => n + 1)
     setNotice(null)
+  }
+
+  const changeActiveView = (view) => {
+    setActiveView(view)
+    saveActiveView(view)
+  }
+
+  const activateOne = async (product) => {
+    setActivating(product.id)
+    const { error } = await repository.setProductActive(product.id, true)
+    setActivating(null)
+    setNotice(error ? `เปิดใช้งาน ${product.sku} ไม่สำเร็จ: ${error}` : `เปิดใช้งาน ${product.sku} แล้ว`)
+    if (!error) onChanged()
+  }
+
+  const activateSelected = async () => {
+    setBulkActiveError(null)
+    setBulkActivating(true)
+    const { updated, error } = await repository.setProductsActive(selectedInactive, true)
+    setBulkActivating(false)
+    if (error) {
+      setBulkActiveError(`เปิดใช้งานได้ ${updated} จาก ${selectedInactive.length} รายการ: ${error}`)
+      if (updated > 0) onChanged()
+      return
+    }
+    setSelected(new Set())
+    handleBulkSaved(`เปิดใช้งาน ${updated} รายการแล้ว`)
   }
 
   const toggleSelected = (id) =>
@@ -247,10 +286,19 @@ export default function ManagePage({
                 <option value={NO_WAREHOUSE}>ยังไม่อยู่คลังย่อย</option>
               </select>
             )}
-            <label className="check">
-              <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />{' '}
-              แสดงที่ปิดใช้งาน
-            </label>
+            <div className="view-tabs toolbar-tabs" role="group" aria-label="สถานะการใช้งาน">
+              {ACTIVE_TABS.map((t) => (
+                <button
+                  key={t.view}
+                  type="button"
+                  className="btn sm"
+                  aria-pressed={activeView === t.view}
+                  onClick={() => changeActiveView(t.view)}
+                >
+                  {t.label} <span className="tab-count">{tabCounts[t.view]}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {selected.size > 0 && (
@@ -264,6 +312,19 @@ export default function ManagePage({
               }}
               onClear={() => setSelected(new Set())}
             />
+          )}
+          {selectedInactive.length > 0 && (
+            <div className="bulk-bar">
+              <b>เลือกไว้ {selectedInactive.length} รายการที่ปิดใช้งาน</b>
+              <button type="button" className="btn btn-activate" onClick={activateSelected} disabled={bulkActivating}>
+                {bulkActivating ? 'กำลังเปิดใช้งาน…' : `เปิดใช้งาน ${selectedInactive.length} รายการ`}
+              </button>
+              {bulkActiveError && (
+                <p className="alert bulk-error" role="alert">
+                  {bulkActiveError}
+                </p>
+              )}
+            </div>
           )}
           {selected.size > 0 && activeOnes.length > 0 && (
             <BulkWarehouseBar
@@ -292,8 +353,24 @@ export default function ManagePage({
               </button>
             </div>
           )}
-          {loadState === 'ready' && visible.length === 0 && (
-            <p className="empty dim">{allProducts.length === 0 ? 'ยังไม่มีสินค้า เพิ่มสินค้าแรกจากฟอร์มด้านขวา' : 'ไม่พบสินค้า'}</p>
+          {loadState === 'ready' && visible.length === 0 && foundElsewhere === 0 && (
+            <p className="empty dim">
+              {allProducts.length === 0
+                ? 'ยังไม่มีสินค้า เพิ่มสินค้าแรกจากฟอร์มด้านขวา'
+                : activeView === ACTIVE_VIEW.INACTIVE && !query && !category && !warehouseFilter
+                  ? 'ไม่มีสินค้าที่ปิดใช้งาน'
+                  : 'ไม่พบสินค้า'}
+            </p>
+          )}
+          {loadState === 'ready' && foundElsewhere > 0 && (
+            <div className="empty found-elsewhere" role="status">
+              <p className="dim">
+                ไม่พบในแท็บ "{tabLabel[activeView]}" · พบ {foundElsewhere} รายการในแท็บ "{tabLabel[otherView]}"
+              </p>
+              <button type="button" className="btn sm" onClick={() => changeActiveView(otherView)}>
+                แสดง
+              </button>
+            </div>
           )}
           {loadState === 'ready' && visible.length > 0 && (
             <div className="table-wrap">
@@ -321,7 +398,10 @@ export default function ManagePage({
                 </thead>
                 <tbody>
                   {visible.map((p) => (
-                    <tr key={p.id} className={p.id === editingId ? 'selected' : undefined}>
+                    <tr
+                      key={p.id}
+                      className={[p.id === editingId && 'selected', !p.active && 'row-off'].filter(Boolean).join(' ') || undefined}
+                    >
                       <td className="pick-col">
                         <input
                           type="checkbox"
@@ -352,7 +432,17 @@ export default function ManagePage({
                       <td>
                         <span className={p.active ? 'badge ok' : 'badge off'}>{p.active ? 'ใช้งาน' : 'ปิดใช้งาน'}</span>
                       </td>
-                      <td className="num">
+                      <td className="num row-actions">
+                        {!p.active && (
+                          <button
+                            type="button"
+                            className="btn sm btn-activate"
+                            onClick={() => activateOne(p)}
+                            disabled={activating === p.id}
+                          >
+                            {activating === p.id ? 'กำลังเปิด…' : 'เปิดใช้งาน'}
+                          </button>
+                        )}
                         <button type="button" className="btn sm btn-edit" onClick={() => startEdit(p.id)}>
                           <span aria-hidden="true">✎</span> แก้ไข
                         </button>

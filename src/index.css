@@ -2289,3 +2289,43 @@ td.mono,
   gap: 6px 16px;
   padding-top: 6px;
 }
+
+/* หน้าจัดการสินค้า: แท็บ ใช้งาน / ปิดใช้งาน / ทั้งหมด และปุ่มเปิดใช้งาน (ใช้สีเขียวเดิมของระบบ) */
+.view-tabs.toolbar-tabs {
+  margin: 0;
+}
+
+.tab-count {
+  margin-left: 4px;
+  font-weight: 700;
+}
+
+tbody tr.row-off .thumb-col,
+tbody tr.row-off .mono {
+  opacity: 0.55;
+}
+
+.row-actions {
+  white-space: nowrap;
+}
+
+.row-actions .btn + .btn {
+  margin-left: 6px;
+}
+
+.btn.btn-activate {
+  color: var(--ok);
+  background: var(--ok-bg);
+  border-color: var(--ok);
+}
+
+.found-elsewhere {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.found-elsewhere p {
+  margin: 0;
+}

@@ -93,6 +93,7 @@ describe('createRepository', () => {
       'saveProduct',
       'saveWarehouse',
       'setProductActive',
+      'setProductsActive',
       'setProductsCategory',
       'setReorderPoints',
       'signImageUrls',
@@ -222,6 +223,27 @@ describe('setProductsCategory', () => {
   it('บันทึกได้ไม่ครบ (RLS กรองแถวออก) คืนข้อความไม่มีสิทธิ์', async () => {
     const client = fakeClient({ data: [{ id: 'p1' }], error: null })
     expect(await createRepository(client).setProductsCategory(['p1', 'p2'], 'x')).toEqual({
+      updated: 1,
+      error: ERROR_MESSAGE.NOT_FOUND,
+    })
+  })
+})
+
+describe('setProductsActive', () => {
+  it('update active ตาม id หลายรายการ', async () => {
+    const client = fakeClient({ data: [{ id: 'p1' }, { id: 'p2' }], error: null })
+    expect(await createRepository(client).setProductsActive(['p1', 'p2'], true)).toEqual({ updated: 2, error: null })
+    expect(client.calls).toEqual([
+      ['from', 'products'],
+      ['update', { active: true }],
+      ['in', 'id', ['p1', 'p2']],
+      ['select', 'id'],
+    ])
+  })
+
+  it('บันทึกได้ไม่ครบ (RLS กรองแถวออก) คืนข้อความไม่มีสิทธิ์', async () => {
+    const client = fakeClient({ data: [{ id: 'p1' }], error: null })
+    expect(await createRepository(client).setProductsActive(['p1', 'p2'], true)).toEqual({
       updated: 1,
       error: ERROR_MESSAGE.NOT_FOUND,
     })
