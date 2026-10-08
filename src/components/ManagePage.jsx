@@ -3,6 +3,7 @@ import { ACTIVE_VIEW, countByActive, filterByActive, readActiveView, saveActiveV
 import { backupReminder, readLastBackup, saveLastBackup } from '../lib/backupReminder.js'
 import { toIsoDate } from '../lib/dateFormat.js'
 import { PAGE } from '../lib/menu.js'
+import { formatQuantity } from '../lib/numberFormat.js'
 import { filterByCategory, listCategories, searchProducts } from '../lib/stockRules.js'
 import BackupButton from './BackupButton.jsx'
 import BulkCategoryBar from './BulkCategoryBar.jsx'
@@ -86,6 +87,7 @@ export default function ManagePage({
   const otherView = activeView === ACTIVE_VIEW.ACTIVE ? ACTIVE_VIEW.INACTIVE : ACTIVE_VIEW.ACTIVE
   const foundElsewhere = activeView !== ACTIVE_VIEW.ALL && visible.length === 0 ? tabCounts[otherView] : 0
   const selectedInactive = allProducts.filter((p) => selected.has(p.id) && !p.active).map((p) => p.id)
+  const selectedActive = allProducts.filter((p) => selected.has(p.id) && p.active)
   const warehouseName = new Map(warehouses.map((w) => [w.id, w.name]))
   const activeOnes = warehouses.filter((w) => w.active)
 
@@ -121,18 +123,34 @@ export default function ManagePage({
     if (!error) onChanged()
   }
 
-  const activateSelected = async () => {
+  // เปิด/ปิดใช้งานสินค้าที่เลือกไว้ทีเดียว ปิดใช้งานถามยืนยันก่อน (บอกจำนวนที่ยังมียอดคงเหลือ)
+  const setSelectedActive = async (active) => {
+    const ids = active ? selectedInactive : selectedActive.map((p) => p.id)
+    const verb = active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'
+    if (!active) {
+      const withStock = selectedActive.filter((p) => p.onHand > 0 || (p.repairQty ?? 0) > 0)
+      const stockNote =
+        withStock.length > 0
+          ? `\n\nมี ${withStock.length} รายการที่ยังมียอดคงเหลือ (รวม ${formatQuantity(
+              withStock.reduce((sum, p) => sum + p.onHand + (p.repairQty ?? 0), 0),
+            )}) ยอดยังอยู่ในระบบตามเดิม`
+          : ''
+      const ok = window.confirm(
+        `ปิดใช้งาน ${ids.length} รายการ?\nสินค้าจะไม่แสดงในหน้าสินค้าคงคลังและหน้ารับ/เบิก เปิดกลับได้ในแท็บ "ปิดใช้งาน"${stockNote}`,
+      )
+      if (!ok) return
+    }
     setBulkActiveError(null)
     setBulkActivating(true)
-    const { updated, error } = await repository.setProductsActive(selectedInactive, true)
+    const { updated, error } = await repository.setProductsActive(ids, active)
     setBulkActivating(false)
     if (error) {
-      setBulkActiveError(`เปิดใช้งานได้ ${updated} จาก ${selectedInactive.length} รายการ: ${error}`)
+      setBulkActiveError(`${verb}ได้ ${updated} จาก ${ids.length} รายการ: ${error}`)
       if (updated > 0) onChanged()
       return
     }
     setSelected(new Set())
-    handleBulkSaved(`เปิดใช้งาน ${updated} รายการแล้ว`)
+    handleBulkSaved(`${verb} ${updated} รายการแล้ว`)
   }
 
   const toggleSelected = (id) =>
@@ -337,12 +355,30 @@ export default function ManagePage({
               onClear={() => setSelected(new Set())}
             />
           )}
-          {selectedInactive.length > 0 && (
+          {selected.size > 0 && (
             <div className="bulk-bar">
-              <b>เลือกไว้ {selectedInactive.length} รายการที่ปิดใช้งาน</b>
-              <button type="button" className="btn btn-activate" onClick={activateSelected} disabled={bulkActivating}>
-                {bulkActivating ? 'กำลังเปิดใช้งาน…' : `เปิดใช้งาน ${selectedInactive.length} รายการ`}
-              </button>
+              <b>การใช้งาน</b>
+              {selectedInactive.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-activate"
+                  onClick={() => setSelectedActive(true)}
+                  disabled={bulkActivating}
+                >
+                  เปิดใช้งาน {selectedInactive.length} รายการ
+                </button>
+              )}
+              {selectedActive.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-cancel"
+                  onClick={() => setSelectedActive(false)}
+                  disabled={bulkActivating}
+                >
+                  ปิดใช้งาน {selectedActive.length} รายการ
+                </button>
+              )}
+              {bulkActivating && <span className="dim">กำลังบันทึก…</span>}
               {bulkActiveError && (
                 <p className="alert bulk-error" role="alert">
                   {bulkActiveError}
