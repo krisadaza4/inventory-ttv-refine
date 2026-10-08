@@ -297,7 +297,7 @@ export default function ManagePage({
         />
       )}
 
-      <div className="manage-list">
+      <div className={selected.size > 0 ? 'manage-list has-dock' : 'manage-list'}>
         <div className="panel">
           <div className="toolbar">
             <input
@@ -344,58 +344,69 @@ export default function ManagePage({
           </div>
 
           {selected.size > 0 && (
-            <BulkCategoryBar
-              ids={[...selected]}
-              categories={listCategories(allProducts)}
-              repository={repository}
-              onSaved={(message) => {
-                handleBulkSaved(message)
-                if (message) setSelected(new Set())
-              }}
-              onClear={() => setSelected(new Set())}
-            />
-          )}
-          {selected.size > 0 && (
-            <div className="bulk-bar">
-              <b>การใช้งาน</b>
-              {selectedInactive.length > 0 && (
-                <button
-                  type="button"
-                  className="btn btn-activate"
-                  onClick={() => setSelectedActive(true)}
-                  disabled={bulkActivating}
-                >
-                  เปิดใช้งาน {selectedInactive.length} รายการ
-                </button>
+            // แถบลอยด้านล่างจอ: เห็นตลอดไม่ว่าจะเลื่อนตารางไปถึงไหน
+            <div className="selection-dock" role="region" aria-label="จัดการรายการที่เลือก">
+              <b className="dock-count">✓ เลือก {selected.size} รายการ</b>
+              <BulkCategoryBar
+                ids={[...selected]}
+                categories={listCategories(allProducts)}
+                repository={repository}
+                label="หมวดหมู่"
+                onSaved={(message) => {
+                  handleBulkSaved(message)
+                  if (message) setSelected(new Set())
+                }}
+              />
+              <div className="bulk-bar">
+                <b>การใช้งาน</b>
+                {selectedInactive.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-activate"
+                    onClick={() => setSelectedActive(true)}
+                    disabled={bulkActivating}
+                  >
+                    เปิดใช้งาน {selectedInactive.length} รายการ
+                  </button>
+                )}
+                {selectedActive.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-cancel"
+                    onClick={() => setSelectedActive(false)}
+                    disabled={bulkActivating}
+                  >
+                    ปิดใช้งาน {selectedActive.length} รายการ
+                  </button>
+                )}
+                {bulkActivating && <span className="dim">กำลังบันทึก…</span>}
+                {bulkActiveError && (
+                  <p className="alert bulk-error" role="alert">
+                    {bulkActiveError}
+                  </p>
+                )}
+              </div>
+              {activeOnes.length > 0 && (
+                <BulkWarehouseBar
+                  ids={[...selected]}
+                  warehouses={activeOnes}
+                  repository={repository}
+                  onSaved={(message) => {
+                    handleBulkSaved(message)
+                    if (message) setSelected(new Set())
+                  }}
+                />
               )}
-              {selectedActive.length > 0 && (
-                <button
-                  type="button"
-                  className="btn btn-cancel"
-                  onClick={() => setSelectedActive(false)}
-                  disabled={bulkActivating}
-                >
-                  ปิดใช้งาน {selectedActive.length} รายการ
-                </button>
-              )}
-              {bulkActivating && <span className="dim">กำลังบันทึก…</span>}
-              {bulkActiveError && (
-                <p className="alert bulk-error" role="alert">
-                  {bulkActiveError}
-                </p>
-              )}
+              <button
+                type="button"
+                className="dialog-close dock-clear"
+                aria-label="ยกเลิกที่เลือก"
+                title="ยกเลิกที่เลือก"
+                onClick={() => setSelected(new Set())}
+              >
+                ✕
+              </button>
             </div>
-          )}
-          {selected.size > 0 && activeOnes.length > 0 && (
-            <BulkWarehouseBar
-              ids={[...selected]}
-              warehouses={activeOnes}
-              repository={repository}
-              onSaved={(message) => {
-                handleBulkSaved(message)
-                if (message) setSelected(new Set())
-              }}
-            />
           )}
 
           {loadState === 'loading' && (

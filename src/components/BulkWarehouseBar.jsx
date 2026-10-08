@@ -39,7 +39,7 @@ export default function BulkWarehouseBar({ ids, warehouses, repository, onSaved 
 
   return (
     <div className="bulk-bar">
-      <b>แสดงในคลังย่อย</b>
+      <b>คลังย่อย</b>
       <select aria-label="คลังย่อย" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} disabled={saving}>
         <option value="">เลือกคลัง…</option>
         {warehouses.map((w) => (

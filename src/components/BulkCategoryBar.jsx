@@ -4,7 +4,8 @@ import { useState } from 'react'
 const NEW_CATEGORY = '__new__'
 
 // แถบตั้งหมวดหมู่ให้สินค้าที่เลือกไว้ (admin) แสดงเมื่อเลือกอย่างน้อย 1 รายการ
-export default function BulkCategoryBar({ ids, categories, repository, onSaved, onClear }) {
+// label = ข้อความหน้าแถบ, ไม่ส่ง onClear = ไม่มีปุ่มยกเลิกที่เลือก (แถบลอยมีปุ่ม ✕ ของตัวเอง)
+export default function BulkCategoryBar({ ids, categories, repository, onSaved, onClear, label }) {
   const [choice, setChoice] = useState('')
   const [typed, setTyped] = useState('')
   const [saving, setSaving] = useState(false)
@@ -31,7 +32,7 @@ export default function BulkCategoryBar({ ids, categories, repository, onSaved, 
 
   return (
     <div className="bulk-bar">
-      <b>เลือก {ids.length} รายการ</b>
+      <b>{label ?? `เลือก ${ids.length} รายการ`}</b>
       <select aria-label="หมวดหมู่ที่จะตั้ง" value={choice} onChange={(e) => setChoice(e.target.value)} disabled={saving}>
         <option value="">เลือกหมวดหมู่…</option>
         {categories.map((c) => (
@@ -53,9 +54,11 @@ export default function BulkCategoryBar({ ids, categories, repository, onSaved, 
       <button type="button" className="btn primary" onClick={handleSave} disabled={saving}>
         {saving ? 'กำลังบันทึก…' : 'ตั้งหมวดหมู่'}
       </button>
-      <button type="button" className="btn btn-cancel" onClick={onClear} disabled={saving}>
-        ยกเลิกที่เลือก
-      </button>
+      {onClear && (
+        <button type="button" className="btn btn-cancel" onClick={onClear} disabled={saving}>
+          ยกเลิกที่เลือก
+        </button>
+      )}
       {error && (
         <p className="alert bulk-error" role="alert">
           {error}
