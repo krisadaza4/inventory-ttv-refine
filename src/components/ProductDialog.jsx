@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 
-// หน้าต่างกลางจอสำหรับฟอร์มสินค้า ใช้ <dialog> ของเบราว์เซอร์ (showModal กันคลิก/โฟกัสหน้าหลัง)
+// หน้าต่างกลางจอ (ฟอร์มสินค้า, มีอะไรใหม่) ใช้ <dialog> ของเบราว์เซอร์ (showModal กันคลิก/โฟกัสหน้าหลัง)
 // ปิดได้ด้วย ✕, Esc หรือคลิกพื้นที่นอกกล่อง ทุกทางผ่าน onRequestClose (ให้หน้าเรียกใช้ถามยืนยันได้)
-export default function ProductDialog({ open, label, onRequestClose, children }) {
+export default function ProductDialog({ open, label, onRequestClose, children, className = 'product-dialog' }) {
   const ref = useRef(null)
 
   useEffect(() => {
@@ -15,7 +15,7 @@ export default function ProductDialog({ open, label, onRequestClose, children })
   return (
     <dialog
       ref={ref}
-      className="product-dialog"
+      className={className}
       aria-label={label}
       onCancel={(e) => {
         // Esc: ไม่ปิดเอง ให้หน้าเรียกใช้ตัดสินใจ (อาจมีข้อมูลยังไม่บันทึก)

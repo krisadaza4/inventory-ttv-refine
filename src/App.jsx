@@ -1,10 +1,12 @@
 import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import AppShell from './components/AppShell.jsx'
+import ChangelogDialog from './components/ChangelogDialog.jsx'
 import LoginForm from './components/LoginForm.jsx'
 import ProductsPage from './components/ProductsPage.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import { lazyPage } from './components/lazyPage.js'
-import { APP_NAME, APP_SUBTITLE, ThemeToggle } from './components/TitleBar.jsx'
+import { APP_NAME, APP_RELEASE, APP_SUBTITLE, ThemeToggle } from './components/TitleBar.jsx'
+import { readSeenVersion, saveSeenVersion, shouldShowChangelog } from './lib/changelog.js'
 import { toIsoDate } from './lib/dateFormat.js'
 import { PAGE, getMenu } from './lib/menu.js'
 import { LOGO_SIDE, checkImageFile, resizeImage } from './lib/productImages.js'
@@ -250,6 +252,13 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
   const [logoUrl, setLogoUrl] = useState(null)
   const [logoBusy, setLogoBusy] = useState(false)
   const [logoError, setLogoError] = useState(null)
+  // หน้าต่าง "มีอะไรใหม่": เปิดเองเมื่อเครื่องนี้ยังไม่เคยเห็นเวอร์ชันนี้ seenBefore ใช้ติดป้าย "ใหม่"
+  const [seenBefore] = useState(() => readSeenVersion())
+  const [showChangelog, setShowChangelog] = useState(() => shouldShowChangelog(seenBefore, APP_RELEASE))
+  const closeChangelog = () => {
+    saveSeenVersion(APP_RELEASE)
+    setShowChangelog(false)
+  }
 
   useEffect(() => {
     let active = true
@@ -357,6 +366,7 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
         signingOut,
         onSignOut,
         onHome: goHome,
+        onWhatsNew: () => setShowChangelog(true),
         logo: { url: logoUrl, canChange: canManageProducts(profile.role), busy: logoBusy, onPick: handleLogo },
       }}
       sidebar={
@@ -376,6 +386,7 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
         today,
       }}
     >
+      <ChangelogDialog open={showChangelog} current={APP_RELEASE} seen={seenBefore} onClose={closeChangelog} />
       {signOutError && (
         <p className="alert" role="alert">
           {signOutError}
