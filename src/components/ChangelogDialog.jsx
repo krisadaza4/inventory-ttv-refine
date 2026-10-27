@@ -25,7 +25,7 @@ function Release({ release, isNew }) {
   )
 }
 
-// หน้าต่าง "มีอะไรใหม่": รายการที่กำลังจะทำ + สิ่งที่เปลี่ยนในแต่ละเวอร์ชัน (จาก CHANGELOG.md)
+// หน้าต่าง "มีอะไรใหม่": รายการที่อัพเดทถัดไป + สิ่งที่เปลี่ยนในแต่ละเวอร์ชัน (จาก CHANGELOG.md)
 // seen = เวอร์ชันที่ติ๊ก "ไม่แสดงอีก" ไว้ก่อนเปิดครั้งนี้ (ใช้ติดป้าย "ใหม่" และค่าเริ่มต้นของช่องติ๊ก)
 // onClose(hideUntilNext) ทุกทางปิด (รับทราบ / ✕ / Esc / คลิกนอกกล่อง) ส่งค่าช่องติ๊กไปด้วย
 export default function ChangelogDialog({ open, current, seen, onClose }) {
@@ -41,7 +41,7 @@ export default function ChangelogDialog({ open, current, seen, onClose }) {
         </div>
         <div className="panel-body cl-body">
           <section className="cl-roadmap">
-            <h3>กำลังจะทำ</h3>
+            <h3>อัพเดทถัดไป</h3>
             {roadmap.length > 0 ? (
               <ul>
                 {roadmap.map((item) => (

@@ -15,7 +15,7 @@ const sample = `# Changelog
 
 ข้อความอธิบาย
 
-## กำลังจะทำ
+## อัพเดทถัดไป
 
 <!-- ตัวอย่าง
 - ไม่ควรนับ
@@ -43,7 +43,7 @@ const memoryStorage = (initial = {}) => {
 }
 
 describe('parseChangelog', () => {
-  it('แยกรายการกำลังจะทำ ตัด markdown และไม่นับในคอมเมนต์', () => {
+  it('แยกรายการอัพเดทถัดไป ตัด markdown และไม่นับในคอมเมนต์', () => {
     expect(parseChangelog(sample).roadmap).toEqual(['สำรองข้อมูลอัตโนมัติ', 'หน้า ลืมรหัสผ่าน'])
   })
 

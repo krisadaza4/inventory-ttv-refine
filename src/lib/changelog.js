@@ -1,5 +1,5 @@
 // อ่าน CHANGELOG.md สำหรับหน้าต่าง "มีอะไรใหม่" และจำเวอร์ชันที่เครื่องนี้ติ๊ก "ไม่แสดงอีก" ไว้
-export const ROADMAP_TITLE = 'กำลังจะทำ'
+export const ROADMAP_TITLE = 'อัพเดทถัดไป'
 export const CHANGELOG_SEEN_KEY = 'inventory-ttv:changelog-hidden'
 
 const VERSION = /^v(\d+\.\d+\.\d+)/
