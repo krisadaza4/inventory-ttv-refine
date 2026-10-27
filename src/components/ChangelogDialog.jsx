@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import changelogText from '../../CHANGELOG.md?raw'
 import { isNewRelease, parseChangelog } from '../lib/changelog.js'
 import { formatThaiDate } from '../lib/dateFormat.js'
@@ -25,12 +26,15 @@ function Release({ release, isNew }) {
 }
 
 // หน้าต่าง "มีอะไรใหม่": รายการที่กำลังจะทำ + สิ่งที่เปลี่ยนในแต่ละเวอร์ชัน (จาก CHANGELOG.md)
-// seen = เวอร์ชันที่เครื่องนี้เคยเห็นก่อนเปิดครั้งนี้ (ใช้ติดป้าย "ใหม่")
+// seen = เวอร์ชันที่ติ๊ก "ไม่แสดงอีก" ไว้ก่อนเปิดครั้งนี้ (ใช้ติดป้าย "ใหม่" และค่าเริ่มต้นของช่องติ๊ก)
+// onClose(hideUntilNext) ทุกทางปิด (รับทราบ / ✕ / Esc / คลิกนอกกล่อง) ส่งค่าช่องติ๊กไปด้วย
 export default function ChangelogDialog({ open, current, seen, onClose }) {
+  const [hide, setHide] = useState(seen === current)
   const recent = releases.slice(0, SHOWN)
   const older = releases.slice(SHOWN)
+  const close = () => onClose(hide)
   return (
-    <ProductDialog open={open} label="มีอะไรใหม่" onRequestClose={onClose} className="product-dialog changelog-dialog">
+    <ProductDialog open={open} label="มีอะไรใหม่" onRequestClose={close} className="product-dialog changelog-dialog">
       <div className="panel">
         <div className="panel-head">
           มีอะไรใหม่ <span className="mono dim">v{current}</span>
@@ -61,7 +65,11 @@ export default function ChangelogDialog({ open, current, seen, onClose }) {
           )}
         </div>
         <div className="form-actions">
-          <button type="button" className="btn primary" onClick={onClose}>
+          <label className="check push-left">
+            <input type="checkbox" checked={hide} onChange={(e) => setHide(e.target.checked)} /> ไม่แสดงอีก
+            <span className="dim"> (จนกว่าจะมีเวอร์ชันใหม่)</span>
+          </label>
+          <button type="button" className="btn primary" onClick={close}>
             รับทราบ
           </button>
         </div>

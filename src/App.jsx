@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import AppShell from './components/AppShell.jsx'
 import ChangelogDialog from './components/ChangelogDialog.jsx'
 import LoginForm from './components/LoginForm.jsx'
@@ -59,6 +59,9 @@ function App() {
     getInitialTheme(undefined, window.matchMedia('(prefers-color-scheme: dark)').matches),
   )
   const [signingOut, setSigningOut] = useState(false)
+  // เพิ่งเข้าสู่ระบบในหน้านี้ (จากออกจากระบบ → เข้าสู่ระบบ) ไม่ใช่เปิดหน้าโดยยังเข้าสู่ระบบค้างอยู่
+  const [freshLogin, setFreshLogin] = useState(false)
+  const wasSignedOut = useRef(false)
   const [signOutError, setSignOutError] = useState(null)
 
   // ตั้งธีมให้ <html> ก่อนวาดหน้าจอ เพื่อไม่ให้จอกะพริบ
@@ -71,6 +74,8 @@ function App() {
   useEffect(() => {
     if (!client) return undefined
     const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
+      if (nextSession && wasSignedOut.current) setFreshLogin(true)
+      wasSignedOut.current = !nextSession
       setSession(nextSession)
     })
     return () => data.subscription.unsubscribe()
@@ -89,7 +94,10 @@ function App() {
     try {
       const { error } = await client.auth.signOut({ scope: 'local' })
       if (error) setSignOutError(toThaiError(error))
-      else setSession(null)
+      else {
+        wasSignedOut.current = true
+        setSession(null)
+      }
     } catch (thrown) {
       setSignOutError(toThaiError(thrown))
     }
@@ -140,12 +148,13 @@ function App() {
       signingOut={signingOut}
       signOutError={signOutError}
       onSignOut={handleSignOut}
+      freshLogin={freshLogin}
     />
   )
 }
 
 // เข้าสู่ระบบแล้ว: โหลด profile ก่อน ไม่มี profile = ยังไม่ได้กำหนดบทบาท
-function SignedIn({ userId, repository, gateProps, theme, onToggleTheme, signingOut, signOutError, onSignOut }) {
+function SignedIn({ userId, repository, gateProps, theme, onToggleTheme, signingOut, signOutError, onSignOut, freshLogin }) {
   // undefined = กำลังโหลด
   const [profile, setProfile] = useState(undefined)
   const [loadError, setLoadError] = useState(null)
@@ -226,12 +235,13 @@ function SignedIn({ userId, repository, gateProps, theme, onToggleTheme, signing
       signingOut={signingOut}
       signOutError={signOutError}
       onSignOut={onSignOut}
+      freshLogin={freshLogin}
     />
   )
 }
 
 // หน้าโปรแกรมหลัก: โหลดสินค้าครั้งเดียวแล้วใช้ร่วมกันทุกหน้า
-function Workspace({ profile, repository, theme, onToggleTheme, signingOut, signOutError, onSignOut }) {
+function Workspace({ profile, repository, theme, onToggleTheme, signingOut, signOutError, onSignOut, freshLogin }) {
   const [page, setPage] = useState(PAGE.PRODUCTS)
   // คลังที่ดูอยู่ในหน้าสินค้า ('' = คลังใหญ่)
   const [warehouseId, setWarehouseId] = useState('')
@@ -252,11 +262,13 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
   const [logoUrl, setLogoUrl] = useState(null)
   const [logoBusy, setLogoBusy] = useState(false)
   const [logoError, setLogoError] = useState(null)
-  // หน้าต่าง "มีอะไรใหม่": เปิดเองเมื่อเครื่องนี้ยังไม่เคยเห็นเวอร์ชันนี้ seenBefore ใช้ติดป้าย "ใหม่"
-  const [seenBefore] = useState(() => readSeenVersion())
-  const [showChangelog, setShowChangelog] = useState(() => shouldShowChangelog(seenBefore, APP_RELEASE))
-  const closeChangelog = () => {
-    saveSeenVersion(APP_RELEASE)
+  // หน้าต่าง "มีอะไรใหม่": เปิดเองทุกครั้งที่เพิ่งเข้าสู่ระบบ ยกเว้นติ๊ก "ไม่แสดงอีก" ไว้ที่เวอร์ชันนี้
+  const [seenBefore, setSeenBefore] = useState(() => readSeenVersion())
+  const [showChangelog, setShowChangelog] = useState(() => shouldShowChangelog(seenBefore, APP_RELEASE, freshLogin))
+  const closeChangelog = (hideUntilNext) => {
+    const next = hideUntilNext ? APP_RELEASE : null
+    saveSeenVersion(next)
+    setSeenBefore(next)
     setShowChangelog(false)
   }
 
@@ -386,7 +398,7 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
         today,
       }}
     >
-      <ChangelogDialog open={showChangelog} current={APP_RELEASE} seen={seenBefore} onClose={closeChangelog} />
+      {showChangelog && <ChangelogDialog open current={APP_RELEASE} seen={seenBefore} onClose={closeChangelog} />}
       {signOutError && (
         <p className="alert" role="alert">
           {signOutError}

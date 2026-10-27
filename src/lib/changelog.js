@@ -1,6 +1,6 @@
-// อ่าน CHANGELOG.md สำหรับหน้าต่าง "มีอะไรใหม่" และจำว่าเครื่องนี้เห็นเวอร์ชันไหนแล้ว
+// อ่าน CHANGELOG.md สำหรับหน้าต่าง "มีอะไรใหม่" และจำเวอร์ชันที่เครื่องนี้ติ๊ก "ไม่แสดงอีก" ไว้
 export const ROADMAP_TITLE = 'กำลังจะทำ'
-export const CHANGELOG_SEEN_KEY = 'inventory-ttv:changelog-seen'
+export const CHANGELOG_SEEN_KEY = 'inventory-ttv:changelog-hidden'
 
 const VERSION = /^v(\d+\.\d+\.\d+)/
 const DATE = /(\d{4}-\d{2}-\d{2})/
@@ -53,12 +53,13 @@ export function compareVersions(a, b) {
   return 0
 }
 
-// เปิดหน้าต่างอัตโนมัติเมื่อเครื่องนี้ยังไม่เคยเห็นเวอร์ชันปัจจุบัน
-export function shouldShowChangelog(seen, current) {
-  return Boolean(current) && compareVersions(current, seen) > 0
+// เปิดหน้าต่างเองทุกครั้งที่เพิ่งเข้าสู่ระบบ ยกเว้นติ๊ก "ไม่แสดงอีก" ไว้ที่เวอร์ชันนี้ (หรือใหม่กว่า) แล้ว
+// seen = เวอร์ชันที่ติ๊ก "ไม่แสดงอีก" ไว้ล่าสุด
+export function shouldShowChangelog(seen, current, freshLogin = true) {
+  return freshLogin && Boolean(current) && compareVersions(current, seen) > 0
 }
 
-// เวอร์ชันที่ติดป้าย "ใหม่": ใหม่กว่าที่เคยเห็น ไม่เคยเห็นเลย = เฉพาะเวอร์ชันปัจจุบัน
+// เวอร์ชันที่ติดป้าย "ใหม่": ใหม่กว่าที่ติ๊กไม่แสดงไว้ ไม่เคยติ๊กเลย = เฉพาะเวอร์ชันปัจจุบัน
 export function isNewRelease(release, seen, current) {
   if (!release.version || compareVersions(release.version, current) > 0) return false
   return seen ? compareVersions(release.version, seen) > 0 : release.version === current
@@ -73,10 +74,11 @@ export function readSeenVersion(storage = globalThis.localStorage) {
   }
 }
 
-// บันทึกไม่ได้ก็ไม่เป็นไร แค่จะเห็นหน้าต่างอีกครั้ง
+// version = null คือเอาติ๊ก "ไม่แสดงอีก" ออก บันทึกไม่ได้ก็ไม่เป็นไร แค่จะเห็นหน้าต่างอีกครั้ง
 export function saveSeenVersion(version, storage = globalThis.localStorage) {
   try {
-    storage.setItem(CHANGELOG_SEEN_KEY, version)
+    if (version) storage.setItem(CHANGELOG_SEEN_KEY, version)
+    else storage.removeItem(CHANGELOG_SEEN_KEY)
   } catch {
     // ไม่จำค่า
   }

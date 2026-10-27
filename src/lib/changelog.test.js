@@ -39,7 +39,7 @@ const sample = `# Changelog
 
 const memoryStorage = (initial = {}) => {
   const data = { ...initial }
-  return { getItem: (k) => data[k] ?? null, setItem: (k, v) => (data[k] = v), data }
+  return { getItem: (k) => data[k] ?? null, setItem: (k, v) => (data[k] = v), removeItem: (k) => delete data[k], data }
 }
 
 describe('parseChangelog', () => {
@@ -75,13 +75,17 @@ describe('compareVersions', () => {
 })
 
 describe('shouldShowChangelog', () => {
-  it('ไม่เคยเห็น หรือเห็นเวอร์ชันเก่ากว่า ให้เปิด', () => {
-    expect(shouldShowChangelog(null, '1.9.0')).toBe(true)
-    expect(shouldShowChangelog('1.8.0', '1.9.0')).toBe(true)
+  it('เพิ่งเข้าสู่ระบบ ไม่เคยติ๊กไม่แสดง หรือติ๊กไว้ที่เวอร์ชันเก่า ให้เปิด', () => {
+    expect(shouldShowChangelog(null, '1.9.0', true)).toBe(true)
+    expect(shouldShowChangelog('1.8.0', '1.9.0', true)).toBe(true)
   })
 
-  it('เห็นเวอร์ชันนี้แล้ว ไม่เปิด', () => {
-    expect(shouldShowChangelog('1.9.0', '1.9.0')).toBe(false)
+  it('ติ๊กไม่แสดงอีกไว้ที่เวอร์ชันนี้ ไม่เปิด', () => {
+    expect(shouldShowChangelog('1.9.0', '1.9.0', true)).toBe(false)
+  })
+
+  it('เปิดหน้าเว็บโดยยังเข้าสู่ระบบค้างอยู่ (ไม่ได้เพิ่งเข้าสู่ระบบ) ไม่เปิด', () => {
+    expect(shouldShowChangelog(null, '1.9.0', false)).toBe(false)
   })
 })
 
@@ -105,11 +109,13 @@ describe('isNewRelease', () => {
 })
 
 describe('readSeenVersion / saveSeenVersion', () => {
-  it('จำเวอร์ชันที่เห็นแล้ว', () => {
+  it('จำเวอร์ชันที่ติ๊กไม่แสดงอีก และเอาติ๊กออกได้', () => {
     const storage = memoryStorage()
     saveSeenVersion('1.9.0', storage)
     expect(storage.data[CHANGELOG_SEEN_KEY]).toBe('1.9.0')
     expect(readSeenVersion(storage)).toBe('1.9.0')
+    saveSeenVersion(null, storage)
+    expect(readSeenVersion(storage)).toBeNull()
   })
 
   it('ไม่มี/ค่าแปลก/เบราว์เซอร์ไม่ให้ใช้ storage คืน null ไม่พัง', () => {
