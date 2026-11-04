@@ -7,6 +7,7 @@ import { formatQuantity } from '../lib/numberFormat.js'
 import { filterByCategory, listCategories, searchProducts } from '../lib/stockRules.js'
 import BackupButton from './BackupButton.jsx'
 import BulkCategoryBar from './BulkCategoryBar.jsx'
+import ConfirmDialog from './ConfirmDialog.jsx'
 import ImageSheetUpdate from './ImageSheetUpdate.jsx'
 import PageHead from './PageHead.jsx'
 import ProductDialog from './ProductDialog.jsx'
@@ -42,6 +43,13 @@ export default function ManagePage({
   const [activating, setActivating] = useState(null)
   const [bulkActivating, setBulkActivating] = useState(false)
   const [bulkActiveError, setBulkActiveError] = useState(null)
+  // หน้าต่างยืนยันในแอป (แทน window.confirm): { title, message, confirmLabel, danger, resolve }
+  const [confirmRequest, setConfirmRequest] = useState(null)
+  const askConfirm = (request) => new Promise((resolve) => setConfirmRequest({ ...request, resolve }))
+  const answerConfirm = (ok) => {
+    confirmRequest?.resolve(ok)
+    setConfirmRequest(null)
+  }
   // หน้าต่างฟอร์ม: null = ปิด, { mode: 'new' } หรือ { mode: 'edit', id }
   const [dialog, setDialog] = useState(null)
   // ใช้เป็น key ให้ฟอร์มเริ่มใหม่ทุกครั้งที่เปิดหรือเพิ่มรายการถัดไป
@@ -89,8 +97,17 @@ export default function ManagePage({
   const startEdit = (id) => openDialog({ mode: 'edit', id })
 
   // ✕ / Esc / คลิกนอกกล่อง / ยกเลิก: มีช่องที่แก้ค้างอยู่ถามก่อน
-  const closeDialog = () => {
-    if (formDirty && !window.confirm('ข้อมูลที่แก้ไขยังไม่ได้บันทึก ปิดหน้าต่างนี้หรือไม่?')) return
+  const closeDialog = async () => {
+    if (
+      formDirty &&
+      !(await askConfirm({
+        title: 'ปิดหน้าต่างนี้?',
+        message: 'ข้อมูลที่แก้ไขยังไม่ได้บันทึก',
+        confirmLabel: 'ปิดโดยไม่บันทึก',
+        danger: true,
+      }))
+    )
+      return
     setDialog(null)
     setFormDirty(false)
     setDialogNotice(null)
@@ -122,9 +139,12 @@ export default function ManagePage({
               withStock.reduce((sum, p) => sum + p.onHand + (p.repairQty ?? 0), 0),
             )}) ยอดยังอยู่ในระบบตามเดิม`
           : ''
-      const ok = window.confirm(
-        `ปิดใช้งาน ${ids.length} รายการ?\nสินค้าจะไม่แสดงในหน้าสินค้าคงคลังและหน้ารับ/เบิก เปิดกลับได้ในแท็บ "ปิดใช้งาน"${stockNote}`,
-      )
+      const ok = await askConfirm({
+        title: `ปิดใช้งาน ${ids.length} รายการ?`,
+        message: `สินค้าจะไม่แสดงในหน้าสินค้าคงคลังและหน้ารับ/เบิก เปิดกลับได้ในแท็บ "ปิดใช้งาน"${stockNote}`,
+        confirmLabel: `ปิดใช้งาน ${ids.length} รายการ`,
+        danger: true,
+      })
       if (!ok) return
     }
     setBulkActiveError(null)
@@ -535,6 +555,7 @@ export default function ManagePage({
           />
         )}
       </ProductDialog>
+      <ConfirmDialog request={confirmRequest} onAnswer={answerConfirm} />
     </>
   )
 }

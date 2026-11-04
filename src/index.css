@@ -2349,6 +2349,24 @@ tbody tr.flash {
   }
 }
 
+/* หน้าต่างยืนยันในแอป (แทน window.confirm) กล่องเล็กกลางจอ มือถือก็ไม่เต็มจอ */
+.product-dialog.confirm-dialog {
+  width: min(440px, calc(100vw - 32px));
+  height: auto;
+  max-height: calc(100vh - 48px);
+  margin: auto;
+}
+
+.product-dialog.confirm-dialog .panel {
+  height: auto;
+  border-radius: var(--radius, 12px);
+}
+
+.confirm-body {
+  white-space: pre-line;
+  line-height: 1.6;
+}
+
 /* หน้าต่าง "มีอะไรใหม่" (ใช้โครงเดียวกับหน้าต่างฟอร์มสินค้า) */
 .changelog-dialog {
   width: min(640px, calc(100vw - 32px));
