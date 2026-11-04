@@ -2352,7 +2352,8 @@ tbody tr.flash {
 /* หน้าต่างยืนยันในแอป (แทน window.confirm) กล่องเล็กกลางจอ มือถือก็ไม่เต็มจอ */
 .product-dialog.confirm-dialog {
   width: min(440px, calc(100vw - 32px));
-  height: auto;
+  /* fit-content (ไม่ใช่ auto): inset 0 + auto ยืดเต็มจอ ทำให้กล่องไปติดบน */
+  height: fit-content;
   max-height: calc(100vh - 48px);
   margin: auto;
 }
