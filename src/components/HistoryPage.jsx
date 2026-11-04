@@ -4,37 +4,18 @@ import { PAGE } from '../lib/menu.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { PAGE_SIZE } from '../lib/repositories.js'
 import { exportFileName, movementSheet } from '../lib/spreadsheet.js'
-import { MOVEMENT_LABEL, MOVEMENT_TYPE, REPAIR_FILTER, TRANSFER_TYPES, signedQuantity } from '../lib/stockRules.js'
-import { CENTRAL } from '../lib/warehouses.js'
+import { LEGACY_TRANSFER_TYPES, MOVEMENT_LABEL, MOVEMENT_TYPE, REPAIR_FILTER, signedQuantity } from '../lib/stockRules.js'
 import ExportButton from './ExportButton.jsx'
 import PageHead from './PageHead.jsx'
 import RefreshIcon from './RefreshIcon.jsx'
 
 const TYPE_LABEL = MOVEMENT_LABEL
 
-// ข้อความช่องคลัง: โอนแสดงทิศทาง, ขายผ่านคลังย่อยที่ตัดคลังใหญ่ด้วยแสดงส่วนที่ตัดแต่ละคลัง
-function warehouseText(m) {
-  const name = m.warehouseName || 'คลังย่อย'
-  if (m.type === MOVEMENT_TYPE.TRANSFER_IN) return { main: `คลังใหญ่ → ${name}` }
-  if (m.type === MOVEMENT_TYPE.TRANSFER_OUT) return { main: `${name} → คลังใหญ่` }
-  if (!m.warehouseId) return { main: 'คลังใหญ่' }
-  const fromCentral = Math.round((m.quantity - (m.warehouseQty ?? 0)) * 100) / 100
-  return {
-    main: name,
-    detail:
-      fromCentral > 0
-        ? `ตัดคลังนี้ ${formatQuantity(m.warehouseQty ?? 0)} · คลังใหญ่ ${formatQuantity(fromCentral)}`
-        : null,
-  }
-}
-
-// หน้าประวัติการเคลื่อนไหว: ล่าสุดก่อน โหลดทีละ PAGE_SIZE กรองสินค้า/ประเภท/คลัง (design.md ข้อ 7)
-// allProducts รวมที่ปิดใช้งาน เพื่อดูประวัติของสินค้าที่เลิกใช้แล้วได้ warehouses รวมคลังที่ปิดใช้งาน
-export default function HistoryPage({ allProducts, warehouses = [], repository }) {
+// หน้าประวัติการเคลื่อนไหว: ล่าสุดก่อน โหลดทีละ PAGE_SIZE กรองสินค้า/ประเภท (design.md ข้อ 7)
+// allProducts รวมที่ปิดใช้งาน เพื่อดูประวัติของสินค้าที่เลิกใช้แล้วได้
+export default function HistoryPage({ allProducts, repository }) {
   const [productId, setProductId] = useState('')
   const [type, setType] = useState('')
-  // '' = ทุกคลัง, CENTRAL = คลังใหญ่, id = คลังย่อย
-  const [warehouse, setWarehouse] = useState('')
   const [page, setPage] = useState(0)
   const [movements, setMovements] = useState([])
   const [hasMore, setHasMore] = useState(false)
@@ -46,7 +27,7 @@ export default function HistoryPage({ allProducts, warehouses = [], repository }
   // เปลี่ยนตัวกรองหรือหน้า: โหลดใหม่ ไม่ใช้ผลที่มาช้าหลังเปลี่ยนตัวกรองไปแล้ว
   useEffect(() => {
     let active = true
-    repository.listMovements({ productId, type, warehouse, page }).then((result) => {
+    repository.listMovements({ productId, type, page }).then((result) => {
       if (!active) return
       if (result.error) {
         setLoadError(result.error)
@@ -60,7 +41,7 @@ export default function HistoryPage({ allProducts, warehouses = [], repository }
     return () => {
       active = false
     }
-  }, [repository, productId, type, warehouse, page, attempt])
+  }, [repository, productId, type, page, attempt])
 
   const changeFilter = (setter) => (e) => {
     setter(e.target.value)
@@ -97,7 +78,7 @@ export default function HistoryPage({ allProducts, warehouses = [], repository }
               fileName={exportFileName('movements', toIsoDate(new Date()))}
               sheetName="ประวัติการเคลื่อนไหว"
               buildSheet={async () => {
-                const { movements: all, error } = await repository.listAllMovements({ productId, type, warehouse })
+                const { movements: all, error } = await repository.listAllMovements({ productId, type })
                 return error ? { error } : { sheetData: movementSheet(all) }
               }}
               disabled={movements.length === 0}
@@ -130,18 +111,6 @@ export default function HistoryPage({ allProducts, warehouses = [], repository }
               </option>
             ))}
           </select>
-          {warehouses.length > 0 && (
-            <select aria-label="กรองคลัง" value={warehouse} onChange={changeFilter(setWarehouse)}>
-              <option value="">ทุกคลัง</option>
-              <option value={CENTRAL}>คลังใหญ่</option>
-              {warehouses.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                  {w.active ? '' : ' (ปิดใช้งาน)'}
-                </option>
-              ))}
-            </select>
-          )}
         </div>
 
         {movements.length > 0 && (
@@ -152,7 +121,6 @@ export default function HistoryPage({ allProducts, warehouses = [], repository }
                   <th>วันที่ / เวลา</th>
                   <th>สินค้า</th>
                   <th className="hide-sm">ประเภท</th>
-                  <th className="hide-sm">คลัง</th>
                   <th className="num">จำนวน</th>
                   <th className="hide-sm">ผู้บันทึก</th>
                   <th className="hide-sm">หมายเหตุ</th>
@@ -161,9 +129,8 @@ export default function HistoryPage({ allProducts, warehouses = [], repository }
               <tbody>
                 {movements.map((m) => {
                   const amount = signedQuantity(m.type, m.quantity)
-                  // โอนระหว่างคลังไม่เปลี่ยนยอดรวม: แสดงจำนวนไม่มีเครื่องหมาย
-                  const transfer = TRANSFER_TYPES.includes(m.type)
-                  const where = warehouseText(m)
+                  // รายการโอนเก่า (คลังย่อยเลิกใช้) ไม่เปลี่ยนยอดรวม: แสดงจำนวนไม่มีเครื่องหมาย
+                  const transfer = LEGACY_TRANSFER_TYPES.includes(m.type)
                   // เวลาที่กดบันทึกจริง (เวลาไทย) ถ้าบันทึกย้อนหลังคนละวัน แสดงวันเวลาที่บันทึกเต็ม
                   const recorded = bangkokParts(m.createdAt)
                   return (
@@ -182,14 +149,10 @@ export default function HistoryPage({ allProducts, warehouses = [], repository }
                         {m.productName}
                         <div className="sub mono">{m.productSku}</div>
                         <div className="sub show-sm">
-                          {TYPE_LABEL[m.type]} · {where.main} · {m.recordedByName}
+                          {TYPE_LABEL[m.type]} · {m.recordedByName}
                         </div>
                       </td>
                       <td className="hide-sm">{TYPE_LABEL[m.type]}</td>
-                      <td className="hide-sm">
-                        {where.main}
-                        {where.detail && <div className="sub">{where.detail}</div>}
-                      </td>
                       <td className={`num nowrap ${transfer ? '' : amount < 0 ? 'minus' : 'plus'}`}>
                         {transfer ? `⇄ ${formatQuantity(amount)}` : formatQuantity(amount, { signed: true })} {m.unit}
                       </td>
@@ -219,7 +182,7 @@ export default function HistoryPage({ allProducts, warehouses = [], repository }
           </div>
         )}
         {loadState === 'ready' && movements.length === 0 && (
-          <p className="empty dim">{productId || type || warehouse ? 'ไม่พบรายการที่ตรงกับเงื่อนไข' : 'ยังไม่มีรายการเคลื่อนไหว'}</p>
+          <p className="empty dim">{productId || type ? 'ไม่พบรายการที่ตรงกับเงื่อนไข' : 'ยังไม่มีรายการเคลื่อนไหว'}</p>
         )}
 
         {movements.length > 0 && (

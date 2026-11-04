@@ -16,7 +16,6 @@ import { canManageProducts } from './lib/roles.js'
 import { getSupabase } from './lib/supabaseClient.js'
 import { ERROR_MESSAGE, toThaiError } from './lib/supabaseErrors.js'
 import { getInitialTheme, saveTheme, toggleTheme } from './lib/theme.js'
-import { activeWarehouses, attachWarehouses } from './lib/warehouses.js'
 
 // หน้าแรก (สินค้า) โหลดพร้อมแอป หน้าอื่นโหลดเมื่อเปิดครั้งแรก
 const MovementPage = lazyPage(() => import('./components/MovementPage.jsx'))
@@ -277,13 +276,8 @@ function SignedIn({ userId, repository, gateProps, theme, onToggleTheme, signing
 // หน้าโปรแกรมหลัก: โหลดสินค้าครั้งเดียวแล้วใช้ร่วมกันทุกหน้า
 function Workspace({ profile, repository, theme, onToggleTheme, signingOut, signOutError, onSignOut, freshLogin }) {
   const [page, setPage] = useState(PAGE.PRODUCTS)
-  // คลังที่ดูอยู่ในหน้าสินค้า ('' = คลังใหญ่)
-  const [warehouseId, setWarehouseId] = useState('')
   // รวมสินค้าที่ปิดใช้งาน (ใช้ในหน้าจัดการสินค้า) หน้าอื่นใช้เฉพาะที่เปิดใช้งาน
-  // แต่ละรายการมี centralQty, warehouseQty, warehouseIds (attachWarehouses)
   const [allProducts, setAllProducts] = useState([])
-  // คลังย่อยทั้งหมด รวมที่ปิดใช้งาน
-  const [warehouses, setWarehouses] = useState([])
   // 'loading' | 'ready' | 'error'
   const [loadState, setLoadState] = useState('loading')
   const [loadError, setLoadError] = useState(null)
@@ -349,21 +343,13 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
 
   useEffect(() => {
     let active = true
-    // สินค้า คลังย่อย การผูกสินค้า และยอดในคลังย่อย โหลดพร้อมกัน
-    Promise.all([
-      repository.listProducts({ includeInactive: true }),
-      repository.listWarehouses(),
-      repository.listProductWarehouses(),
-      repository.listWarehouseStock(),
-    ]).then(([productResult, warehouseResult, linkResult, stockResult]) => {
+    repository.listProducts({ includeInactive: true }).then(({ products: loaded, error }) => {
       if (!active) return
-      const error = productResult.error ?? warehouseResult.error ?? linkResult.error ?? stockResult.error
       if (error) {
         setLoadError(error)
         setLoadState('error')
       } else {
-        setWarehouses(warehouseResult.warehouses)
-        setAllProducts(attachWarehouses(productResult.products, linkResult.links, stockResult.stock))
+        setAllProducts(loaded)
         setLoadState('ready')
       }
     })
@@ -377,30 +363,18 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
     setAttempt((n) => n + 1)
   }
 
-  // warehouse = คลังย่อยที่กดมา ('' = คลังใหญ่)
-  const handleMove = (product, type, warehouse = '') => {
+  const handleMove = (product, type) => {
     // seq ทำให้กดซ้ำสินค้าเดิมแล้วฟอร์มเริ่มใหม่
-    setMoveIntent((current) => ({ productId: product.id, type, warehouseId: warehouse, seq: (current?.seq ?? 0) + 1 }))
+    setMoveIntent((current) => ({ productId: product.id, type, seq: (current?.seq ?? 0) + 1 }))
     setPage(PAGE.MOVE)
   }
 
-  const goHome = () => {
-    setPage(PAGE.PRODUCTS)
-    setWarehouseId('')
-  }
-
-  const openWarehouse = (id) => {
-    setPage(PAGE.PRODUCTS)
-    setWarehouseId(id)
-  }
+  const goHome = () => setPage(PAGE.PRODUCTS)
 
   // หน้าที่บทบาทนี้เปิดไม่ได้ (เช่น staff) กลับไปหน้าแรก
   const allowed = getMenu(profile.role).some((group) => group.items.some((item) => item.page === page))
   const currentPage = allowed ? page : PAGE.PRODUCTS
   const products = allProducts.filter((p) => p.active)
-  const openWarehouses = activeWarehouses(warehouses)
-  // คลังที่ถูกปิดใช้งานระหว่างดูอยู่ กลับไปคลังใหญ่
-  const currentWarehouse = openWarehouses.find((w) => w.id === warehouseId) ?? null
   const today = toIsoDate(new Date())
 
   return (
@@ -419,11 +393,8 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
         <Sidebar
           role={profile.role}
           page={currentPage}
-          onChange={(next) => (next === PAGE.PRODUCTS ? goHome() : setPage(next))}
+          onChange={setPage}
           onHome={goHome}
-          warehouses={openWarehouses}
-          warehouseId={currentWarehouse?.id ?? ''}
-          onPickWarehouse={openWarehouse}
         />
       }
       statusBar={{
@@ -445,10 +416,6 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
       )}
       {currentPage === PAGE.PRODUCTS && (
         <ProductsPage
-          key={currentWarehouse?.id ?? 'central'}
-          warehouse={currentWarehouse}
-          warehouses={openWarehouses}
-          onPickWarehouse={openWarehouse}
           products={products}
           imageUrls={imageUrls}
           loadState={loadState}
@@ -471,7 +438,6 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
           <MovementPage
             key={moveIntent?.seq ?? 0}
             products={products}
-            warehouses={openWarehouses}
             imageUrls={imageUrls}
             loadState={loadState}
             role={profile.role}
@@ -484,7 +450,6 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
         {currentPage === PAGE.MANAGE && (
           <ManagePage
             allProducts={allProducts}
-            warehouses={warehouses}
             imageUrls={imageUrls}
             loadState={loadState}
             loadError={loadError}
@@ -494,12 +459,11 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
           />
         )}
         {currentPage === PAGE.HISTORY && (
-          <HistoryPage allProducts={allProducts} warehouses={warehouses} repository={repository} />
+          <HistoryPage allProducts={allProducts} repository={repository} />
         )}
         {currentPage === PAGE.SALES && (
           <MonthlySalesPage
             allProducts={allProducts}
-            warehouses={warehouses}
             imageUrls={imageUrls}
             loadState={loadState}
             repository={repository}

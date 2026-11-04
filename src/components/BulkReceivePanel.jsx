@@ -1,32 +1,15 @@
 import { useState } from 'react'
+import { planBulkReceive } from '../lib/bulkReceive.js'
 import { formatThaiDate } from '../lib/dateFormat.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { MOVEMENT_TYPE, searchProducts } from '../lib/stockRules.js'
-import { planBulkMovements, quantityIn } from '../lib/warehouses.js'
 import ProductThumb from './ProductThumb.jsx'
 
-// บันทึกหลายรายการในครั้งเดียว ใส่จำนวนในตาราง กดบันทึกครั้งเดียว
-// type = in: รับเข้าคลังใหญ่ (warehouse = null) เช่น ของเข้าจากโรงงานหลายรุ่น
-// type = transfer_in: โอนเข้าคลังย่อย warehouse (เช่น ประกอบเสร็จหลายรุ่น)
+// รับเข้าหลายรายการในครั้งเดียว ใส่จำนวนในตาราง กดบันทึกครั้งเดียว เช่น ของเข้าจากโรงงานหลายรุ่น
 // บันทึกทีละรายการผ่าน record_movement รายการไหนผิดพลาดหยุดทันที รายการก่อนหน้าบันทึกไปแล้ว
-// products = สินค้าที่เปิดใช้งานทั้งหมด (โอนเข้าแล้วสินค้าจะแสดงในคลังนั้นเอง)
-export default function BulkTransferPanel({
-  type = MOVEMENT_TYPE.TRANSFER_IN,
-  warehouse = null,
-  products,
-  imageUrls,
-  role,
-  today,
-  repository,
-  onSaved,
-  onClose,
-}) {
-  const receive = type === MOVEMENT_TYPE.IN
-  const verb = receive ? 'รับเข้า' : 'โอนเข้า'
-  const warehouseId = receive ? '' : warehouse.id
+// products = สินค้าที่เปิดใช้งานทั้งหมด
+export default function BulkReceivePanel({ products, imageUrls, role, today, repository, onSaved, onClose }) {
   const [query, setQuery] = useState('')
-  // เริ่มที่สินค้าที่แสดงในคลังนี้ ติ๊กออกเพื่อเลือกจากสินค้าทั้งหมดในคลังใหญ่
-  const [onlyListed, setOnlyListed] = useState(true)
   const [quantities, setQuantities] = useState({})
   const [movementDate, setMovementDate] = useState(today)
   const [note, setNote] = useState('')
@@ -34,9 +17,7 @@ export default function BulkTransferPanel({
   const [saving, setSaving] = useState(false)
   const [serverError, setServerError] = useState(null)
 
-  // รับเข้าเลือกได้จากสินค้าทั้งหมดเสมอ
-  const listed = receive ? products : products.filter((p) => p.warehouseIds?.includes(warehouseId))
-  const rows = searchProducts(onlyListed ? listed : products, query).toSorted((a, b) => a.sku.localeCompare(b.sku, 'th'))
+  const rows = searchProducts(products, query).toSorted((a, b) => a.sku.localeCompare(b.sku, 'th'))
   const filled = Object.values(quantities).filter((q) => String(q).trim() !== '').length
 
   const setQuantity = (id, value) => {
@@ -54,7 +35,7 @@ export default function BulkTransferPanel({
       setServerError('วันที่ต้องไม่เป็นวันในอนาคต')
       return
     }
-    const plan = planBulkMovements(quantities, products, { type, warehouseId }, role, today)
+    const plan = planBulkReceive(quantities, products, role, today)
     setErrors(plan.errors)
     if (Object.keys(plan.errors).length > 0) return
     if (plan.moves.length === 0) {
@@ -67,11 +48,10 @@ export default function BulkTransferPanel({
     for (const move of plan.moves) {
       const { error } = await repository.recordMovement({
         productId: move.productId,
-        type,
+        type: MOVEMENT_TYPE.IN,
         quantity: move.quantity,
         movementDate,
         note,
-        warehouseId,
       })
       if (error) {
         const product = products.find((p) => p.id === move.productId)
@@ -89,13 +69,13 @@ export default function BulkTransferPanel({
       saved += 1
     }
     setSaving(false)
-    onSaved(receive ? `รับเข้า ${saved} รายการแล้ว` : `โอนเข้าคลัง "${warehouse.name}" ${saved} รายการแล้ว`)
+    onSaved(`รับเข้า ${saved} รายการแล้ว`)
   }
 
   return (
     <div className="panel bulk-transfer">
       <div className="panel-head spread">
-        <span>{receive ? 'รับเข้าคลังใหญ่หลายรายการ' : `โอนเข้าคลัง ${warehouse.name} หลายรายการ`}</span>
+        <span>รับเข้าหลายรายการ</span>
         <button type="button" className="btn sm" onClick={onClose} disabled={saving}>
           ปิด
         </button>
@@ -106,15 +86,10 @@ export default function BulkTransferPanel({
           type="search"
           className="grow"
           placeholder="ค้นหาชื่อ / รหัส / บาร์โค้ด"
-          aria-label={`ค้นหาสินค้าที่จะ${verb}`}
+          aria-label="ค้นหาสินค้าที่จะรับเข้า"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {!receive && (
-          <label className="check">
-            <input type="checkbox" checked={onlyListed} onChange={(e) => setOnlyListed(e.target.checked)} /> เฉพาะสินค้าที่แสดงในคลังนี้
-          </label>
-        )}
         <label className="check">
           วันที่{' '}
           <input
@@ -123,18 +98,14 @@ export default function BulkTransferPanel({
             max={today}
             value={movementDate}
             onChange={(e) => setMovementDate(e.target.value)}
-            aria-label={`วันที่${verb}`}
+            aria-label="วันที่รับเข้า"
           />
         </label>
         <span className="hint">{formatThaiDate(movementDate)}</span>
       </div>
 
       {rows.length === 0 ? (
-        <p className="empty dim">
-          {!receive && onlyListed && listed.length === 0
-            ? 'ยังไม่มีสินค้าที่แสดงในคลังนี้ ติ๊กออกที่ "เฉพาะสินค้าที่แสดงในคลังนี้" เพื่อเลือกจากสินค้าทั้งหมด'
-            : 'ไม่พบสินค้า'}
-        </p>
+        <p className="empty dim">ไม่พบสินค้า</p>
       ) : (
         <div className="table-wrap bulk-transfer-table">
           <table>
@@ -143,9 +114,8 @@ export default function BulkTransferPanel({
                 <th className="thumb-col">รูป</th>
                 <th>รหัส</th>
                 <th>ชื่อสินค้า</th>
-                <th className="num">คลังใหญ่</th>
-                <th className="num">{receive ? 'รวม' : 'ในคลังนี้'}</th>
-                <th className="num">จำนวน{verb}</th>
+                <th className="num">คงเหลือ</th>
+                <th className="num">จำนวนรับเข้า</th>
               </tr>
             </thead>
             <tbody>
@@ -156,17 +126,15 @@ export default function BulkTransferPanel({
                   </td>
                   <td className="mono">{p.sku}</td>
                   <td>{p.name}</td>
-                  <td className="num">{formatQuantity(p.centralQty)}</td>
-                  <td className="num dim">{formatQuantity(receive ? p.onHand : quantityIn(p, warehouseId))}</td>
+                  <td className="num dim">{formatQuantity(p.onHand)}</td>
                   <td className="num">
                     <input
                       className="qty-input"
                       inputMode="decimal"
-                      aria-label={`จำนวน${verb} ${p.sku}`}
+                      aria-label={`จำนวนรับเข้า ${p.sku}`}
                       value={quantities[p.id] ?? ''}
                       onChange={(e) => setQuantity(p.id, e.target.value)}
-                      disabled={saving || (!receive && p.centralQty <= 0)}
-                      placeholder={!receive && p.centralQty <= 0 ? 'ไม่มีของ' : ''}
+                      disabled={saving}
                       aria-invalid={Boolean(errors[p.id])}
                     />{' '}
                     <span className="dim">{p.unit}</span>
@@ -182,14 +150,14 @@ export default function BulkTransferPanel({
       <div className="form-actions spread">
         <input
           className="grow"
-          placeholder={receive ? 'หมายเหตุ (ไม่บังคับ) เช่น ของเข้าจากโรงงาน' : 'หมายเหตุ (ไม่บังคับ) เช่น ประกอบเสร็จ'}
+          placeholder="หมายเหตุ (ไม่บังคับ) เช่น ของเข้าจากโรงงาน"
           aria-label="หมายเหตุ"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           disabled={saving}
         />
         <button type="button" className="btn primary" onClick={handleSave} disabled={saving || filled === 0}>
-          {saving ? 'กำลังบันทึก…' : `บันทึก${verb} ${filled} รายการ`}
+          {saving ? 'กำลังบันทึก…' : `บันทึกรับเข้า ${filled} รายการ`}
         </button>
       </div>
       {serverError && (

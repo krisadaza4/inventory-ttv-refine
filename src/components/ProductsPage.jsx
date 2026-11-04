@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { toIsoDate } from '../lib/dateFormat.js'
 import { PAGE } from '../lib/menu.js'
 import {
-  MOVEMENT_TYPE,
   NO_LOCATION,
   STOCK_STATUS,
   countByStockStatus,
@@ -13,9 +12,8 @@ import {
   searchProducts,
   sortProducts,
 } from '../lib/stockRules.js'
-import { exportFileName, productSheet, warehouseSheet } from '../lib/spreadsheet.js'
-import { productsInWarehouse } from '../lib/warehouses.js'
-import BulkTransferPanel from './BulkTransferPanel.jsx'
+import { exportFileName, productSheet } from '../lib/spreadsheet.js'
+import BulkReceivePanel from './BulkReceivePanel.jsx'
 import ExportButton from './ExportButton.jsx'
 import PageHead from './PageHead.jsx'
 import ProductTable from './ProductTable.jsx'
@@ -27,8 +25,6 @@ const NO_FILTERS = {
   location: '',
   unit: '',
   repairOnly: false,
-  // คลังย่อย: เฉพาะรายการที่มีของอยู่ในคลังนี้
-  inWarehouseOnly: false,
 }
 const DEFAULT_SORT = { key: 'status', dir: 'asc' }
 
@@ -47,13 +43,8 @@ function StatButton({ label, count, tone, pressed, onClick }) {
 }
 
 // หน้าสินค้าคงคลัง: กล่องสรุป, ค้นหา, ตัวกรอง (หมวดหมู่ สถานะ ที่เก็บ หน่วย รอซ่อม), ตาราง (design.md ข้อ 7)
-// warehouse = null คือคลังใหญ่ (สินค้าทั้งหมด) หรือคลังย่อยที่เลือก (เฉพาะสินค้าในคลังนั้น)
-// มือถือไม่มีเมนูคลังย่อย จึงมีแถบเลือกคลังด้านบน
 export default function ProductsPage({
-  warehouse = null,
-  warehouses = [],
-  onPickWarehouse,
-  products: allActive,
+  products,
   imageUrls,
   loadState,
   loadError,
@@ -64,27 +55,16 @@ export default function ProductsPage({
   repository,
 }) {
   const [query, setQuery] = useState('')
-  // แผงบันทึกหลายรายการ: คลังใหญ่ = รับเข้า, คลังย่อย = โอนเข้า
+  // แผงรับเข้าหลายรายการ
   const [bulkOpen, setBulkOpen] = useState(false)
   const [notice, setNotice] = useState(null)
   const [filters, setFilters] = useState(NO_FILTERS)
   const [sort, setSort] = useState(DEFAULT_SORT)
 
-  // คลังย่อย: สถานะ/เรียง/กรองใช้ยอด "ขายได้" จึงใส่ไว้ที่ onHand ของแถว
-  const products = warehouse
-    ? productsInWarehouse(allActive, warehouse.id).map((p) => ({ ...p, onHand: p.sellable }))
-    : allActive
-
   const counts = countByStockStatus(products)
   const locations = listLocations(products)
   const units = listUnits(products)
-  // คลังย่อยแสดงสินค้าที่ผูกไว้ทั้งหมด (ขายได้จากคลังใหญ่) แต่กล่องแรกนับเฉพาะที่มีของอยู่ในคลังนี้จริง
-  const inWarehouseCount = warehouse ? products.filter((p) => p.inWarehouse > 0).length : 0
-  const visible = sortProducts(
-    filterProducts(searchProducts(products, query), filters).filter((p) => !filters.inWarehouseOnly || p.inWarehouse > 0),
-    sort.key,
-    sort.dir,
-  )
+  const visible = sortProducts(filterProducts(searchProducts(products, query), filters), sort.key, sort.dir)
   const filtered = query.trim() !== '' || Object.keys(NO_FILTERS).some((k) => filters[k] !== NO_FILTERS[k])
 
   // กดกล่องสถานะเดิมซ้ำ = กลับไปดูทั้งหมด
@@ -101,7 +81,6 @@ export default function ProductsPage({
     <>
       <PageHead
         page={PAGE.PRODUCTS}
-        title={warehouse ? `คลัง ${warehouse.name}` : undefined}
         actions={
           <div className="head-actions">
             {repository && (
@@ -114,21 +93,13 @@ export default function ProductsPage({
                 }}
                 disabled={bulkOpen || loadState !== 'ready'}
               >
-                {warehouse ? (
-                  <>
-                    <span aria-hidden="true">⇢</span> โอนเข้าหลายรายการ
-                  </>
-                ) : (
-                  <>
-                    <span aria-hidden="true">＋</span> รับเข้าหลายรายการ
-                  </>
-                )}
+                <span aria-hidden="true">＋</span> รับเข้าหลายรายการ
               </button>
             )}
             <ExportButton
-              fileName={exportFileName(warehouse ? `warehouse-${warehouse.name}` : 'products', toIsoDate(new Date()))}
-              sheetName={warehouse ? `คลัง ${warehouse.name}` : 'สินค้าคงคลัง'}
-              buildSheet={() => ({ sheetData: warehouse ? warehouseSheet(visible) : productSheet(visible) })}
+              fileName={exportFileName('products', toIsoDate(new Date()))}
+              sheetName="สินค้าคงคลัง"
+              buildSheet={() => ({ sheetData: productSheet(visible) })}
               disabled={loadState !== 'ready' || visible.length === 0}
             />
             <button type="button" className="btn btn-icon" onClick={onRetry} disabled={loadState === 'loading'}>
@@ -139,25 +110,6 @@ export default function ProductsPage({
         }
       />
 
-      {warehouses.length > 0 && (
-        <div className="wh-tabs" role="group" aria-label="เลือกคลัง">
-          <button type="button" className="btn sm" aria-pressed={!warehouse} onClick={() => onPickWarehouse('')}>
-            คลังใหญ่
-          </button>
-          {warehouses.map((w) => (
-            <button
-              key={w.id}
-              type="button"
-              className="btn sm"
-              aria-pressed={warehouse?.id === w.id}
-              onClick={() => onPickWarehouse(w.id)}
-            >
-              {w.name}
-            </button>
-          ))}
-        </div>
-      )}
-
       {notice && (
         <p className="notice" role="status">
           {notice}
@@ -165,10 +117,8 @@ export default function ProductsPage({
       )}
 
       {bulkOpen && (
-        <BulkTransferPanel
-          type={warehouse ? MOVEMENT_TYPE.TRANSFER_IN : MOVEMENT_TYPE.IN}
-          warehouse={warehouse}
-          products={allActive}
+        <BulkReceivePanel
+          products={products}
           imageUrls={imageUrls}
           role={role}
           today={today}
@@ -185,24 +135,9 @@ export default function ProductsPage({
         />
       )}
 
-      {warehouse && (
-        <p className="hint wh-hint">
-          ขายได้ = ของในคลังนี้ + คลังใหญ่ · ขายแล้วตัดของในคลังนี้ก่อน ไม่พอจึงตัดคลังใหญ่ · ของในคลังนี้คลังอื่นขายไม่ได้
-        </p>
-      )}
-
       {/* กดกล่องเพื่อกรองตามสถานะ กดซ้ำหรือกด "สินค้าทั้งหมด" เพื่อดูทั้งหมด */}
       <div className="stats">
-        {warehouse ? (
-          <StatButton
-            label="มีของในคลังนี้"
-            count={inWarehouseCount}
-            pressed={filters.inWarehouseOnly}
-            onClick={() => setFilters((current) => ({ ...current, inWarehouseOnly: !current.inWarehouseOnly }))}
-          />
-        ) : (
-          <StatButton label="สินค้าทั้งหมด" count={counts.total} pressed={filters.status === ''} onClick={() => showStatus('')} />
-        )}
+        <StatButton label="สินค้าทั้งหมด" count={counts.total} pressed={filters.status === ''} onClick={() => showStatus('')} />
         <StatButton
           label="ใกล้หมด"
           count={counts[STOCK_STATUS.LOW]}
@@ -308,11 +243,7 @@ export default function ProductsPage({
         )}
         {loadState === 'ready' && visible.length === 0 && (
           <p className="empty dim">
-            {filtered
-              ? 'ไม่พบสินค้าที่ตรงกับเงื่อนไข'
-              : warehouse
-                ? 'ยังไม่มีสินค้าในคลังนี้ (กด "โอนเข้าหลายรายการ" ด้านบน หรือตั้ง "แสดงในคลัง" ที่หน้าจัดการสินค้า)'
-                : 'ยังไม่มีสินค้า'}
+            {filtered ? 'ไม่พบสินค้าที่ตรงกับเงื่อนไข' : 'ยังไม่มีสินค้า'}
           </p>
         )}
         {loadState === 'ready' && visible.length > 0 && (
@@ -322,7 +253,6 @@ export default function ProductsPage({
             onMove={onMove}
             sort={sort}
             onSort={sortBy}
-            warehouse={warehouse}
           />
         )}
 

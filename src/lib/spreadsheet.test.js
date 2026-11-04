@@ -4,8 +4,6 @@ import {
   exportFileName,
   movementSheet,
   productSheet,
-  warehouseSalesSheet,
-  warehouseSheet,
 } from './spreadsheet.js'
 
 const values = (row) => row.map((cell) => cell.value)
@@ -42,8 +40,6 @@ describe('productSheet', () => {
       'ขายเฉลี่ย/เดือน',
       'สถานะสต็อก',
       'การใช้งาน',
-      'คลังใหญ่',
-      'ในคลังย่อย',
     ])
     expect(header.every((cell) => cell.fontWeight === 'bold')).toBe(true)
   })
@@ -60,11 +56,11 @@ describe('productSheet', () => {
     expect(first[7]).toMatchObject({ value: 3, type: Number })
     expect(first[8]).toMatchObject({ value: 10, type: Number })
     expect(first[9]).toMatchObject({ value: 12.5, type: Number })
-    expect(values(first).slice(10)).toEqual(['ใกล้หมด', 'ใช้งาน', 4, 0])
+    expect(values(first).slice(10)).toEqual(['ใกล้หมด', 'ใช้งาน'])
     expect(second[6].value).toBe(2.5)
     expect(second[7].value).toBe(0)
     expect(second[9]).toMatchObject({ value: '', type: String })
-    expect(values(second).slice(10)).toEqual(['ปกติ', 'ปิดใช้งาน', 2.5, 0])
+    expect(values(second).slice(10)).toEqual(['ปกติ', 'ปิดใช้งาน'])
   })
 
   it('ไม่มีบาร์โค้ด เป็นช่องว่าง', () => {
@@ -113,14 +109,13 @@ describe('movementSheet', () => {
       'หน่วย',
       'ผู้บันทึก',
       'หมายเหตุ',
-      'คลัง',
     ])
   })
 
   it('วันที่ พ.ศ., เวลาบันทึก (เวลาไทย), ประเภทไทย, จำนวนมีเครื่องหมายตามประเภท', () => {
     const [, out, adjust] = movementSheet(movements)
-    expect(values(out)).toEqual(['29 ก.ย. 2569', '29 ก.ย. 2569 09:05', '00123', 'น้ำดื่ม', 'เบิกออก', -3, 'ขวด', 'มานี', '', 'คลังใหญ่'])
-    expect(values(adjust)).toEqual(['28 ก.ย. 2569', '', 'US-2', 'สบู่', 'ปรับยอด', -1.5, 'ก้อน', 'สมชาย', 'นับสต็อก', 'คลังใหญ่'])
+    expect(values(out)).toEqual(['29 ก.ย. 2569', '29 ก.ย. 2569 09:05', '00123', 'น้ำดื่ม', 'เบิกออก', -3, 'ขวด', 'มานี', ''])
+    expect(values(adjust)).toEqual(['28 ก.ย. 2569', '', 'US-2', 'สบู่', 'ปรับยอด', -1.5, 'ก้อน', 'สมชาย', 'นับสต็อก'])
     expect(out[2].type).toBe(String)
     expect(out[5].type).toBe(Number)
   })
@@ -200,63 +195,3 @@ describe('backupSheets', () => {
   })
 })
 
-describe('warehouseSheet', () => {
-  it('คลังย่อย: ในคลังนี้ และขายได้', () => {
-    const rows = [{ sku: 'A-1', name: 'เอ', category: 'x', unit: 'ชิ้น', inWarehouse: 2, onHand: 7, reorderPoint: 1 }]
-    const [head, row] = warehouseSheet(rows)
-    expect(values(head).slice(6)).toEqual(['ในคลังนี้', 'ขายได้ (รวมคลังใหญ่)', 'สถานะสต็อก'])
-    expect(values(row).slice(6)).toEqual([2, 7, 'ปกติ'])
-  })
-})
-
-describe('movementSheet คลัง', () => {
-  it('ระบุชื่อคลังย่อย', () => {
-    const [, row] = movementSheet([
-      { movementDate: '2026-10-05', productSku: 'A', productName: 'เอ', type: 'transfer_in', quantity: 3, unit: 'ชิ้น', recordedByName: 'ก', note: null, warehouseName: 'Online' },
-    ])
-    expect(values(row).slice(4)).toEqual(['โอนเข้าคลังย่อย', 3, 'ชิ้น', 'ก', '', 'Online'])
-  })
-})
-
-describe('backupSheets คลังย่อย', () => {
-  const products = [
-    { id: 'p1', sku: 'A-1', name: 'เอ', category: 'x', unit: 'ชิ้น', reorderPoint: 0, onHand: 5, active: true },
-    { id: 'p2', sku: 'B-2', name: 'บี', category: 'x', unit: 'ชิ้น', reorderPoint: 0, onHand: 1, active: true },
-  ]
-  const warehouses = [
-    { id: 'w1', name: 'Online', active: true },
-    { id: 'w2', name: 'อะไหล่', active: false },
-  ]
-  const links = [{ productId: 'p1', warehouseId: 'w1' }]
-  // p2 ไม่ได้ผูกแต่ยังมียอดค้างใน Online
-  const warehouseStock = [
-    { warehouseId: 'w1', productId: 'p1', quantity: 2 },
-    { warehouseId: 'w1', productId: 'p2', quantity: 1 },
-  ]
-
-  it('เพิ่มแผ่นคลังย่อย: สินค้าที่ผูกหรือมียอด และคลังที่ยังไม่มีสินค้า', () => {
-    const sheets = backupSheets({ products, movements: [], sales: [], warehouses, links, warehouseStock })
-    expect(sheets.map((s) => s.sheet)).toEqual(['สินค้า', 'ประวัติ', 'ยอดขายรายเดือน', 'คลังย่อย'])
-    const [head, ...rows] = sheets[3].data
-    expect(values(head)).toEqual(['คลัง', 'สถานะคลัง', 'รหัสสินค้า', 'ชื่อสินค้า', 'แสดงในคลัง', 'ยอดในคลังนี้', 'รหัสระบบคลัง'])
-    expect(rows.map(values)).toEqual([
-      ['Online', 'ใช้งาน', 'A-1', 'เอ', 'ใช่', 2, 'w1'],
-      ['Online', 'ใช้งาน', 'B-2', 'บี', 'ไม่', 1, 'w1'],
-      ['อะไหล่', 'ปิดใช้งาน', '', '', '', '', 'w2'],
-    ])
-  })
-})
-
-describe('warehouseSalesSheet', () => {
-  it('แถวละคลัง 12 เดือน + รวม และแถวรวมทุกคลัง', () => {
-    const months = Array(12).fill(0)
-    const sheet = warehouseSalesSheet({
-      rows: [{ id: '', name: 'คลังใหญ่', months: [2, ...months.slice(1)], total: 2 }],
-      totals: { months: [2, ...months.slice(1)], total: 2 },
-    })
-    expect(values(sheet[0])).toHaveLength(14)
-    expect(values(sheet[1])[0]).toBe('คลังใหญ่')
-    expect(values(sheet[2])[0]).toBe('รวมทุกคลัง')
-    expect(values(sheet[2])[13]).toBe(2)
-  })
-})

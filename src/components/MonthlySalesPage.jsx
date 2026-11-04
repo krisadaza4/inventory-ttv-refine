@@ -10,16 +10,12 @@ import PageHead from './PageHead.jsx'
 import ProductThumb from './ProductThumb.jsx'
 import RefreshIcon from './RefreshIcon.jsx'
 import SortHead from './SortHead.jsx'
-import WarehouseSales from './WarehouseSales.jsx'
 
 // คลิกหัวคอลัมน์เพื่อเรียง: ตัวเลขเริ่มจากมาก → น้อย รหัสเริ่มจาก ก → ฮ
 const firstDir = (key) => (key === 'sku' ? 'asc' : 'desc')
 
 // หน้ายอดขายรายเดือน: ตาราง สินค้า × 12 เดือน ค่าจากไฟล์สต็อกของร้าน (นำเข้าในหน้าจัดการสินค้า)
-// และมุมมอง "แยกตามคลัง" คำนวณจากประวัติเบิกออกในระบบ (WarehouseSales)
-export default function MonthlySalesPage({ allProducts, warehouses = [], imageUrls, loadState, repository }) {
-  // 'products' | 'warehouses'
-  const [view, setView] = useState('products')
+export default function MonthlySalesPage({ allProducts, imageUrls, loadState, repository }) {
   const [sales, setSales] = useState([])
   // 'loading' | 'ready' | 'error'
   const [salesState, setSalesState] = useState('loading')
@@ -64,15 +60,12 @@ export default function MonthlySalesPage({ allProducts, warehouses = [], imageUr
         page={PAGE.SALES}
         actions={
           <div className="head-actions">
-            {/* มุมมองแยกตามคลังมีปุ่มส่งออกของตัวเอง */}
-            {view === 'products' && (
-              <ExportButton
-                fileName={`inventory-sales-${shownYear ? toBuddhistYear(shownYear) : ''}-${toIsoDate(new Date())}.xlsx`}
-                sheetName={`ยอดขาย ${shownYear ? toBuddhistYear(shownYear) : ''}`}
-                buildSheet={() => ({ sheetData: monthlySalesSheet(visible) })}
-                disabled={!ready || visible.length === 0}
-              />
-            )}
+            <ExportButton
+              fileName={`inventory-sales-${shownYear ? toBuddhistYear(shownYear) : ''}-${toIsoDate(new Date())}.xlsx`}
+              sheetName={`ยอดขาย ${shownYear ? toBuddhistYear(shownYear) : ''}`}
+              buildSheet={() => ({ sheetData: monthlySalesSheet(visible) })}
+              disabled={!ready || visible.length === 0}
+            />
             <button
               type="button"
               className="btn btn-icon"
@@ -89,20 +82,6 @@ export default function MonthlySalesPage({ allProducts, warehouses = [], imageUr
         }
       />
 
-      <div className="view-tabs" role="group" aria-label="มุมมอง">
-        <button type="button" className="btn sm" aria-pressed={view === 'products'} onClick={() => setView('products')}>
-          ตามสินค้า (ไฟล์ของร้าน)
-        </button>
-        <button type="button" className="btn sm" aria-pressed={view === 'warehouses'} onClick={() => setView('warehouses')}>
-          แยกตามคลัง (จากประวัติ)
-        </button>
-      </div>
-
-      {view === 'warehouses' ? (
-        <div className="panel">
-          <WarehouseSales warehouses={warehouses} repository={repository} />
-        </div>
-      ) : (
       <div className="panel">
         <div className="toolbar">
           <input
@@ -195,7 +174,6 @@ export default function MonthlySalesPage({ allProducts, warehouses = [], imageUr
           </div>
         )}
       </div>
-      )}
     </>
   )
 }
