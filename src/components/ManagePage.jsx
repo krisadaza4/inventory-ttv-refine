@@ -8,6 +8,7 @@ import { filterByCategory, listCategories, searchProducts } from '../lib/stockRu
 import BackupButton from './BackupButton.jsx'
 import BulkCategoryBar from './BulkCategoryBar.jsx'
 import BulkWarehouseBar from './BulkWarehouseBar.jsx'
+import ImageSheetUpdate from './ImageSheetUpdate.jsx'
 import PageHead from './PageHead.jsx'
 import ProductDialog from './ProductDialog.jsx'
 import ProductForm from './ProductForm.jsx'
@@ -59,7 +60,7 @@ export default function ManagePage({
   // แถวที่เพิ่งแก้: ไฮไลต์สั้น ๆ หลังปิดหน้าต่าง
   const [flashId, setFlashId] = useState(null)
   const [notice, setNotice] = useState(null)
-  // null | 'express' (รายการจาก Express) | 'stock' (ไฟล์สต็อก รูป + ยอด) | 'reorder' (ตั้งจุดสั่งซื้อ) | 'warehouses' (คลังย่อย)
+  // null | 'express' (รายการจาก Express) | 'stock' (ไฟล์สต็อก รูป + ยอด) | 'images' (แทนที่รูปจากไฟล์) | 'reorder' (ตั้งจุดสั่งซื้อ) | 'warehouses' (คลังย่อย)
   const [importing, setImporting] = useState(null)
   // วันที่สำรองข้อมูลล่าสุดของเครื่องนี้ เกิน 7 วัน (หรือไม่เคย) แสดงแถบเตือน
   const [lastBackup, setLastBackup] = useState(() => readLastBackup())
@@ -207,6 +208,9 @@ export default function ManagePage({
             <button type="button" className="btn btn-stock" onClick={() => setImporting('stock')} disabled={importing !== null}>
               นำเข้าไฟล์สต็อก
             </button>
+            <button type="button" className="btn btn-stock" onClick={() => setImporting('images')} disabled={importing !== null}>
+              อัปเดตรูปจากไฟล์
+            </button>
             <button type="button" className="btn btn-express" onClick={() => setImporting('express')} disabled={importing !== null}>
               นำเข้าจาก Express
             </button>
@@ -252,6 +256,22 @@ export default function ManagePage({
               setImporting(null)
             }
             onChanged()
+          }}
+          onClose={() => setImporting(null)}
+        />
+      )}
+
+      {importing === 'images' && (
+        <ImageSheetUpdate
+          allProducts={allProducts}
+          imageUrls={imageUrls}
+          repository={repository}
+          onDone={(message, changed) => {
+            if (message) {
+              setNotice(message)
+              setImporting(null)
+            }
+            if (changed) onChanged()
           }}
           onClose={() => setImporting(null)}
         />

@@ -8,6 +8,7 @@ import {
   openingNote,
   parseRels,
   parseStockSheet,
+  planImageUpdate,
   planStockImport,
   productLookup,
   readSheetImages,
@@ -165,5 +166,42 @@ describe('รูปที่ฝังในไฟล์', () => {
     expect(imageTypeOf('xl/media/a.PNG')).toBe('image/png')
     expect(imageTypeOf('xl/media/a.jpeg')).toBe('image/jpeg')
     expect(imageTypeOf('xl/media/a.emf')).toBeNull()
+  })
+})
+
+describe('planImageUpdate', () => {
+  const products = [
+    { id: 'p1', sku: 'GL-101R', legacySku: 'GL-101 R', imagePath: 'p1/old.jpg' },
+    { id: 'p2', sku: 'BLR-02-A01', legacySku: null, imagePath: null },
+  ]
+  const images = new Map([
+    [3, 'xl/media/image1.png'],
+    [4, 'xl/media/image2.jpeg'],
+    [6, 'xl/media/image9.emf'],
+  ])
+
+  it('จับคู่ทั้งรหัสปัจจุบันและรหัสเดิม แยกที่ไม่พบสินค้าและที่ไม่มีรูป', () => {
+    const items = [
+      { row: 3, code: 'GL-101 R' },
+      { row: 4, code: 'blr-02-a01' },
+      { row: 5, code: 'NOPE-1' },
+      { row: 6, code: 'GL-101R' },
+    ]
+    const plan = planImageUpdate(items, images, products)
+    expect(plan.updates.map((u) => [u.sku, u.imagePath])).toEqual([
+      ['GL-101R', 'xl/media/image1.png'],
+      ['BLR-02-A01', 'xl/media/image2.jpeg'],
+    ])
+    expect(plan.notFound).toEqual(['NOPE-1'])
+    // รูป emf เบราว์เซอร์เปิดไม่ได้ นับเป็นไม่มีรูป
+    expect(plan.noImage).toEqual(['GL-101R'])
+  })
+
+  it('สินค้าเดียวกันซ้ำในไฟล์ ใช้แถวแรก', () => {
+    const items = [
+      { row: 3, code: 'GL-101R' },
+      { row: 4, code: 'GL-101 R' },
+    ]
+    expect(planImageUpdate(items, images, products).updates).toHaveLength(1)
   })
 })

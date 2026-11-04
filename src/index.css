@@ -2537,3 +2537,56 @@ tbody tr.flash {
     display: none;
   }
 }
+
+/* รูปสินค้าทั้งระบบ (อัพเดทถัดไปข้อ 2): ใหญ่ขึ้น และแสดงทั้งรูปตามสัดส่วนจริง ไม่ครอปให้เต็มกรอบ
+   ทุกขนาดใช้ contain บนพื้นขาวแบบเดียวกับรูปในตาราง (เดิม sm/md/lg ใช้ cover ทำให้รูปถูกตัดขอบ) */
+.thumb {
+  background: #fff;
+}
+
+.thumb img {
+  object-fit: contain;
+}
+
+.thumb.sm {
+  width: 44px;
+  height: 44px;
+}
+
+.thumb.md {
+  width: 88px;
+  height: 88px;
+}
+
+.thumb.lg {
+  width: 200px;
+  height: 200px;
+}
+
+.thumb.row {
+  width: 120px;
+  height: 120px;
+}
+
+/* ตารางยอดขาย: คอลัมน์รูปค้างซ้าย กว้างตามรูป */
+.sales-table {
+  --thumb-w: 136px;
+}
+
+@media (max-width: 640px) {
+  .thumb.row {
+    width: 88px;
+    height: 88px;
+  }
+
+  .thumb.lg {
+    width: 160px;
+    height: 160px;
+  }
+}
+
+@media (max-width: 760px) {
+  .sales-table {
+    --thumb-w: 62px;
+  }
+}

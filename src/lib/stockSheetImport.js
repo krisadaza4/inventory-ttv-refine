@@ -211,3 +211,28 @@ export const openingNote = (entry, fileName) =>
   `ยอดเริ่มต้นจากไฟล์ ${fileName} (ของดี ${entry.good}, รอซ่อม ${entry.repair})`
 
 export { skuKey }
+
+// อัปเดตรูปอย่างเดียว: จับคู่รหัสในไฟล์กับสินค้าในระบบ (รวมรหัสเดิม) ไม่แตะยอด/โลเคชั่น/ยอดขาย
+// คืน { updates: [{ row, sku, product, imagePath }], notFound: [รหัส], noImage: [รหัส] }
+export function planImageUpdate(items, imagesByRow, products) {
+  const lookup = productLookup(products)
+  const plan = { updates: [], notFound: [], noImage: [] }
+  const seen = new Set()
+  for (const item of items) {
+    const product = lookup.get(skuKey(item.code))
+    if (!product) {
+      plan.notFound.push(item.code)
+      continue
+    }
+    const imagePath = imagesByRow.get(item.row) ?? null
+    if (!imagePath || !imageTypeOf(imagePath)) {
+      plan.noImage.push(item.code)
+      continue
+    }
+    // รหัสซ้ำในไฟล์ ใช้แถวแรก
+    if (seen.has(product.id)) continue
+    seen.add(product.id)
+    plan.updates.push({ row: item.row, sku: product.sku, product, imagePath })
+  }
+  return plan
+}
