@@ -4,7 +4,8 @@ import { toThaiError } from '../lib/supabaseErrors.js'
 const EMPTY_FIELDS = 'กรุณากรอกอีเมลและรหัสผ่าน'
 
 // ไม่มีลิงก์สมัครสมาชิก (เจ้าของร้านสร้างบัญชีให้) เข้าสู่ระบบสำเร็จแล้ว App รู้เองจาก onAuthStateChange
-export default function LoginForm({ auth }) {
+// notice = ข้อความแจ้งก่อนเข้าสู่ระบบ (เช่น ครบเวลาต้องเข้าสู่ระบบใหม่)
+export default function LoginForm({ auth, notice }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
@@ -31,6 +32,11 @@ export default function LoginForm({ auth }) {
     <form className="panel" onSubmit={handleSubmit} noValidate>
       <div className="panel-head">เข้าสู่ระบบ</div>
       <div className="panel-body">
+        {notice && !error && (
+          <p className="notice login-notice" role="status">
+            {notice}
+          </p>
+        )}
         {error && (
           <p className="alert" role="alert">
             {error}

@@ -81,6 +81,7 @@ describe('movementSheet', () => {
   const movements = [
     {
       movementDate: '2026-09-29',
+      createdAt: '2026-09-29T02:05:00Z',
       productSku: '00123',
       productName: 'น้ำดื่ม',
       type: 'out',
@@ -104,6 +105,7 @@ describe('movementSheet', () => {
   it('หัวคอลัมน์ภาษาไทย', () => {
     expect(values(movementSheet(movements)[0])).toEqual([
       'วันที่',
+      'บันทึกเมื่อ',
       'รหัสสินค้า',
       'ชื่อสินค้า',
       'ประเภท',
@@ -115,12 +117,12 @@ describe('movementSheet', () => {
     ])
   })
 
-  it('วันที่ พ.ศ., ประเภทไทย, จำนวนมีเครื่องหมายตามประเภท', () => {
+  it('วันที่ พ.ศ., เวลาบันทึก (เวลาไทย), ประเภทไทย, จำนวนมีเครื่องหมายตามประเภท', () => {
     const [, out, adjust] = movementSheet(movements)
-    expect(values(out)).toEqual(['29 ก.ย. 2569', '00123', 'น้ำดื่ม', 'เบิกออก', -3, 'ขวด', 'มานี', '', 'คลังใหญ่'])
-    expect(values(adjust)).toEqual(['28 ก.ย. 2569', 'US-2', 'สบู่', 'ปรับยอด', -1.5, 'ก้อน', 'สมชาย', 'นับสต็อก', 'คลังใหญ่'])
-    expect(out[1].type).toBe(String)
-    expect(out[4].type).toBe(Number)
+    expect(values(out)).toEqual(['29 ก.ย. 2569', '29 ก.ย. 2569 09:05', '00123', 'น้ำดื่ม', 'เบิกออก', -3, 'ขวด', 'มานี', '', 'คลังใหญ่'])
+    expect(values(adjust)).toEqual(['28 ก.ย. 2569', '', 'US-2', 'สบู่', 'ปรับยอด', -1.5, 'ก้อน', 'สมชาย', 'นับสต็อก', 'คลังใหญ่'])
+    expect(out[2].type).toBe(String)
+    expect(out[5].type).toBe(Number)
   })
 })
 
@@ -212,7 +214,7 @@ describe('movementSheet คลัง', () => {
     const [, row] = movementSheet([
       { movementDate: '2026-10-05', productSku: 'A', productName: 'เอ', type: 'transfer_in', quantity: 3, unit: 'ชิ้น', recordedByName: 'ก', note: null, warehouseName: 'Online' },
     ])
-    expect(values(row).slice(3)).toEqual(['โอนเข้าคลังย่อย', 3, 'ชิ้น', 'ก', '', 'Online'])
+    expect(values(row).slice(4)).toEqual(['โอนเข้าคลังย่อย', 3, 'ชิ้น', 'ก', '', 'Online'])
   })
 })
 

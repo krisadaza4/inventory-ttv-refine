@@ -1,4 +1,4 @@
-import { formatThaiDate } from './dateFormat.js'
+import { formatThaiDate, formatThaiDateTime } from './dateFormat.js'
 import { MONTH_LABELS, toBuddhistYear } from './monthlySales.js'
 import { MOVEMENT_LABEL, STOCK_STATUS, getStockStatus, signedQuantity } from './stockRules.js'
 
@@ -60,9 +60,10 @@ export function warehouseSheet(rows) {
 
 export function movementSheet(movements) {
   return [
-    header(['วันที่', 'รหัสสินค้า', 'ชื่อสินค้า', 'ประเภท', 'จำนวน (+/−)', 'หน่วย', 'ผู้บันทึก', 'หมายเหตุ', 'คลัง']),
+    header(['วันที่', 'บันทึกเมื่อ', 'รหัสสินค้า', 'ชื่อสินค้า', 'ประเภท', 'จำนวน (+/−)', 'หน่วย', 'ผู้บันทึก', 'หมายเหตุ', 'คลัง']),
     ...movements.map((m) => [
       text(formatThaiDate(m.movementDate)),
+      text(formatThaiDateTime(m.createdAt)),
       text(m.productSku),
       text(m.productName),
       text(MOVEMENT_LABEL[m.type]),

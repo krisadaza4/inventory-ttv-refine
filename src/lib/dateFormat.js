@@ -12,6 +12,32 @@ export function formatThaiDate(iso) {
   return `${Number(day)} ${monthName} ${Number(year) + 543}`
 }
 
+// เวลาที่บันทึกจริง (created_at เป็น timestamp UTC) แสดงเป็นเวลาไทยเสมอ ไม่ขึ้นกับเครื่องที่เปิด
+const BANGKOK_PARTS = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Bangkok',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+})
+
+// timestamp → { date: 'YYYY-MM-DD', time: 'HH:MM' } ตามเวลาไทย อ่านไม่ได้คืน null
+export function bangkokParts(timestamp) {
+  if (!timestamp) return null
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return null
+  const p = Object.fromEntries(BANGKOK_PARTS.formatToParts(date).map((part) => [part.type, part.value]))
+  return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` }
+}
+
+// timestamp → '8 ต.ค. 2569 13:45' (เวลาไทย) อ่านไม่ได้คืน ''
+export function formatThaiDateTime(timestamp) {
+  const parts = bangkokParts(timestamp)
+  return parts ? `${formatThaiDate(parts.date)} ${parts.time}` : ''
+}
+
 // แปลง Date เป็น 'YYYY-MM-DD' ตามวันที่ท้องถิ่น (ไม่ใช้ toISOString เพราะเป็น UTC)
 export function toIsoDate(date) {
   const yyyy = String(date.getFullYear()).padStart(4, '0')

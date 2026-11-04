@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { formatThaiDate, toIsoDate } from '../lib/dateFormat.js'
+import { bangkokParts, formatThaiDate, formatThaiDateTime, toIsoDate } from '../lib/dateFormat.js'
 import { PAGE } from '../lib/menu.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { PAGE_SIZE } from '../lib/repositories.js'
@@ -149,7 +149,7 @@ export default function HistoryPage({ allProducts, warehouses = [], repository }
             <table>
               <thead>
                 <tr>
-                  <th>วันที่</th>
+                  <th>วันที่ / เวลา</th>
                   <th>สินค้า</th>
                   <th className="hide-sm">ประเภท</th>
                   <th className="hide-sm">คลัง</th>
@@ -164,9 +164,20 @@ export default function HistoryPage({ allProducts, warehouses = [], repository }
                   // โอนระหว่างคลังไม่เปลี่ยนยอดรวม: แสดงจำนวนไม่มีเครื่องหมาย
                   const transfer = TRANSFER_TYPES.includes(m.type)
                   const where = warehouseText(m)
+                  // เวลาที่กดบันทึกจริง (เวลาไทย) ถ้าบันทึกย้อนหลังคนละวัน แสดงวันเวลาที่บันทึกเต็ม
+                  const recorded = bangkokParts(m.createdAt)
                   return (
                     <tr key={m.id}>
-                      <td className="nowrap">{formatThaiDate(m.movementDate)}</td>
+                      <td className="nowrap">
+                        {formatThaiDate(m.movementDate)}
+                        {recorded && (
+                          <div className="sub">
+                            {recorded.date === m.movementDate
+                              ? `${recorded.time} น.`
+                              : `บันทึก ${formatThaiDateTime(m.createdAt)} น.`}
+                          </div>
+                        )}
+                      </td>
                       <td>
                         {m.productName}
                         <div className="sub mono">{m.productSku}</div>

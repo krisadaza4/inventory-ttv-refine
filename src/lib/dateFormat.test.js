@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { formatThaiDate, toIsoDate } from './dateFormat.js'
+import { bangkokParts, formatThaiDate, formatThaiDateTime, toIsoDate } from './dateFormat.js'
+
+describe('bangkokParts / formatThaiDateTime', () => {
+  it('แปลงเวลา UTC เป็นเวลาไทย (+7)', () => {
+    expect(bangkokParts('2026-10-08T06:45:20.493Z')).toEqual({ date: '2026-10-08', time: '13:45' })
+    expect(formatThaiDateTime('2026-10-08T06:45:20.493Z')).toBe('8 ต.ค. 2569 13:45')
+  })
+
+  it('หลังเที่ยงคืนเวลาไทยเป็นวันถัดไป', () => {
+    expect(bangkokParts('2026-10-08T17:30:00+00:00')).toEqual({ date: '2026-10-09', time: '00:30' })
+  })
+
+  it('ว่างหรืออ่านไม่ได้', () => {
+    expect(bangkokParts(null)).toBeNull()
+    expect(bangkokParts('x')).toBeNull()
+    expect(formatThaiDateTime(undefined)).toBe('')
+  })
+})
 
 describe('formatThaiDate', () => {
   it('แปลง ISO ค.ศ. เป็น พ.ศ. แบบย่อ', () => {

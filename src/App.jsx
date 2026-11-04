@@ -11,6 +11,7 @@ import { toIsoDate } from './lib/dateFormat.js'
 import { PAGE, getMenu } from './lib/menu.js'
 import { LOGO_SIDE, checkImageFile, resizeImage } from './lib/productImages.js'
 import { createRepository } from './lib/repositories.js'
+import { SESSION_EXPIRED_MESSAGE, msUntilRelogin, reloginTimeout } from './lib/sessionLimit.js'
 import { canManageProducts } from './lib/roles.js'
 import { getSupabase } from './lib/supabaseClient.js'
 import { ERROR_MESSAGE, toThaiError } from './lib/supabaseErrors.js'
@@ -62,6 +63,8 @@ function App() {
   // เพิ่งเข้าสู่ระบบในหน้านี้ (จากออกจากระบบ → เข้าสู่ระบบ) ไม่ใช่เปิดหน้าโดยยังเข้าสู่ระบบค้างอยู่
   const [freshLogin, setFreshLogin] = useState(false)
   const wasSignedOut = useRef(false)
+  // ข้อความบนหน้าเข้าสู่ระบบ (เช่น ครบ 12 ชั่วโมงแล้ว)
+  const [loginNotice, setLoginNotice] = useState(null)
   const [signOutError, setSignOutError] = useState(null)
 
   // ตั้งธีมให้ <html> ก่อนวาดหน้าจอ เพื่อไม่ให้จอกะพริบ
@@ -74,12 +77,43 @@ function App() {
   useEffect(() => {
     if (!client) return undefined
     const { data } = client.auth.onAuthStateChange((_event, nextSession) => {
-      if (nextSession && wasSignedOut.current) setFreshLogin(true)
+      if (nextSession && wasSignedOut.current) {
+        setFreshLogin(true)
+        setLoginNotice(null)
+      }
       wasSignedOut.current = !nextSession
       setSession(nextSession)
     })
     return () => data.subscription.unsubscribe()
   }, [client])
+
+  // บังคับเข้าสู่ระบบใหม่ทุก 12 ชั่วโมง: ตั้งเวลาไว้ และตรวจซ้ำเมื่อกลับมาที่แท็บ (เครื่องหลับแล้วตัวจับเวลาอาจช้า)
+  // session ใหม่ (ต่ออายุ token ทุกชั่วโมง) ทำให้ตั้งเวลาใหม่เอง
+  useEffect(() => {
+    if (!client || !session) return undefined
+    const lastSignIn = session.user?.last_sign_in_at
+    const remaining = msUntilRelogin(lastSignIn)
+    if (remaining === null) return undefined
+    let done = false
+    const check = () => {
+      const left = msUntilRelogin(lastSignIn)
+      if (done || left === null || left > 0) return
+      done = true
+      wasSignedOut.current = true
+      setSession(null)
+      setLoginNotice(SESSION_EXPIRED_MESSAGE)
+      client.auth.signOut({ scope: 'local' }).catch(() => {})
+    }
+    const timer = setTimeout(check, reloginTimeout(remaining))
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') check()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [client, session])
 
   const handleToggleTheme = () => {
     const next = toggleTheme(theme)
@@ -131,7 +165,7 @@ function App() {
   if (session === null) {
     return (
       <Gate {...gateProps}>
-        <LoginForm auth={client.auth} />
+        <LoginForm auth={client.auth} notice={loginNotice} />
       </Gate>
     )
   }
