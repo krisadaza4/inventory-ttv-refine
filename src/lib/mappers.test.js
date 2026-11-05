@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toMovement, toProduct, toProductRow, toProfile } from './mappers.js'
+import { toMovement, toProduct, toProductRow, toProfile, visibleNote } from './mappers.js'
 
 describe('toProduct', () => {
   it('แปลงแถวจาก product_stock และแปลง numeric เป็นตัวเลข', () => {
@@ -156,5 +156,18 @@ describe('toProfile', () => {
 
   it('ไม่มีแถว คืน null', () => {
     expect(toProfile(null)).toBeNull()
+  })
+})
+
+describe('visibleNote', () => {
+  it('ซ่อนหมายเหตุอัตโนมัติจากการนำเข้ายอดเริ่มต้น', () => {
+    expect(visibleNote('ยอดเริ่มต้นจากไฟล์ 5-เตา KB นำเข้า.xlsx (ของดี 633, รอซ่อม 0)')).toBe('')
+    expect(toMovement({ note: 'ยอดเริ่มต้นจากไฟล์ a.xlsx (ของดี 1, รอซ่อม 0)' }).note).toBe('')
+  })
+
+  it('หมายเหตุอื่นแสดงตามเดิม', () => {
+    expect(visibleNote('ชิ้นส่วนชำรุด')).toBe('ชิ้นส่วนชำรุด')
+    expect(visibleNote('นับสต็อก ยอดเริ่มต้นจากไฟล์')).toBe('นับสต็อก ยอดเริ่มต้นจากไฟล์')
+    expect(visibleNote(null)).toBeNull()
   })
 })

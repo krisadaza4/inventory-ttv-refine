@@ -56,6 +56,15 @@ export function toProductRow(product) {
 }
 
 // แถวจาก record_movement ไม่มี product/recorder ที่ join มา
+// หมายเหตุอัตโนมัติจากการนำเข้ายอดเริ่มต้น ("ยอดเริ่มต้นจากไฟล์ … (ของดี …, รอซ่อม …)")
+// ผู้ใช้สั่งไม่ให้แสดง (2026-11-05) แต่ฐานข้อมูลยังเก็บไว้ เพราะรายการปรับยอดต้องมีหมายเหตุ
+// ซ่อนตรงนี้ที่เดียว หน้าประวัติ ไฟล์ Excel และไฟล์สำรองจึงเห็นเป็นช่องว่างเหมือนกัน
+export const IMPORT_NOTE_PREFIX = 'ยอดเริ่มต้นจากไฟล์'
+
+export function visibleNote(note) {
+  return typeof note === 'string' && note.startsWith(IMPORT_NOTE_PREFIX) ? '' : note
+}
+
 export function toMovement(row) {
   return {
     id: row.id,
@@ -63,7 +72,7 @@ export function toMovement(row) {
     type: row.type,
     quantity: toNumber(row.quantity),
     movementDate: row.movement_date,
-    note: row.note,
+    note: visibleNote(row.note),
     createdBy: row.created_by,
     createdAt: row.created_at,
     productName: row.product?.name ?? '',
