@@ -9,6 +9,7 @@ import { LEGACY_TRANSFER_TYPES, MOVEMENT_LABEL, MOVEMENT_TYPE, REPAIR_FILTER, si
 import ExportButton from './ExportButton.jsx'
 import PageHead from './PageHead.jsx'
 import RefreshIcon from './RefreshIcon.jsx'
+import ThaiDateInput from './ThaiDateInput.jsx'
 
 const TYPE_LABEL = MOVEMENT_LABEL
 
@@ -137,24 +138,28 @@ export default function HistoryPage({ allProducts, repository }) {
           </select>
         </div>
         <div className="toolbar date-range" role="group" aria-label="ช่วงวันที่">
-          <label className="date-field">
+          <div className="date-field">
             <span>ตั้งแต่</span>
-            <input
-              type="date"
+            <ThaiDateInput
+              ariaLabel="ตั้งแต่วันที่"
+              placeholder="ไม่จำกัด"
+              clearable
               value={range.from}
               max={range.to || undefined}
-              onChange={(e) => changeRange({ ...range, from: e.target.value })}
+              onChange={(from) => changeRange({ ...range, from })}
             />
-          </label>
-          <label className="date-field">
+          </div>
+          <div className="date-field">
             <span>ถึง</span>
-            <input
-              type="date"
+            <ThaiDateInput
+              ariaLabel="ถึงวันที่"
+              placeholder="ไม่จำกัด"
+              clearable
               value={range.to}
               min={range.from || undefined}
-              onChange={(e) => changeRange({ ...range, to: e.target.value })}
+              onChange={(to) => changeRange({ ...range, to })}
             />
-          </label>
+          </div>
           <div className="view-tabs" role="group" aria-label="ช่วงวันที่ลัด">
             {DATE_PRESETS.map((p) => (
               <button
@@ -173,7 +178,7 @@ export default function HistoryPage({ allProducts, repository }) {
               aria-pressed={!range.from && !range.to}
               onClick={() => changeRange({ from: '', to: '' })}
             >
-              ทุกวันที่
+              ไม่กรองวันที่
             </button>
           </div>
         </div>

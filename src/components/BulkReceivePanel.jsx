@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { planBulkReceive } from '../lib/bulkReceive.js'
-import { formatThaiDate } from '../lib/dateFormat.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { MOVEMENT_TYPE, searchProducts } from '../lib/stockRules.js'
 import ProductThumb from './ProductThumb.jsx'
+import ThaiDateInput from './ThaiDateInput.jsx'
 
 // รับเข้าหลายรายการในครั้งเดียว ใส่จำนวนในตาราง กดบันทึกครั้งเดียว เช่น ของเข้าจากโรงงานหลายรุ่น
 // บันทึกทีละรายการผ่าน record_movement รายการไหนผิดพลาดหยุดทันที รายการก่อนหน้าบันทึกไปแล้ว
@@ -90,18 +90,10 @@ export default function BulkReceivePanel({ products, imageUrls, role, today, rep
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <label className="check">
-          วันที่{' '}
-          <input
-            type="date"
-            className="short"
-            max={today}
-            value={movementDate}
-            onChange={(e) => setMovementDate(e.target.value)}
-            aria-label="วันที่รับเข้า"
-          />
-        </label>
-        <span className="hint">{formatThaiDate(movementDate)}</span>
+        <div className="date-field">
+          <span>วันที่</span>
+          <ThaiDateInput ariaLabel="วันที่รับเข้า" max={today} value={movementDate} onChange={setMovementDate} />
+        </div>
       </div>
 
       {rows.length === 0 ? (

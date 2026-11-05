@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { formatThaiDate } from '../lib/dateFormat.js'
 import { PAGE } from '../lib/menu.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import {
@@ -17,6 +16,7 @@ import {
 import PageHead from './PageHead.jsx'
 import ProductThumb from './ProductThumb.jsx'
 import StockBadge from './StockBadge.jsx'
+import ThaiDateInput from './ThaiDateInput.jsx'
 
 const TYPE_LABEL = MOVEMENT_LABEL
 
@@ -201,16 +201,14 @@ export default function MovementPage({
             วันที่
           </label>
           <div>
-            <input
+            <ThaiDateInput
               id="move-date"
-              type="date"
-              className="short"
               max={today}
               value={movementDate}
-              onChange={(e) => setMovementDate(e.target.value)}
-              aria-invalid={Boolean(errors.movementDate)}
+              onChange={setMovementDate}
+              invalid={Boolean(errors.movementDate)}
             />{' '}
-            <span className="hint">{formatThaiDate(movementDate)} · ห้ามเลือกวันในอนาคต</span>
+            <span className="hint">ห้ามเลือกวันในอนาคต</span>
             <FieldError message={errors.movementDate} />
           </div>
 
