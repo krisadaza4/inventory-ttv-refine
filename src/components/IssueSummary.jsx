@@ -61,7 +61,8 @@ export default function IssueSummary({ repository, productId, range, attempt }) 
   }
 
   const summary = summarizeIssues(movements, { byRecorder })
-  const cols = byRecorder ? 6 : 5
+  // คอลัมน์: สินค้า, (ผู้บันทึก), เช้า, บ่าย, รวม
+  const cols = byRecorder ? 5 : 4
 
   return (
     <>
