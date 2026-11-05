@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   backupSheets,
   exportFileName,
+  issueSummarySheet,
   movementSheet,
   productSheet,
 } from './spreadsheet.js'
@@ -102,6 +103,7 @@ describe('movementSheet', () => {
     expect(values(movementSheet(movements)[0])).toEqual([
       'วันที่',
       'เวลา',
+      'ช่วง',
       'รหัสสินค้า',
       'ชื่อสินค้า',
       'ประเภท',
@@ -115,14 +117,15 @@ describe('movementSheet', () => {
   it('บันทึกย้อนหลังคนละวัน: คอลัมน์เวลาใส่วันที่บันทึกด้วย', () => {
     const [, late] = movementSheet([{ ...movements[0], movementDate: '2026-09-27' }])
     expect(values(late)[1]).toBe('29 ก.ย. 2569 09:05')
+    expect(values(late)[2]).toBe('เช้า')
   })
 
   it('วันที่ พ.ศ., เวลาบันทึก (เวลาไทย), ประเภทไทย, จำนวนมีเครื่องหมายตามประเภท', () => {
     const [, out, adjust] = movementSheet(movements)
-    expect(values(out)).toEqual(['29 ก.ย. 2569', '09:05', '00123', 'น้ำดื่ม', 'เบิกออก', -3, 'ขวด', 'มานี', ''])
-    expect(values(adjust)).toEqual(['28 ก.ย. 2569', '', 'US-2', 'สบู่', 'ปรับยอด', -1.5, 'ก้อน', 'สมชาย', 'นับสต็อก'])
-    expect(out[2].type).toBe(String)
-    expect(out[5].type).toBe(Number)
+    expect(values(out)).toEqual(['29 ก.ย. 2569', '09:05', 'เช้า', '00123', 'น้ำดื่ม', 'เบิกออก', -3, 'ขวด', 'มานี', ''])
+    expect(values(adjust)).toEqual(['28 ก.ย. 2569', '', '', 'US-2', 'สบู่', 'ปรับยอด', -1.5, 'ก้อน', 'สมชาย', 'นับสต็อก'])
+    expect(out[3].type).toBe(String)
+    expect(out[6].type).toBe(Number)
   })
 })
 
@@ -200,3 +203,24 @@ describe('backupSheets', () => {
   })
 })
 
+
+describe('issueSummarySheet', () => {
+  const summary = {
+    rows: [{ sku: 'A01', name: 'ฝา', recorder: 'Admin', morning: 3, afternoon: 2, total: 5, unit: 'ชิ้น' }],
+    total: { unit: 'ชิ้น', morning: 3, afternoon: 2, total: 5 },
+  }
+
+  it('หัวคอลัมน์ แถว และแถวรวม', () => {
+    const sheet = issueSummarySheet(summary)
+    expect(values(sheet[0])).toEqual(['รหัสสินค้า', 'ชื่อสินค้า', 'เช้า', 'บ่าย', 'รวม', 'หน่วย'])
+    expect(values(sheet[1])).toEqual(['A01', 'ฝา', 3, 2, 5, 'ชิ้น'])
+    expect(values(sheet[2])).toEqual(['รวมทั้งหมด', '', 3, 2, 5, 'ชิ้น'])
+  })
+
+  it('แยกตามผู้บันทึก มีคอลัมน์ผู้บันทึก', () => {
+    const sheet = issueSummarySheet({ ...summary, total: null }, { byRecorder: true })
+    expect(values(sheet[0])).toContain('ผู้บันทึก')
+    expect(values(sheet[1])).toEqual(['A01', 'ฝา', 'Admin', 3, 2, 5, 'ชิ้น'])
+    expect(sheet).toHaveLength(2)
+  })
+})

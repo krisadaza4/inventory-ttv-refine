@@ -1,4 +1,5 @@
 import { bangkokParts, formatThaiDate, formatThaiDateTime } from './dateFormat.js'
+import { PERIOD_LABEL, periodOf } from './dayPeriod.js'
 import { MONTH_LABELS, toBuddhistYear } from './monthlySales.js'
 import { MOVEMENT_LABEL, STOCK_STATUS, getStockStatus, signedQuantity } from './stockRules.js'
 
@@ -48,10 +49,11 @@ function recordedTime(m) {
 
 export function movementSheet(movements) {
   return [
-    header(['วันที่', 'เวลา', 'รหัสสินค้า', 'ชื่อสินค้า', 'ประเภท', 'จำนวน (+/−)', 'หน่วย', 'ผู้บันทึก', 'หมายเหตุ']),
+    header(['วันที่', 'เวลา', 'ช่วง', 'รหัสสินค้า', 'ชื่อสินค้า', 'ประเภท', 'จำนวน (+/−)', 'หน่วย', 'ผู้บันทึก', 'หมายเหตุ']),
     ...movements.map((m) => [
       text(formatThaiDate(m.movementDate)),
       text(recordedTime(m)),
+      text(PERIOD_LABEL[periodOf(m.createdAt)] ?? ''),
       text(m.productSku),
       text(m.productName),
       text(MOVEMENT_LABEL[m.type]),
@@ -61,6 +63,35 @@ export function movementSheet(movements) {
       text(m.note),
     ]),
   ]
+}
+
+// สรุปการเบิกออกช่วงเช้า-บ่าย: { rows, total } จาก summarizeIssues
+export function issueSummarySheet({ rows, total }, { byRecorder = false } = {}) {
+  const cols = ['รหัสสินค้า', 'ชื่อสินค้า', ...(byRecorder ? ['ผู้บันทึก'] : []), 'เช้า', 'บ่าย', 'รวม', 'หน่วย']
+  const sheet = [
+    header(cols),
+    ...rows.map((r) => [
+      text(r.sku),
+      text(r.name),
+      ...(byRecorder ? [text(r.recorder)] : []),
+      number(r.morning),
+      number(r.afternoon),
+      number(r.total),
+      text(r.unit),
+    ]),
+  ]
+  if (total) {
+    sheet.push([
+      text('รวมทั้งหมด'),
+      text(''),
+      ...(byRecorder ? [text('')] : []),
+      number(total.morning),
+      number(total.afternoon),
+      number(total.total),
+      text(total.unit),
+    ])
+  }
+  return sheet
 }
 
 // ยอดขายรายเดือน: rows จาก buildSalesRows (เดือนที่ไม่มีข้อมูลเป็นช่องว่าง)

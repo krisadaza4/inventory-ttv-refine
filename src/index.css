@@ -430,6 +430,16 @@ button:focus-visible {
   white-space: nowrap;
 }
 
+/* ประวัติ: แท็บสรุปการเบิกเช้า-บ่าย */
+.summary-bar {
+  align-items: center;
+}
+
+.issue-summary tfoot td {
+  border-top: 2px solid var(--border);
+  background: var(--surface-2);
+}
+
 /* ช่องเลือกวันที่ของแอป (ThaiDateInput): หน้าตาเหมือนช่องกรอก แสดง "1 ต.ค. 2569" */
 .thai-date {
   display: inline-flex;
