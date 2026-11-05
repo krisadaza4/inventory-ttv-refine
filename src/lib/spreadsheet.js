@@ -1,5 +1,4 @@
 import { bangkokParts, formatThaiDate, formatThaiDateTime } from './dateFormat.js'
-import { PERIOD_LABEL, periodOf } from './dayPeriod.js'
 import { MONTH_LABELS, toBuddhistYear } from './monthlySales.js'
 import { MOVEMENT_LABEL, STOCK_STATUS, getStockStatus, signedQuantity } from './stockRules.js'
 
@@ -49,11 +48,10 @@ function recordedTime(m) {
 
 export function movementSheet(movements) {
   return [
-    header(['วันที่', 'เวลา', 'ช่วง', 'รหัสสินค้า', 'ชื่อสินค้า', 'ประเภท', 'จำนวน (+/−)', 'หน่วย', 'ผู้บันทึก', 'หมายเหตุ']),
+    header(['วันที่', 'เวลา', 'รหัสสินค้า', 'ชื่อสินค้า', 'ประเภท', 'จำนวน (+/−)', 'หน่วย', 'ผู้บันทึก', 'หมายเหตุ', 'หมวดหมู่']),
     ...movements.map((m) => [
       text(formatThaiDate(m.movementDate)),
       text(recordedTime(m)),
-      text(PERIOD_LABEL[periodOf(m.createdAt)] ?? ''),
       text(m.productSku),
       text(m.productName),
       text(MOVEMENT_LABEL[m.type]),
@@ -61,6 +59,7 @@ export function movementSheet(movements) {
       text(m.unit),
       text(m.recordedByName),
       text(m.note),
+      text(m.productCategory),
     ]),
   ]
 }

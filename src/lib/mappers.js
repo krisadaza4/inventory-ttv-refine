@@ -2,7 +2,7 @@
 export const PRODUCT_COLUMNS = 'id, sku, barcode, name, category, unit, reorder_point, active, on_hand, image_path, location, avg_monthly_sales, repair_qty, legacy_sku'
 export const MOVEMENT_COLUMNS =
   'id, product_id, type, quantity, movement_date, note, created_by, created_at, ' +
-  'product:products(name, sku, unit), recorder:profiles(display_name)'
+  'product:products(name, sku, unit, category), recorder:profiles(display_name)'
 export const PROFILE_COLUMNS = 'id, display_name, role'
 export const MONTHLY_SALES_COLUMNS = 'product_id, year, month, quantity'
 
@@ -78,6 +78,7 @@ export function toMovement(row) {
     productName: row.product?.name ?? '',
     productSku: row.product?.sku ?? '',
     unit: row.product?.unit ?? '',
+    productCategory: row.product?.category ?? '',
     recordedByName: row.recorder?.display_name ?? '',
   }
 }

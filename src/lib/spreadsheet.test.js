@@ -86,6 +86,7 @@ describe('movementSheet', () => {
       unit: 'ขวด',
       recordedByName: 'มานี',
       note: null,
+      productCategory: 'เครื่องดื่ม',
     },
     {
       movementDate: '2026-09-28',
@@ -103,7 +104,6 @@ describe('movementSheet', () => {
     expect(values(movementSheet(movements)[0])).toEqual([
       'วันที่',
       'เวลา',
-      'ช่วง',
       'รหัสสินค้า',
       'ชื่อสินค้า',
       'ประเภท',
@@ -111,21 +111,21 @@ describe('movementSheet', () => {
       'หน่วย',
       'ผู้บันทึก',
       'หมายเหตุ',
+      'หมวดหมู่',
     ])
   })
 
   it('บันทึกย้อนหลังคนละวัน: คอลัมน์เวลาใส่วันที่บันทึกด้วย', () => {
     const [, late] = movementSheet([{ ...movements[0], movementDate: '2026-09-27' }])
     expect(values(late)[1]).toBe('29 ก.ย. 2569 09:05')
-    expect(values(late)[2]).toBe('เช้า')
   })
 
   it('วันที่ พ.ศ., เวลาบันทึก (เวลาไทย), ประเภทไทย, จำนวนมีเครื่องหมายตามประเภท', () => {
     const [, out, adjust] = movementSheet(movements)
-    expect(values(out)).toEqual(['29 ก.ย. 2569', '09:05', 'เช้า', '00123', 'น้ำดื่ม', 'เบิกออก', -3, 'ขวด', 'มานี', ''])
-    expect(values(adjust)).toEqual(['28 ก.ย. 2569', '', '', 'US-2', 'สบู่', 'ปรับยอด', -1.5, 'ก้อน', 'สมชาย', 'นับสต็อก'])
-    expect(out[3].type).toBe(String)
-    expect(out[6].type).toBe(Number)
+    expect(values(out)).toEqual(['29 ก.ย. 2569', '09:05', '00123', 'น้ำดื่ม', 'เบิกออก', -3, 'ขวด', 'มานี', '', 'เครื่องดื่ม'])
+    expect(values(adjust)).toEqual(['28 ก.ย. 2569', '', 'US-2', 'สบู่', 'ปรับยอด', -1.5, 'ก้อน', 'สมชาย', 'นับสต็อก', ''])
+    expect(out[2].type).toBe(String)
+    expect(out[5].type).toBe(Number)
   })
 })
 

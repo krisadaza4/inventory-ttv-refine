@@ -115,7 +115,7 @@ describe('toMovement', () => {
     note: null,
     created_by: 'u1',
     created_at: '2026-09-29T03:00:00Z',
-    product: { name: 'น้ำดื่ม', sku: 'DR-001', unit: 'ขวด' },
+    product: { name: 'น้ำดื่ม', sku: 'DR-001', unit: 'ขวด', category: 'เครื่องดื่ม' },
     recorder: { display_name: 'สมชาย' },
   }
 
@@ -132,6 +132,7 @@ describe('toMovement', () => {
       productName: 'น้ำดื่ม',
       productSku: 'DR-001',
       unit: 'ขวด',
+      productCategory: 'เครื่องดื่ม',
       recordedByName: 'สมชาย',
     })
   })
@@ -141,6 +142,7 @@ describe('toMovement', () => {
     const movement = toMovement(plain)
     expect(movement.productName).toBe('')
     expect(movement.recordedByName).toBe('')
+    expect(movement.productCategory).toBe('')
   })
 
 })
