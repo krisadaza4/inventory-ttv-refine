@@ -447,7 +447,7 @@ button:focus-visible {
   text-align: left;
 }
 
-.thai-date.empty {
+.thai-date.is-empty {
   color: var(--muted);
 }
 

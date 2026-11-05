@@ -39,17 +39,21 @@ export default function ThaiDateInput({
   }
 
   // วางปฏิทินใต้ช่อง ถ้าที่ด้านล่างไม่พอให้ขึ้นด้านบน ไม่ล้นขอบขวา
-  useLayoutEffect(() => {
-    if (!open || !triggerRef.current) return
+  const place = () => {
+    if (!triggerRef.current) return
     const r = triggerRef.current.getBoundingClientRect()
     const below = window.innerHeight - r.bottom >= POPUP_HEIGHT + 8
     setPos({
       left: Math.max(8, Math.min(r.left, window.innerWidth - POPUP_WIDTH - 8)),
       top: below ? r.bottom + 4 : Math.max(8, r.top - POPUP_HEIGHT - 4),
     })
+  }
+
+  useLayoutEffect(() => {
+    if (open) place()
   }, [open])
 
-  // คลิกนอกปฏิทิน / Esc / เลื่อนหน้า / ปรับขนาดจอ: ปิด
+  // คลิกนอกปฏิทิน / Esc: ปิด | เลื่อนหน้า / ปรับขนาดจอ: ย้ายตามช่อง (ไม่ปิด เลื่อนนิดเดียวปฏิทินจะได้ไม่หาย)
   useEffect(() => {
     if (!open) return
     const onDown = (e) => {
@@ -62,19 +66,15 @@ export default function ThaiDateInput({
         close()
       }
     }
-    const onScroll = (e) => {
-      if (!popupRef.current?.contains(e.target)) close(false)
-    }
-    const onResize = () => close(false)
     document.addEventListener('mousedown', onDown)
     document.addEventListener('keydown', onKey, true)
-    window.addEventListener('scroll', onScroll, true)
-    window.addEventListener('resize', onResize)
+    window.addEventListener('scroll', place, true)
+    window.addEventListener('resize', place)
     return () => {
       document.removeEventListener('mousedown', onDown)
       document.removeEventListener('keydown', onKey, true)
-      window.removeEventListener('scroll', onScroll, true)
-      window.removeEventListener('resize', onResize)
+      window.removeEventListener('scroll', place, true)
+      window.removeEventListener('resize', place)
     }
   }, [open])
 
@@ -92,7 +92,7 @@ export default function ThaiDateInput({
         ref={triggerRef}
         id={id}
         type="button"
-        className={`thai-date ${value ? '' : 'empty'} ${className}`.trim()}
+        className={`thai-date ${value ? '' : 'is-empty'} ${className}`.trim()}
         aria-label={ariaLabel ? `${ariaLabel}${value ? ` ${formatThaiDate(value)}` : ''}` : undefined}
         aria-haspopup="dialog"
         aria-expanded={open}
