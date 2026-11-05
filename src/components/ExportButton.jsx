@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
-// ปุ่มส่งออก Excel: buildSheet คืน { sheetData } หรือ { error } (async ได้)
+// ปุ่มส่งออก Excel: buildSheet คืน { sheetData } (แผ่นเดียว ชื่อ sheetName) หรือ { sheets } (หลายแผ่น:
+// [{ data, sheet, stickyRowsCount }]) หรือ { error } (async ได้)
 // โหลด write-excel-file เมื่อกดเท่านั้น หน้าแรกจะได้ไม่ช้าลง
 // ไอคอน Excel แบบปัจจุบัน: แผ่นงานเขียวไล่ระดับ 4 แถบ + กล่องเขียวเข้มตัว X ด้านซ้าย
 function ExcelIcon() {
@@ -31,7 +32,10 @@ export default function ExportButton({ fileName, sheetName, buildSheet, disabled
         setError(result.error)
       } else {
         const { default: writeExcelFile } = await import('write-excel-file/browser')
-        await writeExcelFile(result.sheetData, { sheet: sheetName, stickyRowsCount: 1 }).toFile(fileName)
+        const file = result.sheets
+          ? writeExcelFile(result.sheets)
+          : writeExcelFile(result.sheetData, { sheet: sheetName, stickyRowsCount: 1 })
+        await file.toFile(fileName)
       }
     } catch {
       setError('สร้างไฟล์ Excel ไม่สำเร็จ กรุณาลองใหม่')

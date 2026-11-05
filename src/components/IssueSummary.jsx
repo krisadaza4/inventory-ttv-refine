@@ -4,7 +4,7 @@ import { rangeFileSuffix } from '../lib/dateRange.js'
 import { AFTERNOON_FROM } from '../lib/dayPeriod.js'
 import { summarizeIssues } from '../lib/issueSummary.js'
 import { formatQuantity } from '../lib/numberFormat.js'
-import { exportFileName, issueSummarySheet } from '../lib/spreadsheet.js'
+import { exportFileName, issueSummarySheet, movementSheet } from '../lib/spreadsheet.js'
 import { MOVEMENT_TYPE } from '../lib/stockRules.js'
 import ExportButton from './ExportButton.jsx'
 
@@ -77,7 +77,13 @@ export default function IssueSummary({ repository, productId, range, attempt }) 
         <ExportButton
           fileName={exportFileName(`issue-summary${rangeFileSuffix(range)}`, toIsoDate(new Date()))}
           sheetName="สรุปการเบิก"
-          buildSheet={() => ({ sheetData: issueSummarySheet(summary, { byRecorder }) })}
+          // แผ่น 1 สรุปต่อสินค้า, แผ่น 2 รายการเบิกทีละรายการพร้อมเวลาและช่วง (ไว้ตรวจว่ายอดสรุปมาจากรายการไหน)
+          buildSheet={() => ({
+            sheets: [
+              { data: issueSummarySheet(summary, { byRecorder }), sheet: 'สรุปการเบิก', stickyRowsCount: 1 },
+              { data: movementSheet(movements), sheet: 'รายการเบิก (มีเวลา)', stickyRowsCount: 1 },
+            ],
+          })}
           disabled={summary.rows.length === 0}
         />
       </div>
