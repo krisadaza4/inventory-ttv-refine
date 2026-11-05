@@ -1,4 +1,4 @@
-import { formatThaiDate, formatThaiDateTime } from './dateFormat.js'
+import { bangkokParts, formatThaiDate, formatThaiDateTime } from './dateFormat.js'
 import { MONTH_LABELS, toBuddhistYear } from './monthlySales.js'
 import { MOVEMENT_LABEL, STOCK_STATUS, getStockStatus, signedQuantity } from './stockRules.js'
 
@@ -38,12 +38,20 @@ export function productSheet(products) {
   ]
 }
 
+// คอลัมน์ "เวลา": เวลาที่กดบันทึก (เวลาไทย) เช่น 15:55 ถ้าบันทึกย้อนหลังคนละวันกับวันที่ของรายการ
+// ใส่วันที่บันทึกด้วย เช่น "9 ต.ค. 2569 08:10" (เหมือนหน้าประวัติ)
+function recordedTime(m) {
+  const parts = bangkokParts(m.createdAt)
+  if (!parts) return ''
+  return parts.date === m.movementDate ? parts.time : formatThaiDateTime(m.createdAt)
+}
+
 export function movementSheet(movements) {
   return [
-    header(['วันที่', 'บันทึกเมื่อ', 'รหัสสินค้า', 'ชื่อสินค้า', 'ประเภท', 'จำนวน (+/−)', 'หน่วย', 'ผู้บันทึก', 'หมายเหตุ']),
+    header(['วันที่', 'เวลา', 'รหัสสินค้า', 'ชื่อสินค้า', 'ประเภท', 'จำนวน (+/−)', 'หน่วย', 'ผู้บันทึก', 'หมายเหตุ']),
     ...movements.map((m) => [
       text(formatThaiDate(m.movementDate)),
-      text(formatThaiDateTime(m.createdAt)),
+      text(recordedTime(m)),
       text(m.productSku),
       text(m.productName),
       text(MOVEMENT_LABEL[m.type]),
