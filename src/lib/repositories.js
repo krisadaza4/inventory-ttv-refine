@@ -54,8 +54,17 @@ const filterType = (query, type) => {
   return type === REPAIR_FILTER ? query.in('type', REPAIR_TYPES) : query.eq('type', type)
 }
 
+// ตัวกรองประวัติร่วมกันของหน้าจอและส่งออก: สินค้า ประเภท ช่วงวันที่
+function filterMovements(query, { productId, type, dateFrom, dateTo }) {
+  let q = query
+  if (productId) q = q.eq('product_id', productId)
+  q = filterType(q, type)
+  if (dateFrom) q = q.gte('movement_date', dateFrom)
+  if (dateTo) q = q.lte('movement_date', dateTo)
+  return q
+}
+
 // ตั้งใจไม่มีฟังก์ชันลบข้อมูลหลัก และบันทึกรายการเคลื่อนไหวผ่าน record_movement เท่านั้น
-// ตั้งใจไม่มีฟังก์ชันลบข้อมูลหลัก (ลบได้เฉพาะการผูกสินค้ากับคลังย่อย) และบันทึกรายการเคลื่อนไหวผ่าน record_movement เท่านั้น
 export function createRepository(client) {
   return {
     // ดึงทีละ EXPORT_PAGE_SIZE เพราะ Supabase คืนได้สูงสุด 1000 แถวต่อครั้ง (เรียงด้วย id ด้วยให้แบ่งหน้าได้แน่นอน)
@@ -235,13 +244,16 @@ export function createRepository(client) {
       return { saved, error: null }
     },
 
-    // page เริ่มที่ 0 ล่าสุดก่อน
-    async listMovements({ productId, type, page = 0 } = {}) {
+    // page เริ่มที่ 0 ล่าสุดก่อน dateFrom/dateTo = ช่วงวันที่ของรายการ ('YYYY-MM-DD' รวมวันนั้น ว่าง = ไม่จำกัด)
+    async listMovements({ productId, type, dateFrom, dateTo, page = 0 } = {}) {
       const from = page * PAGE_SIZE
       const { data, error } = await run(() => {
-        let query = client.from('stock_movements').select(MOVEMENT_COLUMNS)
-        if (productId) query = query.eq('product_id', productId)
-        query = filterType(query, type)
+        const query = filterMovements(client.from('stock_movements').select(MOVEMENT_COLUMNS), {
+          productId,
+          type,
+          dateFrom,
+          dateTo,
+        })
         return query
           .order('movement_date', { ascending: false })
           .order('created_at', { ascending: false })
@@ -252,13 +264,16 @@ export function createRepository(client) {
     },
 
     // ทุกรายการตามตัวกรอง (สำหรับส่งออก Excel) ล่าสุดก่อน
-    async listAllMovements({ productId, type } = {}) {
+    async listAllMovements({ productId, type, dateFrom, dateTo } = {}) {
       const all = []
       for (let from = 0; from < EXPORT_MAX_ROWS; from += EXPORT_PAGE_SIZE) {
         const { data, error } = await run(() => {
-          let query = client.from('stock_movements').select(MOVEMENT_COLUMNS)
-          if (productId) query = query.eq('product_id', productId)
-          query = filterType(query, type)
+          const query = filterMovements(client.from('stock_movements').select(MOVEMENT_COLUMNS), {
+            productId,
+            type,
+            dateFrom,
+            dateTo,
+          })
           return query
             .order('movement_date', { ascending: false })
             .order('created_at', { ascending: false })

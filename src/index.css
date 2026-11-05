@@ -414,6 +414,22 @@ button:focus-visible {
   overflow-x: auto;
 }
 
+/* ประวัติ: แถวกรองช่วงวันที่ ใต้แถวสินค้า/ประเภท */
+.toolbar.date-range {
+  align-items: center;
+}
+
+.date-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-field span {
+  color: var(--muted, inherit);
+  white-space: nowrap;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

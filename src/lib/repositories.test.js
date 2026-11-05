@@ -10,7 +10,7 @@ const fakeClient = (result) => {
   const builder = {
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
   }
-  for (const method of ['select', 'insert', 'upsert', 'update', 'delete', 'eq', 'in', 'is', 'order', 'range', 'single', 'maybeSingle']) {
+  for (const method of ['select', 'insert', 'upsert', 'update', 'delete', 'eq', 'in', 'is', 'gte', 'lte', 'order', 'range', 'single', 'maybeSingle']) {
     builder[method] = (...args) => {
       calls.push([method, ...args])
       return builder
@@ -348,6 +348,19 @@ describe('listMovements', () => {
     expect(client.calls).toContainEqual(['range', 2 * PAGE_SIZE, 3 * PAGE_SIZE - 1])
   })
 
+  it('กรองช่วงวันที่ของรายการ (รวมวันต้นและวันท้าย)', async () => {
+    const client = fakeClient({ data: [], error: null })
+    await createRepository(client).listMovements({ dateFrom: '2026-11-01', dateTo: '2026-11-30' })
+    expect(client.calls).toContainEqual(['gte', 'movement_date', '2026-11-01'])
+    expect(client.calls).toContainEqual(['lte', 'movement_date', '2026-11-30'])
+  })
+
+  it('ไม่ระบุวันที่ ไม่กรองวันที่', async () => {
+    const client = fakeClient({ data: [], error: null })
+    await createRepository(client).listMovements({ dateFrom: '', dateTo: '' })
+    expect(client.calls.some(([m]) => m === 'gte' || m === 'lte')).toBe(false)
+  })
+
   it('ได้ครบหน้า = อาจมีหน้าถัดไป', async () => {
     const client = fakeClient({ data: Array.from({ length: PAGE_SIZE }, () => movementRow), error: null })
     expect((await createRepository(client).listMovements()).hasMore).toBe(true)
@@ -405,7 +418,11 @@ describe('listAllMovements', () => {
       { data: full, error: null },
       { data: [movementRow], error: null },
     ])
-    const { movements, error } = await createRepository(client).listAllMovements({ productId: 'p1', type: 'out' })
+    const { movements, error } = await createRepository(client).listAllMovements({
+      productId: 'p1',
+      type: 'out',
+      dateFrom: '2026-10-01',
+    })
     expect(error).toBeNull()
     expect(movements).toHaveLength(EXPORT_PAGE_SIZE + 1)
     const ranges = client.calls.filter(([m]) => m === 'range')
@@ -415,6 +432,8 @@ describe('listAllMovements', () => {
     ])
     expect(client.calls).toContainEqual(['eq', 'product_id', 'p1'])
     expect(client.calls).toContainEqual(['eq', 'type', 'out'])
+    expect(client.calls).toContainEqual(['gte', 'movement_date', '2026-10-01'])
+    expect(client.calls.some(([m]) => m === 'lte')).toBe(false)
   })
 
   it('ผิดพลาดกลางทาง คืนรายการว่างและข้อความไทย', async () => {

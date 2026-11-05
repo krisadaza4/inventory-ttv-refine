@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { bangkokParts, formatThaiDate, formatThaiDateTime, toIsoDate } from '../lib/dateFormat.js'
+import { DATE_PRESETS, matchPreset, normalizeRange, presetRange, rangeFileSuffix } from '../lib/dateRange.js'
 import { PAGE } from '../lib/menu.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { PAGE_SIZE } from '../lib/repositories.js'
@@ -11,11 +12,14 @@ import RefreshIcon from './RefreshIcon.jsx'
 
 const TYPE_LABEL = MOVEMENT_LABEL
 
-// หน้าประวัติการเคลื่อนไหว: ล่าสุดก่อน โหลดทีละ PAGE_SIZE กรองสินค้า/ประเภท (design.md ข้อ 7)
+// หน้าประวัติการเคลื่อนไหว: ล่าสุดก่อน โหลดทีละ PAGE_SIZE กรองสินค้า/ประเภท/ช่วงวันที่ (design.md ข้อ 7)
+// ส่งออก Excel ใช้ตัวกรองเดียวกันทั้งหมด
 // allProducts รวมที่ปิดใช้งาน เพื่อดูประวัติของสินค้าที่เลิกใช้แล้วได้
 export default function HistoryPage({ allProducts, repository }) {
   const [productId, setProductId] = useState('')
   const [type, setType] = useState('')
+  // ช่วงวันที่ของรายการ ('YYYY-MM-DD' ว่าง = ไม่จำกัด)
+  const [range, setRange] = useState({ from: '', to: '' })
   const [page, setPage] = useState(0)
   const [movements, setMovements] = useState([])
   const [hasMore, setHasMore] = useState(false)
@@ -27,7 +31,7 @@ export default function HistoryPage({ allProducts, repository }) {
   // เปลี่ยนตัวกรองหรือหน้า: โหลดใหม่ ไม่ใช้ผลที่มาช้าหลังเปลี่ยนตัวกรองไปแล้ว
   useEffect(() => {
     let active = true
-    repository.listMovements({ productId, type, page }).then((result) => {
+    repository.listMovements({ productId, type, dateFrom: range.from, dateTo: range.to, page }).then((result) => {
       if (!active) return
       if (result.error) {
         setLoadError(result.error)
@@ -41,14 +45,29 @@ export default function HistoryPage({ allProducts, repository }) {
     return () => {
       active = false
     }
-  }, [repository, productId, type, page, attempt])
+  }, [repository, productId, type, range, page, attempt])
 
-  const changeFilter = (setter) => (e) => {
-    setter(e.target.value)
+  const resetList = () => {
     setPage(0)
     setMovements([])
     setLoadState('loading')
   }
+
+  const changeFilter = (setter) => (e) => {
+    setter(e.target.value)
+    resetList()
+  }
+
+  const changeRange = (next) => {
+    const normalized = normalizeRange(next)
+    if (normalized.from === range.from && normalized.to === range.to) return
+    setRange(normalized)
+    resetList()
+  }
+
+  const today = toIsoDate(new Date())
+  const activePreset = matchPreset(range, today)
+  const filtered = Boolean(productId || type || range.from || range.to)
 
   const loadMore = () => {
     setLoadState('loading')
@@ -75,10 +94,15 @@ export default function HistoryPage({ allProducts, repository }) {
         actions={
           <div className="head-actions">
             <ExportButton
-              fileName={exportFileName('movements', toIsoDate(new Date()))}
+              fileName={exportFileName(`movements${rangeFileSuffix(range)}`, today)}
               sheetName="ประวัติการเคลื่อนไหว"
               buildSheet={async () => {
-                const { movements: all, error } = await repository.listAllMovements({ productId, type })
+                const { movements: all, error } = await repository.listAllMovements({
+                  productId,
+                  type,
+                  dateFrom: range.from,
+                  dateTo: range.to,
+                })
                 return error ? { error } : { sheetData: movementSheet(all) }
               }}
               disabled={movements.length === 0}
@@ -111,6 +135,47 @@ export default function HistoryPage({ allProducts, repository }) {
               </option>
             ))}
           </select>
+        </div>
+        <div className="toolbar date-range" role="group" aria-label="ช่วงวันที่">
+          <label className="date-field">
+            <span>ตั้งแต่</span>
+            <input
+              type="date"
+              value={range.from}
+              max={range.to || undefined}
+              onChange={(e) => changeRange({ ...range, from: e.target.value })}
+            />
+          </label>
+          <label className="date-field">
+            <span>ถึง</span>
+            <input
+              type="date"
+              value={range.to}
+              min={range.from || undefined}
+              onChange={(e) => changeRange({ ...range, to: e.target.value })}
+            />
+          </label>
+          <div className="view-tabs" role="group" aria-label="ช่วงวันที่ลัด">
+            {DATE_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className="btn sm"
+                aria-pressed={activePreset === p.id}
+                onClick={() => changeRange(presetRange(p.id, today))}
+              >
+                {p.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="btn sm"
+              aria-pressed={!range.from && !range.to}
+              onClick={() => changeRange({ from: '', to: '' })}
+            >
+              ทุกวันที่
+            </button>
+          </div>
         </div>
 
         {movements.length > 0 && (
@@ -182,7 +247,7 @@ export default function HistoryPage({ allProducts, repository }) {
           </div>
         )}
         {loadState === 'ready' && movements.length === 0 && (
-          <p className="empty dim">{productId || type ? 'ไม่พบรายการที่ตรงกับเงื่อนไข' : 'ยังไม่มีรายการเคลื่อนไหว'}</p>
+          <p className="empty dim">{filtered ? 'ไม่พบรายการที่ตรงกับเงื่อนไข' : 'ยังไม่มีรายการเคลื่อนไหว'}</p>
         )}
 
         {movements.length > 0 && (
