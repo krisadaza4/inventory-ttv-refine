@@ -5,6 +5,7 @@ import SortHead from './SortHead.jsx'
 import StockBadge from './StockBadge.jsx'
 
 // ตารางสินค้าคงคลัง (เรียงมาแล้วจากหน้าที่เรียกใช้ กดหัวคอลัมน์เพื่อเปลี่ยนการเรียง) hide-sm = ซ่อนบนมือถือ
+// onMove ไม่ส่งมา = ดูอย่างเดียว (Manager / Marketing) ไม่แสดงปุ่มรับเข้า/เบิกออก
 export default function ProductTable({ products, imageUrls, onMove, sort, onSort }) {
   const head = { sort, onSort }
   return (
@@ -48,9 +49,11 @@ export default function ProductTable({ products, imageUrls, onMove, sort, onSort
             <SortHead sortKey="status" {...head}>
               สถานะ
             </SortHead>
-            <th className="hide-sm">
-              <span className="sr-only">ทำรายการ</span>
-            </th>
+            {onMove && (
+              <th className="hide-sm">
+                <span className="sr-only">ทำรายการ</span>
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -77,20 +80,22 @@ export default function ProductTable({ products, imageUrls, onMove, sort, onSort
               <td>
                 <StockBadge status={getStockStatus(p.onHand, p.reorderPoint)} />
               </td>
-              <td className="num hide-sm actions">
-                <button type="button" className="btn sm btn-in" onClick={() => onMove(p, MOVEMENT_TYPE.IN)}>
-                  <span aria-hidden="true">＋</span> รับเข้า
-                </button>
-                <button
-                  type="button"
-                  className="btn sm btn-out"
-                  onClick={() => onMove(p, MOVEMENT_TYPE.OUT)}
-                  disabled={p.onHand <= 0}
-                  title={p.onHand <= 0 ? 'ไม่มีของ เบิกออกไม่ได้' : undefined}
-                >
-                  <span aria-hidden="true">－</span> เบิกออก
-                </button>
-              </td>
+              {onMove && (
+                <td className="num hide-sm actions">
+                  <button type="button" className="btn sm btn-in" onClick={() => onMove(p, MOVEMENT_TYPE.IN)}>
+                    <span aria-hidden="true">＋</span> รับเข้า
+                  </button>
+                  <button
+                    type="button"
+                    className="btn sm btn-out"
+                    onClick={() => onMove(p, MOVEMENT_TYPE.OUT)}
+                    disabled={p.onHand <= 0}
+                    title={p.onHand <= 0 ? 'ไม่มีของ เบิกออกไม่ได้' : undefined}
+                  >
+                    <span aria-hidden="true">－</span> เบิกออก
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

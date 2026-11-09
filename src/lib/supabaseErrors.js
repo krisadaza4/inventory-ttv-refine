@@ -8,8 +8,9 @@ export const ERROR_MESSAGE = {
   NETWORK: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
   NO_PROFILE: 'บัญชีนี้ยังไม่ได้กำหนดบทบาท กรุณาติดต่อเจ้าของร้าน',
   INVALID_TYPE: 'ประเภทรายการไม่ถูกต้อง',
-  ADJUST_ADMIN_ONLY: 'ปรับยอดได้เฉพาะเจ้าของร้าน',
-  WRITE_OFF_ADMIN_ONLY: 'ตัดจำหน่ายได้เฉพาะเจ้าของร้าน',
+  READ_ONLY_ROLE: 'บัญชีนี้ดูข้อมูลได้อย่างเดียว บันทึกรายการไม่ได้',
+  ADJUST_ADMIN_ONLY: 'ปรับยอดได้เฉพาะเจ้าของร้านและ Store/QC',
+  WRITE_OFF_ADMIN_ONLY: 'ตัดจำหน่ายได้เฉพาะเจ้าของร้านและ Store/QC',
   INVALID_QUANTITY: 'จำนวนไม่ถูกต้อง',
   FUTURE_DATE: 'วันที่ต้องไม่เป็นวันในอนาคต',
   ADJUST_NEEDS_NOTE: 'การปรับยอดต้องระบุหมายเหตุ',
@@ -31,6 +32,7 @@ export const ERROR_MESSAGE = {
 // hint จาก record_movement (supabase/schema.sql) -> ข้อความสำรองถ้าฐานข้อมูลไม่ส่งข้อความมา
 const BY_HINT = {
   no_profile: ERROR_MESSAGE.NO_PROFILE,
+  read_only_role: ERROR_MESSAGE.READ_ONLY_ROLE,
   invalid_type: ERROR_MESSAGE.INVALID_TYPE,
   adjust_admin_only: ERROR_MESSAGE.ADJUST_ADMIN_ONLY,
   write_off_admin_only: ERROR_MESSAGE.WRITE_OFF_ADMIN_ONLY,

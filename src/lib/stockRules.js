@@ -1,5 +1,5 @@
 import { toIsoDate } from './dateFormat.js'
-import { canAdjust, canWriteOff } from './roles.js'
+import { canAdjust, canRecordMovements, canWriteOff } from './roles.js'
 
 export const MOVEMENT_TYPE = {
   IN: 'in',
@@ -42,6 +42,7 @@ export const REPAIR_REASONS = ['สปาร์คเสีย', 'รอคิ�
 
 // ประเภทที่บทบาทนี้บันทึกได้ (record_movement ตรวจซ้ำ)
 export function allowedMovementTypes(role) {
+  if (!canRecordMovements(role)) return []
   return Object.values(MOVEMENT_TYPE).filter(
     (type) =>
       (type !== MOVEMENT_TYPE.ADJUST || canAdjust(role)) && (type !== MOVEMENT_TYPE.WRITE_OFF || canWriteOff(role)),
@@ -147,12 +148,14 @@ export function validateMovement(movement, stock, role, today = toIsoDate(new Da
   const { type } = movement
   const current = toStock(stock)
 
-  if (!Object.values(MOVEMENT_TYPE).includes(type)) {
+  if (!canRecordMovements(role)) {
+    errors.type = 'บัญชีนี้ดูข้อมูลได้อย่างเดียว บันทึกรายการไม่ได้'
+  } else if (!Object.values(MOVEMENT_TYPE).includes(type)) {
     errors.type = 'ประเภทรายการไม่ถูกต้อง'
   } else if (type === MOVEMENT_TYPE.ADJUST && !canAdjust(role)) {
-    errors.type = 'ปรับยอดได้เฉพาะเจ้าของร้าน'
+    errors.type = 'ปรับยอดได้เฉพาะเจ้าของร้านและ Store/QC'
   } else if (type === MOVEMENT_TYPE.WRITE_OFF && !canWriteOff(role)) {
-    errors.type = 'ตัดจำหน่ายได้เฉพาะเจ้าของร้าน'
+    errors.type = 'ตัดจำหน่ายได้เฉพาะเจ้าของร้านและ Store/QC'
   }
 
   const quantity = parseAmount(movement.quantity)

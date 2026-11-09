@@ -444,6 +444,23 @@ describe('สินค้ารอซ่อม', () => {
     expect(allowedMovementTypes(ROLE.STAFF)).toEqual(['in', 'out', 'to_repair', 'repaired'])
   })
 
+  it('allowedMovementTypes: Store/QC ได้ทุกประเภทเหมือน admin, Manager/Marketing ไม่มีเลย', () => {
+    expect(allowedMovementTypes(ROLE.STORE_QC)).toEqual(allowedMovementTypes(ROLE.ADMIN))
+    expect(allowedMovementTypes(ROLE.MANAGER)).toEqual([])
+    expect(allowedMovementTypes(ROLE.MARKETING)).toEqual([])
+    expect(allowedMovementTypes(undefined)).toEqual([])
+  })
+
+  it('validateMovement: Store/QC ปรับยอดและตัดจำหน่ายได้, ดูอย่างเดียวบันทึกไม่ได้', () => {
+    expect(validateMovement(move(MOVEMENT_TYPE.ADJUST, '1', 'นับสต็อก'), stock, ROLE.STORE_QC, today)).toEqual({})
+    expect(validateMovement(move(MOVEMENT_TYPE.WRITE_OFF, '1'), stock, ROLE.STORE_QC, today)).toEqual({})
+    for (const role of [ROLE.MANAGER, ROLE.MARKETING]) {
+      expect(validateMovement(move(MOVEMENT_TYPE.IN, '1'), stock, role, today).type).toBe(
+        'บัญชีนี้ดูข้อมูลได้อย่างเดียว บันทึกรายการไม่ได้',
+      )
+    }
+  })
+
   it('ส่งซ่อม/ซ่อมเสร็จ/ตัดจำหน่าย ต้องมีเหตุผล', () => {
     for (const type of [MOVEMENT_TYPE.TO_REPAIR, MOVEMENT_TYPE.REPAIRED, MOVEMENT_TYPE.WRITE_OFF]) {
       expect(validateMovement(move(type, '1', ' '), stock, ROLE.ADMIN, today).note).toBe('กรุณาระบุเหตุผล')
@@ -467,7 +484,7 @@ describe('สินค้ารอซ่อม', () => {
 
   it('staff ตัดจำหน่ายไม่ได้', () => {
     expect(validateMovement(move(MOVEMENT_TYPE.WRITE_OFF, '1'), stock, ROLE.STAFF, today).type).toBe(
-      'ตัดจำหน่ายได้เฉพาะเจ้าของร้าน',
+      'ตัดจำหน่ายได้เฉพาะเจ้าของร้านและ Store/QC',
     )
   })
 

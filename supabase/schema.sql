@@ -721,3 +721,5 @@ create policy "product_warehouses_delete_admin"
   to authenticated
   using ((select public.current_app_role()) = 'admin');
 
+-- บทบาท Store/QC, Manager, Marketing (2026-11-09): หลังไฟล์นี้ให้รัน migration_roles.sql ด้วย
+-- (เพิ่มค่าใน profiles_role_valid, ทับ record_movement และนโยบายเพิ่ม/แก้สินค้า ยอดขาย รูปสินค้า)

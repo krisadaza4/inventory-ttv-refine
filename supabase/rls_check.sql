@@ -1,6 +1,7 @@
 -- Inventory TTV: ตรวจ RLS ตาม design.md ข้อ 9 (T2.6) + ประเภทรายการซ่อม (ส่งซ่อม / ซ่อมเสร็จ / ตัดจำหน่าย) + คลังย่อย
 -- รันใน Supabase SQL Editor ทั้งไฟล์ ข้อมูลทดสอบทั้งหมดถูกย้อนกลับ ไม่เหลือในฐานข้อมูล
 -- ต้องมี profile admin และ staff อย่างละ 1 แถวก่อน
+-- บทบาท store_qc / manager / marketing ทดสอบโดยเปลี่ยนบทบาทของบัญชี staff ชั่วคราวในบล็อกทดสอบ (ย้อนกลับทั้งหมด)
 -- ผลลัพธ์: ตาราง rls_results ทุกแถวต้องได้ pass = true
 
 create temp table if not exists rls_results (
@@ -151,7 +152,54 @@ begin
     ['admin เอาสินค้าออกจากคลังได้', 'admin',
       $t$delete from public.product_warehouses where product_id = (select id from public.products where sku = 'RLS-TEST-A')$t$, 'ok rows=2'],
     ['admin ลบคลังไม่ได้', 'admin',
-      $t$delete from public.warehouses where name = 'RLS-คลัง-A'$t$, 'ERR 42501%']
+      $t$delete from public.warehouses where name = 'RLS-คลัง-A'$t$, 'ERR 42501%'],
+    -- บทบาทใหม่ (migration_roles.sql) ใช้สินค้า RLS-TEST-C ที่ admin เพิ่มไว้ข้างบน (ยังไม่มีรายการ)
+    ['store_qc เพิ่มสินค้าได้', 'store_qc',
+      $t$insert into public.products (sku, name, category, unit) values ('RLS-TEST-D', 'ทดสอบ D', 'ทดสอบ', 'ชิ้น')$t$, 'ok rows=1'],
+    ['store_qc แก้สินค้าได้', 'store_qc',
+      $t$update public.products set reorder_point = 2 where sku = 'RLS-TEST-D'$t$, 'ok rows=1'],
+    ['store_qc ลบสินค้าไม่ได้', 'store_qc',
+      $t$delete from public.products where sku = 'RLS-TEST-D'$t$, 'ERR 42501%'],
+    ['store_qc รับเข้า 5 ได้', 'store_qc',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-C'), 'in', 5)$t$, 'ok rows=1'],
+    ['store_qc เบิกออก 1 ได้', 'store_qc',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-C'), 'out', 1)$t$, 'ok rows=1'],
+    ['store_qc ส่งซ่อม 2 ได้', 'store_qc',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-C'), 'to_repair', 2, null, 'เสีย')$t$, 'ok rows=1'],
+    ['store_qc ซ่อมเสร็จ 1 ได้ (นำเข้าสต็อก)', 'store_qc',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-C'), 'repaired', 1, null, 'ซ่อมแล้ว')$t$, 'ok rows=1'],
+    ['store_qc ปรับยอดพร้อมหมายเหตุได้', 'store_qc',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-C'), 'adjust', 1, null, 'นับสต็อก')$t$, 'ok rows=1'],
+    ['store_qc ตัดจำหน่าย 1 ได้', 'store_qc',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-C'), 'write_off', 1, null, 'ซ่อมไม่ได้')$t$, 'ok rows=1'],
+    ['store_qc เพิ่มคลังไม่ได้ (คลังย่อยเลิกใช้ เฉพาะ admin)', 'store_qc',
+      $t$insert into public.warehouses (name) values ('RLS-คลัง-Q')$t$, 'ERR 42501%'],
+    ['store_qc แก้ profiles ไม่ได้', 'store_qc',
+      $t$update public.profiles set role = 'admin'$t$, 'ERR 42501%'],
+    ['manager ดูสินค้าได้', 'manager',
+      $t$select 1 from public.products where sku = 'RLS-TEST-C'$t$, 'ok rows=1'],
+    ['manager ดูประวัติได้', 'manager',
+      $t$select 1 from public.stock_movements limit 1$t$, 'ok rows=1'],
+    ['manager ดูยอดคงเหลือได้', 'manager',
+      $t$select 1 from public.product_stock where sku = 'RLS-TEST-C'$t$, 'ok rows=1'],
+    ['manager รับเข้าไม่ได้', 'manager',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-C'), 'in', 1)$t$, '%read_only_role'],
+    ['manager เบิกออกไม่ได้', 'manager',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-C'), 'out', 1)$t$, '%read_only_role'],
+    ['manager ซ่อมเสร็จไม่ได้', 'manager',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-C'), 'repaired', 1, null, 'x')$t$, '%read_only_role'],
+    ['manager เพิ่มสินค้าไม่ได้', 'manager',
+      $t$insert into public.products (sku, name, category, unit) values ('RLS-TEST-M', 'm', 'm', 'm')$t$, 'ERR 42501%'],
+    ['manager แก้สินค้าไม่ได้ (0 แถว)', 'manager',
+      $t$update public.products set name = 'x' where sku = 'RLS-TEST-C'$t$, 'ok rows=0'],
+    ['marketing ดูสินค้าได้', 'marketing',
+      $t$select 1 from public.products where sku = 'RLS-TEST-C'$t$, 'ok rows=1'],
+    ['marketing รับเข้าไม่ได้', 'marketing',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-C'), 'in', 1)$t$, '%read_only_role'],
+    ['marketing ปรับยอดไม่ได้', 'marketing',
+      $t$select public.record_movement((select id from public.products where sku = 'RLS-TEST-C'), 'adjust', 1, null, 'x')$t$, '%read_only_role'],
+    ['marketing เพิ่มสินค้าไม่ได้', 'marketing',
+      $t$insert into public.products (sku, name, category, unit) values ('RLS-TEST-K', 'k', 'k', 'k')$t$, 'ERR 42501%']
   ];
 
   -- ทุกอย่างในบล็อกนี้ถูกย้อนกลับตอนจบด้วย exception P0999
@@ -166,9 +214,14 @@ begin
     for i in 1 .. array_length(v_tests, 1) loop
       v_uid := case v_tests[i][2]
         when 'admin' then v_admin
-        when 'staff' then v_staff
-        else v_nobody
+        when 'nobody' then v_nobody
+        else v_staff
       end;
+
+      -- store_qc / manager / marketing: ใช้บัญชี staff แต่เปลี่ยนบทบาทชั่วคราว (ย้อนกลับตอนจบ) ที่เหลือคืนเป็น staff
+      update public.profiles
+        set role = case when v_tests[i][2] in ('store_qc', 'manager', 'marketing') then v_tests[i][2] else 'staff' end
+        where id = v_staff;
 
       begin
         perform set_config('request.jwt.claims',

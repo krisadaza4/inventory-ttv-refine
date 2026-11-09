@@ -24,8 +24,10 @@ describe('toThaiError', () => {
   it('ทุก hint ของ record_movement มีข้อความสำรอง', () => {
     const hints = [
       'no_profile',
+      'read_only_role',
       'invalid_type',
       'adjust_admin_only',
+      'write_off_admin_only',
       'invalid_quantity',
       'future_date',
       'adjust_needs_note',

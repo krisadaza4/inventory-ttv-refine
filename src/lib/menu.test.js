@@ -11,14 +11,26 @@ describe('getMenu', () => {
     expect(pagesOf(menu)).toEqual([PAGE.PRODUCTS, PAGE.MOVE, PAGE.HISTORY, PAGE.SALES, PAGE.MANAGE])
   })
 
+  it('Store/QC เห็นทุกหน้าเหมือน admin', () => {
+    expect(pagesOf(getMenu(ROLE.STORE_QC))).toEqual(pagesOf(getMenu(ROLE.ADMIN)))
+  })
+
+  it('Manager / Marketing ดูอย่างเดียว ไม่เห็นหน้ารับเข้า/เบิกออกและจัดการสินค้า', () => {
+    for (const role of [ROLE.MANAGER, ROLE.MARKETING]) {
+      const menu = getMenu(role)
+      expect(menu.map((group) => group.label)).toEqual(['งานประจำวัน'])
+      expect(pagesOf(menu)).toEqual([PAGE.PRODUCTS, PAGE.HISTORY, PAGE.SALES])
+    }
+  })
+
   it('staff ไม่เห็นกลุ่มผู้ดูแล', () => {
     const menu = getMenu(ROLE.STAFF)
     expect(menu.map((group) => group.label)).toEqual(['งานประจำวัน'])
     expect(pagesOf(menu)).toEqual([PAGE.PRODUCTS, PAGE.MOVE, PAGE.HISTORY, PAGE.SALES])
   })
 
-  it('บทบาทไม่รู้จัก เห็นเหมือน staff', () => {
-    expect(pagesOf(getMenu('owner'))).not.toContain(PAGE.MANAGE)
+  it('บทบาทไม่รู้จัก ดูอย่างเดียว ไม่เห็นหน้าบันทึกและหน้าจัดการ', () => {
+    expect(pagesOf(getMenu('owner'))).toEqual([PAGE.PRODUCTS, PAGE.HISTORY, PAGE.SALES])
   })
 })
 

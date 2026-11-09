@@ -1,15 +1,10 @@
-import { ROLE } from '../lib/roles.js'
+import { ROLE_LABEL } from '../lib/roles.js'
 import { THEME } from '../lib/theme.js'
 
 export const APP_NAME = 'Inventory TTV'
 export const APP_SUBTITLE = 'ระบบบริหารสต็อกสินค้า'
 // เลขเวอร์ชันจาก package.json (vite.config.js ฝังให้ตอน build)
 export const APP_RELEASE = __APP_RELEASE__
-
-const ROLE_LABEL = {
-  [ROLE.ADMIN]: 'เจ้าของร้าน (admin)',
-  [ROLE.STAFF]: 'พนักงาน (staff)',
-}
 
 // ปุ่มสลับธีมบอกสิ่งที่จะเกิดเมื่อกด
 export function ThemeToggle({ theme, onToggle }) {

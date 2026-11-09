@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { toIsoDate } from '../lib/dateFormat.js'
 import { PAGE } from '../lib/menu.js'
+import { canRecordMovements } from '../lib/roles.js'
 import {
   NO_LOCATION,
   STOCK_STATUS,
@@ -54,6 +55,8 @@ export default function ProductsPage({
   today,
   repository,
 }) {
+  // Manager / Marketing ดูอย่างเดียว: ไม่มีปุ่มรับเข้า/เบิกออก
+  const canRecord = canRecordMovements(role)
   const [query, setQuery] = useState('')
   // แผงรับเข้าหลายรายการ
   const [bulkOpen, setBulkOpen] = useState(false)
@@ -83,7 +86,7 @@ export default function ProductsPage({
         page={PAGE.PRODUCTS}
         actions={
           <div className="head-actions">
-            {repository && (
+            {repository && canRecord && (
               <button
                 type="button"
                 className="btn btn-in"
@@ -116,7 +119,7 @@ export default function ProductsPage({
         </p>
       )}
 
-      {bulkOpen && (
+      {bulkOpen && canRecord && (
         <BulkReceivePanel
           products={products}
           imageUrls={imageUrls}
@@ -250,7 +253,7 @@ export default function ProductsPage({
           <ProductTable
             products={visible}
             imageUrls={imageUrls}
-            onMove={onMove}
+            onMove={canRecord ? onMove : undefined}
             sort={sort}
             onSort={sortBy}
           />
