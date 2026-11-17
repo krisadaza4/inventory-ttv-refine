@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ISSUE_NOTE_MAX, ISSUE_NOTE_OPTIONS, planBulkIssue } from '../lib/bulkIssue.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { searchProducts } from '../lib/stockRules.js'
+import NoteCombo from './NoteCombo.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ProductDialog from './ProductDialog.jsx'
 import ThaiDateInput from './ThaiDateInput.jsx'
@@ -112,21 +113,17 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
               </div>
               <label className="date-field">
                 <span>ตั้งหมายเหตุทุกรายการ</span>
-                <input
-                  className="note-input note-all-input"
-                  list="issue-note-options"
+                <NoteCombo
+                  className="note-all-input"
+                  options={ISSUE_NOTE_OPTIONS}
                   placeholder="ระบุหมายเหตุ…"
+                  ariaLabel="หมายเหตุที่ใช้กับทุกรายการ"
                   maxLength={ISSUE_NOTE_MAX}
                   value={noteAllValue}
-                  onChange={(e) => setAllNotes(e.target.value)}
+                  onChange={setAllNotes}
                   disabled={rows.length === 0 || saving}
                 />
               </label>
-              <datalist id="issue-note-options">
-                {ISSUE_NOTE_OPTIONS.map((o) => (
-                  <option key={o} value={o} />
-                ))}
-              </datalist>
             </div>
 
             <div className="issue-search">
@@ -207,16 +204,15 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
                           </td>
                           <td className="num">{formatQuantity(p.onHand)}</td>
                           <td>
-                            <input
-                              className="note-input"
-                              list="issue-note-options"
+                            <NoteCombo
+                              options={ISSUE_NOTE_OPTIONS}
                               placeholder="ระบุหมายเหตุ…"
-                              aria-label={`หมายเหตุ ${p.sku}`}
+                              ariaLabel={`หมายเหตุ ${p.sku}`}
                               maxLength={ISSUE_NOTE_MAX}
                               value={row.note}
-                              onChange={(e) => patchRow(row.productId, { note: e.target.value })}
+                              onChange={(note) => patchRow(row.productId, { note })}
                               disabled={saving}
-                              aria-invalid={Boolean(err.note)}
+                              invalid={Boolean(err.note)}
                             />
                             {err.note && <div className="err">{err.note}</div>}
                           </td>
