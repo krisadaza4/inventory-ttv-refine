@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ISSUE_NOTE_OPTIONS, planBulkIssue } from './bulkIssue.js'
+import { ISSUE_NOTE_CHOICES, ISSUE_NOTE_CUSTOM, ISSUE_NOTE_MAX, ISSUE_NOTE_OPTIONS, planBulkIssue } from './bulkIssue.js'
 
 const products = [
   { id: 'p1', name: 'A', onHand: 10, repairQty: 1 },
@@ -9,8 +9,9 @@ const products = [
 const today = '2026-11-17'
 
 describe('ISSUE_NOTE_OPTIONS', () => {
-  it('ออนไลน์ / ขายส่ง', () => {
+  it('ออนไลน์ / ขายส่ง และตัวเลือก "ระบุหมายเหตุ"', () => {
     expect(ISSUE_NOTE_OPTIONS).toEqual(['ออนไลน์', 'ขายส่ง'])
+    expect(ISSUE_NOTE_CHOICES).toEqual(['ออนไลน์', 'ขายส่ง', 'ระบุหมายเหตุ'])
   })
 })
 
@@ -58,6 +59,31 @@ describe('planBulkIssue', () => {
       expect(errors.p1.note).toBe('เลือกหมายเหตุ')
       expect(moves).toEqual([])
     }
+  })
+
+  it('ระบุหมายเหตุ: บันทึกข้อความที่พิมพ์ (ตัดช่องว่างหัวท้าย) ไม่ใช่คำว่า ระบุหมายเหตุ', () => {
+    const rows = [{ productId: 'p1', quantity: '1', note: ISSUE_NOTE_CUSTOM, customNote: '  ร้านสมชาย  ' }]
+    expect(planBulkIssue(rows, products, 'staff', today)).toEqual({
+      moves: [{ productId: 'p1', type: 'out', quantity: '1', note: 'ร้านสมชาย' }],
+      errors: {},
+    })
+  })
+
+  it('ระบุหมายเหตุแต่ไม่ได้พิมพ์ หรือยาวเกิน ผิด', () => {
+    for (const customNote of ['', '   ', undefined]) {
+      const rows = [{ productId: 'p1', quantity: '1', note: ISSUE_NOTE_CUSTOM, customNote }]
+      expect(planBulkIssue(rows, products, 'staff', today).errors.p1.note).toBe('กรุณาระบุหมายเหตุ')
+    }
+    const long = 'ก'.repeat(ISSUE_NOTE_MAX + 1)
+    const rows = [{ productId: 'p1', quantity: '1', note: ISSUE_NOTE_CUSTOM, customNote: long }]
+    expect(planBulkIssue(rows, products, 'staff', today).errors.p1.note).toContain('200')
+    const ok = [{ productId: 'p1', quantity: '1', note: ISSUE_NOTE_CUSTOM, customNote: 'ก'.repeat(ISSUE_NOTE_MAX) }]
+    expect(planBulkIssue(ok, products, 'staff', today).errors).toEqual({})
+  })
+
+  it('ข้อความที่พิมพ์ไว้แต่เลือกกลับเป็น ออนไลน์ ใช้ ออนไลน์', () => {
+    const rows = [{ productId: 'p1', quantity: '1', note: 'ออนไลน์', customNote: 'ร้านเก่า' }]
+    expect(planBulkIssue(rows, products, 'staff', today).moves[0].note).toBe('ออนไลน์')
   })
 
   it('จำนวนและหมายเหตุผิดพร้อมกัน แจ้งทั้งสองช่อง', () => {

@@ -2596,6 +2596,19 @@ tbody tr.flash {
   padding: 8px 10px;
 }
 
+.note-input {
+  display: block;
+  width: 100%;
+  min-width: 160px;
+  margin-top: 6px;
+}
+
+.note-all-input {
+  flex: 1;
+  min-width: 240px;
+  margin-top: 0;
+}
+
 .issue-table .qty-input {
   width: 96px;
   text-align: right;

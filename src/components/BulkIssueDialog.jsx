@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ISSUE_NOTE_OPTIONS, planBulkIssue } from '../lib/bulkIssue.js'
+import { ISSUE_NOTE_CHOICES, ISSUE_NOTE_CUSTOM, ISSUE_NOTE_MAX, planBulkIssue } from '../lib/bulkIssue.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { searchProducts } from '../lib/stockRules.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
@@ -36,7 +36,7 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
 
   const addProduct = (product) => {
     if (product.onHand <= 0) return
-    setRows((current) => (current.some((r) => r.productId === product.id) ? current : [...current, { productId: product.id, quantity: '', note: '' }]))
+    setRows((current) => (current.some((r) => r.productId === product.id) ? current : [...current, { productId: product.id, quantity: '', note: '', customNote: '' }]))
     setQuery('')
     setServerError(null)
   }
@@ -62,6 +62,12 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
   const setAllNotes = (note) => {
     if (!note) return
     setRows((current) => current.map((r) => ({ ...r, note })))
+    setErrors({})
+  }
+
+  // เลือก "ระบุหมายเหตุ" ที่ช่องรวม แล้วพิมพ์ข้อความเดียวใช้กับทุกแถว (เช่น ชื่อร้านของใบสั่งนี้)
+  const setAllCustomText = (customNote) => {
+    setRows((current) => current.map((r) => ({ ...r, note: ISSUE_NOTE_CUSTOM, customNote })))
     setErrors({})
   }
 
@@ -99,6 +105,7 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
   }
 
   const noteAllValue = rows.length > 0 && rows.every((r) => r.note && r.note === rows[0].note) ? rows[0].note : ''
+  const allCustomText = noteAllValue === ISSUE_NOTE_CUSTOM && rows.every((r) => r.customNote === rows[0].customNote) ? rows[0].customNote : ''
 
   return (
     <>
@@ -115,13 +122,24 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
                 <span>ตั้งหมายเหตุทุกรายการ</span>
                 <select value={noteAllValue} onChange={(e) => setAllNotes(e.target.value)} disabled={rows.length === 0 || saving}>
                   <option value="">เลือก…</option>
-                  {ISSUE_NOTE_OPTIONS.map((o) => (
+                  {ISSUE_NOTE_CHOICES.map((o) => (
                     <option key={o} value={o}>
                       {o}
                     </option>
                   ))}
                 </select>
               </label>
+              {noteAllValue === ISSUE_NOTE_CUSTOM && (
+                <input
+                  className="note-input note-all-input"
+                  placeholder="พิมพ์หมายเหตุที่ใช้กับทุกรายการ เช่น ชื่อร้าน"
+                  aria-label="หมายเหตุที่ใช้กับทุกรายการ"
+                  maxLength={ISSUE_NOTE_MAX}
+                  value={allCustomText}
+                  onChange={(e) => setAllCustomText(e.target.value)}
+                  disabled={saving}
+                />
+              )}
             </div>
 
             <div className="issue-search">
@@ -210,12 +228,24 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
                               aria-invalid={Boolean(err.note)}
                             >
                               <option value="">เลือก…</option>
-                              {ISSUE_NOTE_OPTIONS.map((o) => (
+                              {ISSUE_NOTE_CHOICES.map((o) => (
                                 <option key={o} value={o}>
                                   {o}
                                 </option>
                               ))}
                             </select>
+                            {row.note === ISSUE_NOTE_CUSTOM && (
+                              <input
+                                className="note-input"
+                                placeholder="พิมพ์หมายเหตุ"
+                                aria-label={`ข้อความหมายเหตุ ${p.sku}`}
+                                maxLength={ISSUE_NOTE_MAX}
+                                value={row.customNote}
+                                onChange={(e) => patchRow(row.productId, { customNote: e.target.value })}
+                                disabled={saving}
+                                aria-invalid={Boolean(err.note)}
+                              />
+                            )}
                             {err.note && <div className="err">{err.note}</div>}
                           </td>
                           <td>
