@@ -11,6 +11,7 @@ describe('ROLE', () => {
       STAFF: 'staff',
       MANAGER: 'manager',
       MARKETING: 'marketing',
+      ACCOUNTING: 'accounting',
     })
   })
 
@@ -32,6 +33,7 @@ describe('สิทธิ์เต็ม (จัดการสินค้า �
       expect(can(ROLE.STAFF)).toBe(false)
       expect(can(ROLE.MANAGER)).toBe(false)
       expect(can(ROLE.MARKETING)).toBe(false)
+      expect(can(ROLE.ACCOUNTING)).toBe(false)
     })
 
     it(`${name}: ไม่มีบทบาท ค่าไม่รู้จัก หรือตัวพิมพ์ไม่ตรง ไม่ได้`, () => {
@@ -48,7 +50,7 @@ describe('canRecordMovements', () => {
   })
 
   it('Manager, Marketing, ไม่มีบทบาท, ค่าไม่รู้จัก ดูอย่างเดียว', () => {
-    for (const value of [ROLE.MANAGER, ROLE.MARKETING, undefined, null, '', 'owner']) {
+    for (const value of [ROLE.MANAGER, ROLE.MARKETING, ROLE.ACCOUNTING, undefined, null, '', 'owner']) {
       expect(canRecordMovements(value)).toBe(false)
     }
   })

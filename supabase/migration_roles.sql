@@ -12,7 +12,7 @@
 -- 1) ค่าบทบาทที่ใช้ได้ ---------------------------------------------------------
 alter table public.profiles drop constraint if exists profiles_role_valid;
 alter table public.profiles add constraint profiles_role_valid
-  check (role in ('admin', 'staff', 'store_qc', 'manager', 'marketing'));
+  check (role in ('admin', 'staff', 'store_qc', 'manager', 'marketing', 'accounting'));
 
 -- 2) record_movement: ดูอย่างเดียวบันทึกไม่ได้, ปรับยอด/ตัดจำหน่าย = admin หรือ store_qc ----
 -- ตัวเต็มตามที่ใช้งานจริงอยู่ (ยังรับ p_warehouse_id เพราะข้อมูลคลังย่อยเก่ายังอยู่ในฐานข้อมูล แอปส่ง null เสมอ)

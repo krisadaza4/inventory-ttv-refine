@@ -78,7 +78,7 @@ describe('planBulkIssue', () => {
   })
 
   it('ดูอย่างเดียว (manager / marketing) เบิกไม่ได้', () => {
-    for (const role of ['manager', 'marketing']) {
+    for (const role of ['manager', 'marketing', 'accounting']) {
       const { errors, moves } = planBulkIssue([{ productId: 'p1', quantity: '1', note: 'ออนไลน์' }], products, role, today)
       expect(moves).toEqual([])
       expect(errors.p1.quantity).toBe('บัญชีนี้ดูข้อมูลได้อย่างเดียว บันทึกรายการไม่ได้')

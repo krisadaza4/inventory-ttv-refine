@@ -5,6 +5,7 @@ export const ROLE = {
   STAFF: 'staff', // พนักงาน (บัญชีเดิม): รับเข้า เบิกออก ส่งซ่อม ซ่อมเสร็จ
   MANAGER: 'manager', // ดูอย่างเดียว
   MARKETING: 'marketing', // ดูอย่างเดียว
+  ACCOUNTING: 'accounting', // แผนกบัญชี: ดูอย่างเดียว
 }
 
 // ชื่อบทบาทที่แสดงบนแถบบน
@@ -14,6 +15,7 @@ export const ROLE_LABEL = {
   [ROLE.STAFF]: 'พนักงาน (staff)',
   [ROLE.MANAGER]: 'Manager',
   [ROLE.MARKETING]: 'Marketing',
+  [ROLE.ACCOUNTING]: 'บัญชี',
 }
 
 // ทำได้ทุกอย่าง: เพิ่ม/แก้ไข/ปิดใช้งานสินค้า นำเข้าไฟล์ ปรับยอด ตัดจำหน่าย

@@ -13,6 +13,7 @@
 --   staff      พนักงาน (บัญชีเดิม)    รับเข้า เบิกออก ส่งซ่อม ซ่อมเสร็จ
 --   manager    Manager                ดูอย่างเดียว
 --   marketing  Marketing              ดูอย่างเดียว
+--   accounting บัญชี                  ดูอย่างเดียว (เพิ่ม 2026-11-17)
 
 -- เพิ่มโปรไฟล์: แผนกละ 3 บัญชี ----------------------------------------------
 insert into public.profiles (id, display_name, role)
@@ -26,7 +27,8 @@ from (values
   ('manager03@ttv.com',   'Manager03',   'manager'),
   ('marketing01@ttv.com', 'Marketing01', 'marketing'),
   ('marketing02@ttv.com', 'Marketing02', 'marketing'),
-  ('marketing03@ttv.com', 'Marketing03', 'marketing')
+  ('marketing03@ttv.com', 'Marketing03', 'marketing'),
+  ('account01@ttv.com',   'Account01',   'accounting')
 ) as v(email, display_name, role)
 join auth.users u on lower(u.email) = v.email
 on conflict (id) do update
