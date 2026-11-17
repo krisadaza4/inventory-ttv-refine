@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ISSUE_NOTE_OPTIONS, planBulkIssue } from '../lib/bulkIssue.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { searchProducts } from '../lib/stockRules.js'
@@ -20,6 +20,12 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
   const [saving, setSaving] = useState(false)
   const [serverError, setServerError] = useState(null)
   const [confirmClose, setConfirmClose] = useState(false)
+  const searchRef = useRef(null)
+
+  // เปิดหน้าต่างแล้วพิมพ์ค้นหาได้ทันที (autoFocus ใช้ไม่ได้ เพราะ <dialog> เปิดหลังกล่องค้นหาถูกสร้าง effect ของ parent รันหลัง effect เปิด dialog)
+  useEffect(() => {
+    searchRef.current?.focus()
+  }, [])
 
   const byId = new Map(products.map((p) => [p.id, p]))
   const picked = new Set(rows.map((r) => r.productId))
@@ -121,7 +127,7 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
             <div className="issue-search">
               <input
                 type="search"
-                autoFocus
+                ref={searchRef}
                 placeholder="ค้นหาชื่อ / รหัส / บาร์โค้ด แล้วกดเลือกสินค้า (Enter = เลือกรายการแรก)"
                 aria-label="ค้นหาสินค้าที่จะเบิก"
                 value={query}
