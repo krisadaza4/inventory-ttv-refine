@@ -210,6 +210,21 @@ export function createRepository(client) {
       return { movement: error ? null : toMovement(data), error }
     },
 
+    // บันทึกหลายรายการทั้งใบ (record_movements): รายการไหนไม่ผ่าน ฐานข้อมูลย้อนกลับทั้งใบ ไม่เหลือรายการที่บันทึกไปครึ่งเดียว
+    // items = [{ productId, type, quantity, note }] คืน { saved: จำนวนที่บันทึก, error }
+    async recordMovements({ items, movementDate }) {
+      const payload = items.map((item) => ({
+        product_id: item.productId,
+        type: item.type,
+        quantity: Number(item.quantity),
+        note: String(item.note ?? '').trim() || null,
+      }))
+      const { data, error } = await run(() =>
+        client.rpc('record_movements', { p_items: payload, p_movement_date: movementDate || null }),
+      )
+      return { saved: error ? 0 : Number(data), error }
+    },
+
     // ยอดขายรายเดือนทั้งหมด (สินค้า ~ร้อยรายการ × 12 เดือนต่อปี) ดึงทีละ EXPORT_PAGE_SIZE
     async listMonthlySales() {
       const all = []

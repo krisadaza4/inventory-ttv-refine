@@ -12,6 +12,11 @@ describe('toThaiError', () => {
     expect(toThaiError(error)).toBe('จำนวนคงเหลือไม่พอ (คงเหลือ 3.50)')
   })
 
+  it('ข้อความคงเหลือไม่พอจากฐานข้อมูล ตัดคำว่า คลังใหญ่ ออก (ไม่มีคลังย่อยแล้ว)', () => {
+    const error = { code: 'P0001', message: 'รายการที่ 2: คลังใหญ่คงเหลือไม่พอ (คงเหลือ 3)', hint: 'insufficient_stock' }
+    expect(toThaiError(error)).toBe('รายการที่ 2: คงเหลือไม่พอ (คงเหลือ 3)')
+  })
+
   it('hint ที่รู้จักแต่ไม่มีข้อความ ใช้ข้อความสำรอง', () => {
     expect(toThaiError({ code: 'P0001', message: '', hint: 'product_inactive' })).toBe(ERROR_MESSAGE.PRODUCT_INACTIVE)
   })
@@ -25,6 +30,9 @@ describe('toThaiError', () => {
     const hints = [
       'no_profile',
       'read_only_role',
+      'empty_batch',
+      'too_many_items',
+      'batch_item_failed',
       'invalid_type',
       'adjust_admin_only',
       'write_off_admin_only',

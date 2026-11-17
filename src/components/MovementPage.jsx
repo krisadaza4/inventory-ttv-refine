@@ -13,6 +13,7 @@ import {
   stockAfter,
   validateMovement,
 } from '../lib/stockRules.js'
+import BulkIssueDialog from './BulkIssueDialog.jsx'
 import PageHead from './PageHead.jsx'
 import ProductThumb from './ProductThumb.jsx'
 import StockBadge from './StockBadge.jsx'
@@ -58,6 +59,8 @@ export default function MovementPage({
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState(null)
   const [notice, setNotice] = useState(null)
+  // หน้าต่างเบิกออกหลายรายการ
+  const [bulkOpen, setBulkOpen] = useState(false)
 
   const types = allowedMovementTypes(role)
   const product = products.find((p) => p.id === productId) ?? null
@@ -105,7 +108,32 @@ export default function MovementPage({
 
   return (
     <>
-      <PageHead page={PAGE.MOVE} title="บันทึกรับเข้า / เบิกออก / ส่งซ่อม" />
+      <PageHead
+        page={PAGE.MOVE}
+        title="บันทึกรับเข้า / เบิกออก / ส่งซ่อม"
+        actions={
+          <div className="head-actions">
+            <button type="button" className="btn btn-out" onClick={() => setBulkOpen(true)} disabled={loadState !== 'ready'}>
+              <span aria-hidden="true">－</span> เบิกออกหลายรายการ
+            </button>
+          </div>
+        }
+      />
+
+      {bulkOpen && (
+        <BulkIssueDialog
+          products={products}
+          role={role}
+          today={today}
+          repository={repository}
+          onClose={() => setBulkOpen(false)}
+          onSaved={(message) => {
+            setBulkOpen(false)
+            setNotice(message)
+            onSaved()
+          }}
+        />
+      )}
 
       {notice && (
         <p className="notice" role="status">

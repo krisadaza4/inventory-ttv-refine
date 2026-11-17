@@ -2529,6 +2529,91 @@ tbody tr.flash {
   line-height: 1.6;
 }
 
+/* หน้าต่างเบิกออกหลายรายการ (หน้ารับเข้า/เบิกออก) */
+.product-dialog.bulk-issue-dialog {
+  width: min(1000px, calc(100vw - 32px));
+}
+
+.issue-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  margin-bottom: 12px;
+}
+
+.issue-search {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.issue-search input {
+  width: 100%;
+}
+
+.pick-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.pick-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pick-item:hover:not(:disabled),
+.pick-item:focus-visible {
+  background: var(--row-hover);
+}
+
+.pick-item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.pick-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.pick-empty {
+  padding: 8px 10px;
+}
+
+.issue-table .qty-input {
+  width: 96px;
+  text-align: right;
+}
+
+.issue-table tr.row-error td {
+  background: var(--out-bg);
+}
+
+.issue-hint {
+  font-size: 13px;
+}
+
+.issue-buttons {
+  display: inline-flex;
+  gap: 8px;
+}
+
 /* หน้าต่าง "มีอะไรใหม่" (ใช้โครงเดียวกับหน้าต่างฟอร์มสินค้า) */
 .changelog-dialog {
   width: min(640px, calc(100vw - 32px));

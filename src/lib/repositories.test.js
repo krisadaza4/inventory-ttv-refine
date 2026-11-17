@@ -84,6 +84,7 @@ describe('createRepository', () => {
       'listMovements',
       'listProducts',
       'recordMovement',
+      'recordMovements',
       'removeProductImage',
       'saveProduct',
       'setProductActive',
@@ -263,6 +264,39 @@ describe('setReorderPoints', () => {
     const { updated, error } = await createRepository(client).setReorderPoints([{ id: 'a', reorderPoint: 3 }])
     expect(updated).toBe(0)
     expect(error).toBeTruthy()
+  })
+})
+
+describe('recordMovements', () => {
+  const items = [
+    { productId: 'p1', type: 'out', quantity: '2', note: 'ออนไลน์' },
+    { productId: 'p2', type: 'out', quantity: '1.5', note: ' ' },
+  ]
+
+  it('ส่งทั้งใบเป็น rpc ครั้งเดียว (จำนวนเป็นตัวเลข หมายเหตุว่าง = null) และคืนจำนวนที่บันทึก', async () => {
+    const client = fakeClient({ data: 2, error: null })
+    expect(await createRepository(client).recordMovements({ items, movementDate: '2026-11-17' })).toEqual({ saved: 2, error: null })
+    expect(client.calls).toEqual([
+      [
+        'rpc',
+        'record_movements',
+        {
+          p_items: [
+            { product_id: 'p1', type: 'out', quantity: 2, note: 'ออนไลน์' },
+            { product_id: 'p2', type: 'out', quantity: 1.5, note: null },
+          ],
+          p_movement_date: '2026-11-17',
+        },
+      ],
+    ])
+  })
+
+  it('ผิดพลาด: ไม่มีรายการไหนบันทึก (saved 0) และได้ข้อความไทย', async () => {
+    const client = fakeClient({ data: null, error: { code: 'P0001', message: 'รายการที่ 2: คงเหลือไม่พอ (คงเหลือ 3)', hint: 'insufficient_stock' } })
+    expect(await createRepository(client).recordMovements({ items, movementDate: '2026-11-17' })).toEqual({
+      saved: 0,
+      error: 'รายการที่ 2: คงเหลือไม่พอ (คงเหลือ 3)',
+    })
   })
 })
 

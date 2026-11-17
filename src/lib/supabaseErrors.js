@@ -8,6 +8,9 @@ export const ERROR_MESSAGE = {
   NETWORK: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
   NO_PROFILE: 'บัญชีนี้ยังไม่ได้กำหนดบทบาท กรุณาติดต่อเจ้าของร้าน',
   INVALID_TYPE: 'ประเภทรายการไม่ถูกต้อง',
+  EMPTY_BATCH: 'ไม่มีรายการที่จะบันทึก',
+  TOO_MANY_ITEMS: 'บันทึกครั้งเดียวได้ไม่เกิน 200 รายการ',
+  BATCH_ITEM_FAILED: 'บันทึกรายการไม่สำเร็จ',
   READ_ONLY_ROLE: 'บัญชีนี้ดูข้อมูลได้อย่างเดียว บันทึกรายการไม่ได้',
   ADJUST_ADMIN_ONLY: 'ปรับยอดได้เฉพาะเจ้าของร้านและ Store/QC',
   WRITE_OFF_ADMIN_ONLY: 'ตัดจำหน่ายได้เฉพาะเจ้าของร้านและ Store/QC',
@@ -33,6 +36,9 @@ export const ERROR_MESSAGE = {
 const BY_HINT = {
   no_profile: ERROR_MESSAGE.NO_PROFILE,
   read_only_role: ERROR_MESSAGE.READ_ONLY_ROLE,
+  empty_batch: ERROR_MESSAGE.EMPTY_BATCH,
+  too_many_items: ERROR_MESSAGE.TOO_MANY_ITEMS,
+  batch_item_failed: ERROR_MESSAGE.BATCH_ITEM_FAILED,
   invalid_type: ERROR_MESSAGE.INVALID_TYPE,
   adjust_admin_only: ERROR_MESSAGE.ADJUST_ADMIN_ONLY,
   write_off_admin_only: ERROR_MESSAGE.WRITE_OFF_ADMIN_ONLY,
@@ -88,7 +94,8 @@ export function toThaiError(error) {
   if (!error) return null
   // ตรวจ hint ก่อน code เพราะ no_profile/adjust_admin_only ใช้ code 42501 เหมือนกัน
   // ข้อความจาก record_movement เป็นภาษาไทยอยู่แล้ว และบางข้อมีตัวเลขคงเหลือ
-  if (error.hint && BY_HINT[error.hint]) return error.message || BY_HINT[error.hint]
+  // ข้อความเก่าในฐานข้อมูลมีคำว่า "คลังใหญ่" จากสมัยมีคลังย่อย ตัดออกให้เหลือคำว่า คงเหลือไม่พอ
+  if (error.hint && BY_HINT[error.hint]) return (error.message || BY_HINT[error.hint]).replace('คลังใหญ่คงเหลือไม่พอ', 'คงเหลือไม่พอ')
   if (error.code === '23505') return duplicateMessage(error)
   if (error.code && BY_CODE[error.code]) return BY_CODE[error.code]
   if (error.status === 429) return ERROR_MESSAGE.RATE_LIMIT
