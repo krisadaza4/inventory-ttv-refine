@@ -241,7 +241,7 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
                           <td className="num dim">{index + 1}</td>
                           <td>
                             {p.name}
-                            <div className="sub mono">{p.sku}</div>
+                            {p.name !== p.sku && <div className="sub mono">{p.sku}</div>}
                           </td>
                           <td>
                             {sourceSummary(line.sources)}
@@ -259,7 +259,7 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
                             />
                             {err.quantity && <div className="err">{err.quantity}</div>}
                           </td>
-                          <td className="num">
+                          <td className="num nowrap">
                             {formatQuantity(p.onHand)} {p.unit}
                           </td>
                           <td>
