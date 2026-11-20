@@ -18,8 +18,10 @@ const round = (n) => Math.round(n * 10) / 10
 export async function readPdfPages(file) {
   const pdfjs = await loadPdfjs()
   const data = new Uint8Array(await file.arrayBuffer())
-  const doc = await pdfjs.getDocument({ data, isEvalSupported: false }).promise
+  // pdfjs v6: ปิดเอกสารผ่าน loadingTask.destroy() (PDFDocumentProxy ไม่มี destroy แล้ว)
+  const task = pdfjs.getDocument({ data, isEvalSupported: false })
   try {
+    const doc = await task.promise
     const pages = []
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i)
@@ -33,6 +35,6 @@ export async function readPdfPages(file) {
     }
     return pages
   } finally {
-    await doc.destroy()
+    await task.destroy()
   }
 }

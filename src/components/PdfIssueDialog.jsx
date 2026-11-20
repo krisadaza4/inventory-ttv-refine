@@ -49,7 +49,8 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
       try {
         const parsed = parsePicklist(await readPdfPages(file))
         results.push({ name: file.name, ...parsed })
-      } catch {
+      } catch (thrown) {
+        console.error('อ่าน PDF ไม่ได้', file.name, thrown)
         results.push({ name: file.name, platform: null, rows: [], warnings: [], error: 'อ่านไฟล์ไม่ได้ (ไม่ใช่ PDF หรือไฟล์เสีย)' })
       }
     }
