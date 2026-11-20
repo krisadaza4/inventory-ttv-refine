@@ -80,11 +80,13 @@ describe('createRepository', () => {
       'getMyProfile',
       'insertProducts',
       'listAllMovements',
+      'listIssuedOrders',
       'listMonthlySales',
       'listMovements',
       'listProducts',
       'recordMovement',
       'recordMovements',
+      'recordOnlineIssue',
       'removeProductImage',
       'saveProduct',
       'setProductActive',
@@ -297,6 +299,49 @@ describe('recordMovements', () => {
       saved: 0,
       error: 'รายการที่ 2: คงเหลือไม่พอ (คงเหลือ 3)',
     })
+  })
+})
+
+describe('เบิกออกจาก PDF', () => {
+  it('listIssuedOrders: ค้นตามเลขคำสั่งซื้อไม่ซ้ำ ทีละชุด แปลงชื่อฟิลด์', async () => {
+    const client = fakeClient({ data: [{ platform: 'shopee', order_no: 'S1', sku: 'GL-101I' }], error: null })
+    const orderNos = [...Array.from({ length: UPDATE_BATCH_SIZE + 1 }, (_, i) => `O${i}`), 'O0']
+    const { rows, error } = await createRepository(client).listIssuedOrders(orderNos)
+    expect(error).toBeNull()
+    expect(rows).toEqual([
+      { platform: 'shopee', orderNo: 'S1', sku: 'GL-101I' },
+      { platform: 'shopee', orderNo: 'S1', sku: 'GL-101I' },
+    ])
+    const ins = client.calls.filter((c) => c[0] === 'in')
+    expect(ins.map((c) => c[2].length)).toEqual([UPDATE_BATCH_SIZE, 1])
+    expect(client.calls[0]).toEqual(['from', 'online_issued_orders'])
+  })
+
+  it('recordOnlineIssue: rpc record_online_issue ส่งรายการและคำสั่งซื้อพร้อมกัน', async () => {
+    const client = fakeClient({ data: 1, error: null })
+    const orders = [{ platform: 'lazada', order_no: 'L1', sku: 'KB8A-VAB' }]
+    const items = [{ productId: 'p1', type: 'out', quantity: '1', note: 'ออนไลน์' }]
+    expect(await createRepository(client).recordOnlineIssue({ items, orders, movementDate: '2026-11-20' })).toEqual({ saved: 1, error: null })
+    expect(client.calls).toEqual([
+      [
+        'rpc',
+        'record_online_issue',
+        { p_items: [{ product_id: 'p1', type: 'out', quantity: 1, note: 'ออนไลน์' }], p_orders: orders, p_movement_date: '2026-11-20' },
+      ],
+    ])
+  })
+
+  it('recordOnlineIssue: คำสั่งซื้อซ้ำได้ข้อความจากฐานข้อมูลพร้อมเลขคำสั่งซื้อ', async () => {
+    const client = fakeClient({ data: null, error: { code: 'P0001', message: 'มีคำสั่งซื้อที่เบิกไปแล้ว: L1', hint: 'duplicate_order' } })
+    const result = await createRepository(client).recordOnlineIssue({ items: [], orders: [], movementDate: null })
+    expect(result).toEqual({ saved: 0, error: 'มีคำสั่งซื้อที่เบิกไปแล้ว: L1' })
+  })
+
+  it('ชนกันพร้อมกันพอดี (unique violation) ได้ข้อความคำสั่งซื้อซ้ำ', async () => {
+    const error = { code: '23505', message: 'duplicate key value violates unique constraint "online_issued_orders_pkey"' }
+    const client = fakeClient({ data: null, error })
+    const result = await createRepository(client).recordOnlineIssue({ items: [], orders: [], movementDate: null })
+    expect(result.error).toBe(ERROR_MESSAGE.DUPLICATE_ORDER)
   })
 })
 

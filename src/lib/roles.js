@@ -40,6 +40,11 @@ export function canWriteOff(role) {
   return FULL_ACCESS.has(role)
 }
 
+// เบิกออกจาก PDF ของเว็บ seller (ผู้ใช้กำหนด 2026-11-19: เฉพาะ admin และ Store/QC)
+export function canIssueFromPdf(role) {
+  return FULL_ACCESS.has(role)
+}
+
 // รับเข้า / เบิกออก / ส่งซ่อม / ซ่อมเสร็จ
 export function canRecordMovements(role) {
   return CAN_RECORD.has(role)

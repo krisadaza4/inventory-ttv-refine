@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ROLE, ROLE_LABEL, canAdjust, canManageProducts, canRecordMovements, canWriteOff } from './roles.js'
+import { ROLE, ROLE_LABEL, canAdjust, canIssueFromPdf, canManageProducts, canRecordMovements, canWriteOff } from './roles.js'
 
 const ALL_ROLES = Object.values(ROLE)
 
@@ -26,6 +26,7 @@ describe('สิทธิ์เต็ม (จัดการสินค้า �
     ['canManageProducts', canManageProducts],
     ['canAdjust', canAdjust],
     ['canWriteOff', canWriteOff],
+    ['canIssueFromPdf', canIssueFromPdf],
   ]) {
     it(`${name}: admin และ Store/QC ได้ ที่เหลือไม่ได้`, () => {
       expect(can(ROLE.ADMIN)).toBe(true)

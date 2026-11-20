@@ -225,6 +225,35 @@ export function createRepository(client) {
       return { saved: error ? 0 : Number(data), error }
     },
 
+    // คำสั่งซื้อออนไลน์ที่เคยเบิกแล้ว ตามเลขคำสั่งซื้อที่อ่านจาก PDF คืน { rows: [{ platform, orderNo, sku }], error }
+    async listIssuedOrders(orderNos) {
+      const unique = [...new Set(orderNos)]
+      const rows = []
+      for (let i = 0; i < unique.length; i += UPDATE_BATCH_SIZE) {
+        const batch = unique.slice(i, i + UPDATE_BATCH_SIZE)
+        const { data, error } = await run(() =>
+          client.from('online_issued_orders').select('platform, order_no, sku').in('order_no', batch),
+        )
+        if (error) return { rows: [], error }
+        rows.push(...(data ?? []).map((r) => ({ platform: r.platform, orderNo: r.order_no, sku: r.sku })))
+      }
+      return { rows, error: null }
+    },
+
+    // เบิกออกจาก PDF: บันทึกคำสั่งซื้อ + เบิกออกทั้งใบใน transaction เดียว (record_online_issue)
+    async recordOnlineIssue({ items, orders, movementDate }) {
+      const payload = items.map((item) => ({
+        product_id: item.productId,
+        type: item.type,
+        quantity: Number(item.quantity),
+        note: String(item.note ?? '').trim() || null,
+      }))
+      const { data, error } = await run(() =>
+        client.rpc('record_online_issue', { p_items: payload, p_orders: orders, p_movement_date: movementDate || null }),
+      )
+      return { saved: error ? 0 : Number(data), error }
+    },
+
     // ยอดขายรายเดือนทั้งหมด (สินค้า ~ร้อยรายการ × 12 เดือนต่อปี) ดึงทีละ EXPORT_PAGE_SIZE
     async listMonthlySales() {
       const all = []

@@ -11,6 +11,9 @@ export const ERROR_MESSAGE = {
   EMPTY_BATCH: 'ไม่มีรายการที่จะบันทึก',
   TOO_MANY_ITEMS: 'บันทึกครั้งเดียวได้ไม่เกิน 200 รายการ',
   BATCH_ITEM_FAILED: 'บันทึกรายการไม่สำเร็จ',
+  PDF_ISSUE_FORBIDDEN: 'เบิกออกจาก PDF ได้เฉพาะเจ้าของร้านและ Store/QC',
+  EMPTY_ORDERS: 'ไม่มีเลขคำสั่งซื้อ',
+  DUPLICATE_ORDER: 'มีคำสั่งซื้อที่เบิกไปแล้ว กรุณาอ่านไฟล์ใหม่อีกครั้ง',
   READ_ONLY_ROLE: 'บัญชีนี้ดูข้อมูลได้อย่างเดียว บันทึกรายการไม่ได้',
   ADJUST_ADMIN_ONLY: 'ปรับยอดได้เฉพาะเจ้าของร้านและ Store/QC',
   WRITE_OFF_ADMIN_ONLY: 'ตัดจำหน่ายได้เฉพาะเจ้าของร้านและ Store/QC',
@@ -39,6 +42,9 @@ const BY_HINT = {
   empty_batch: ERROR_MESSAGE.EMPTY_BATCH,
   too_many_items: ERROR_MESSAGE.TOO_MANY_ITEMS,
   batch_item_failed: ERROR_MESSAGE.BATCH_ITEM_FAILED,
+  pdf_issue_forbidden: ERROR_MESSAGE.PDF_ISSUE_FORBIDDEN,
+  empty_orders: ERROR_MESSAGE.EMPTY_ORDERS,
+  duplicate_order: ERROR_MESSAGE.DUPLICATE_ORDER,
   invalid_type: ERROR_MESSAGE.INVALID_TYPE,
   adjust_admin_only: ERROR_MESSAGE.ADJUST_ADMIN_ONLY,
   write_off_admin_only: ERROR_MESSAGE.WRITE_OFF_ADMIN_ONLY,
@@ -78,6 +84,7 @@ function duplicateMessage(error) {
   const text = `${error.message ?? ''} ${error.details ?? ''}`
   if (text.includes('products_sku_unique')) return ERROR_MESSAGE.DUPLICATE_SKU
   if (text.includes('products_barcode_unique')) return ERROR_MESSAGE.DUPLICATE_BARCODE
+  if (text.includes('online_issued_orders_pkey')) return ERROR_MESSAGE.DUPLICATE_ORDER
   return ERROR_MESSAGE.DUPLICATE
 }
 

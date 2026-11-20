@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { PAGE } from '../lib/menu.js'
+import { canIssueFromPdf } from '../lib/roles.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import {
   MOVEMENT_LABEL,
@@ -15,6 +16,7 @@ import {
 } from '../lib/stockRules.js'
 import BulkIssueDialog from './BulkIssueDialog.jsx'
 import PageHead from './PageHead.jsx'
+import PdfIssueDialog from './PdfIssueDialog.jsx'
 import ProductThumb from './ProductThumb.jsx'
 import StockBadge from './StockBadge.jsx'
 import ThaiDateInput from './ThaiDateInput.jsx'
@@ -61,6 +63,8 @@ export default function MovementPage({
   const [notice, setNotice] = useState(null)
   // หน้าต่างเบิกออกหลายรายการ
   const [bulkOpen, setBulkOpen] = useState(false)
+  // หน้าต่างเบิกออกจาก PDF (admin / Store/QC)
+  const [pdfOpen, setPdfOpen] = useState(false)
 
   const types = allowedMovementTypes(role)
   const product = products.find((p) => p.id === productId) ?? null
@@ -113,6 +117,11 @@ export default function MovementPage({
         title="บันทึกรับเข้า / เบิกออก / ส่งซ่อม"
         actions={
           <div className="head-actions">
+            {canIssueFromPdf(role) && (
+              <button type="button" className="btn btn-out" onClick={() => setPdfOpen(true)} disabled={loadState !== 'ready'}>
+                <span aria-hidden="true">－</span> เบิกออกจาก PDF
+              </button>
+            )}
             <button type="button" className="btn btn-out" onClick={() => setBulkOpen(true)} disabled={loadState !== 'ready'}>
               <span aria-hidden="true">－</span> เบิกออกหลายรายการ
             </button>
@@ -129,6 +138,21 @@ export default function MovementPage({
           onClose={() => setBulkOpen(false)}
           onSaved={(message) => {
             setBulkOpen(false)
+            setNotice(message)
+            onSaved()
+          }}
+        />
+      )}
+
+      {pdfOpen && (
+        <PdfIssueDialog
+          products={products}
+          role={role}
+          today={today}
+          repository={repository}
+          onClose={() => setPdfOpen(false)}
+          onSaved={(message) => {
+            setPdfOpen(false)
             setNotice(message)
             onSaved()
           }}

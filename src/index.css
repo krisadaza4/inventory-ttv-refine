@@ -2602,6 +2602,47 @@ tbody tr.flash {
   min-width: 160px;
 }
 
+.pdf-pick {
+  cursor: pointer;
+}
+
+.pdf-hint {
+  align-self: center;
+}
+
+.pdf-files {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.pdf-warn {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--low-border);
+  border-radius: var(--radius);
+  background: var(--low-bg);
+}
+
+.pdf-warn .issue-table {
+  margin-top: 8px;
+}
+
+.pdf-warn-text {
+  color: var(--low);
+  font-size: 0.85em;
+}
+
+.pdf-skipped {
+  margin: 0 0 12px;
+}
+
+.pdf-skipped summary {
+  cursor: pointer;
+}
+
 .note-combo {
   position: relative;
 }

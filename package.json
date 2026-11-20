@@ -1,7 +1,7 @@
 {
   "name": "inventory-ttv",
   "private": true,
-  "version": "1.18.0",
+  "version": "1.19.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
+    "pdfjs-dist": "6.4.299",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "read-excel-file": "^9.3.10",
