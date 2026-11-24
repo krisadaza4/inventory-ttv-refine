@@ -24,13 +24,15 @@ export function checkBundleDraft(draft, bundles, oldSku = null) {
 }
 
 // เรียงชิ้นส่วน: สินค้าหลัก (รหัสชุดขึ้นต้นด้วยรหัสสินค้านั้น เช่น GL-203R ใน GL-203R-P1) ก่อน ที่เหลือเรียงตามรหัส
+// ชิ้นส่วนที่ไม่พบสินค้าอยู่ท้ายสุด
 export function sortBundleItems(bundle, productsById) {
   const skuOf = (item) => normalizeSku(productsById.get(item.productId)?.sku)
-  const main = (item) => {
+  const rank = (item) => {
     const sku = skuOf(item)
-    return sku !== '' && normalizeSku(bundle.sku).startsWith(`${sku}-`) ? sku.length : 0
+    if (sku === '') return -1
+    return normalizeSku(bundle.sku).startsWith(`${sku}-`) ? sku.length : 0
   }
-  return bundle.items.toSorted((a, b) => main(b) - main(a) || skuOf(a).localeCompare(skuOf(b), 'th'))
+  return bundle.items.toSorted((a, b) => rank(b) - rank(a) || skuOf(a).localeCompare(skuOf(b), 'th'))
 }
 
 // สรุปชิ้นส่วนเป็นข้อความสั้น เช่น "GL-203R, LGT001-P1 ×2, VLP-889A"
