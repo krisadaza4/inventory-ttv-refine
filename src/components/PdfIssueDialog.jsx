@@ -241,6 +241,23 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
 
             {plan && lines.length === 0 && <p className="empty dim">ไม่มีรายการที่จะเบิก</p>}
 
+            {plan && plan.bundled.length > 0 && (
+              <div className="pdf-bundles">
+                <strong>ชุดสินค้าที่แตกเป็นชิ้นส่วน {plan.bundled.length} รายการ</strong>
+                <ul>
+                  {plan.bundled.map((b, i) => (
+                    <li key={`${b.platform}-${b.sku}-${i}`}>
+                      <span className="bundle-tag">ชุด</span> {PLATFORM_LABEL[b.platform]} · <span className="mono">{b.sku}</span> ×
+                      {formatQuantity(b.quantity)} →{' '}
+                      <span className="mono">
+                        {b.items.map((item) => `${byId.get(item.productId)?.sku ?? '?'} ×${formatQuantity(item.quantity)}`).join(', ')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {lines.length > 0 && (
               <div className="table-wrap">
                 <table className="issue-table">
@@ -261,10 +278,13 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
                       const p = byId.get(line.productId)
                       const err = errors[line.productId] ?? {}
                       return (
-                        <tr key={line.productId} className={err.quantity ? 'row-error' : undefined}>
+                        <tr
+                          key={line.productId}
+                          className={[err.quantity && 'row-error', line.fromBundle && 'row-bundle'].filter(Boolean).join(' ') || undefined}
+                        >
                           <td className="num dim">{index + 1}</td>
                           <td>
-                            {p.name}
+                            {line.fromBundle && <span className="bundle-tag">ชุด</span>} {p.name}
                             {p.name !== p.sku && <div className="sub mono">{p.sku}</div>}
                           </td>
                           <td>

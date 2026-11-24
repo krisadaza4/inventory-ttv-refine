@@ -141,7 +141,7 @@ export default function BundleManager({ allProducts, repository, onClose }) {
                 </label>
                 {errors.sku && <div className="err">{errors.sku}</div>}
                 {!errors.sku && productSkus.has(normalizeSku(editing.sku)) && (
-                  <div className="pdf-warn-text">รหัสนี้เป็นสินค้าในสต็อกด้วย ตอนเบิกจาก PDF ระบบจะตัดเป็นชิ้นส่วนตามชุดนี้แทน</div>
+                  <div className="pdf-warn-text">รหัสนี้เป็นสินค้าในสต็อกด้วย ตอนเบิกจาก PDF ถ้าสินค้านี้ยังมีสต็อกจะตัดสินค้านี้ตรง สต็อกหมดแล้วจึงแตกเป็นชิ้นส่วนตามชุดนี้</div>
                 )}
 
                 <div className="issue-search">

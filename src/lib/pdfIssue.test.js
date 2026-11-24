@@ -108,10 +108,33 @@ describe('ชุดสินค้า (Bundle)', () => {
     expect(ordersOfLines(plan.lines).map((o) => o.order_no).toSorted()).toEqual(['S1', 'S2', 'S3'])
   })
 
-  it('รหัสที่เป็นทั้งสินค้าและชุด ถือว่าเป็นชุด', () => {
+  it('รหัสชุดที่เป็นสินค้าและยังมีสต็อก ตัดสินค้านั้นตรง ไม่แตกชุด', () => {
     const file = { platform: 'shopee', rows: [{ sku: 'KB5A02-VAB-P1', quantity: 1, orders: ['S1'] }] }
     const plan = planPdfIssue([file], parts, new Set(), bundles)
-    expect(plan.lines.map((l) => l.productId).toSorted()).toEqual(['kb', 'lgt'])
+    expect(plan.lines.map((l) => [l.productId, l.fromBundle])).toEqual([['kbp1', false]])
+    expect(plan.bundled).toEqual([])
+  })
+
+  it('สินค้าชุดสต็อกหมดแล้ว แตกเป็นชิ้นส่วน', () => {
+    const file = { platform: 'shopee', rows: [{ sku: 'KB5A02-VAB-P1', quantity: 1, orders: ['S1'] }] }
+    const empty = parts.map((p) => (p.id === 'kbp1' ? { ...p, onHand: 0 } : p))
+    const plan = planPdfIssue([file], empty, new Set(), bundles)
+    expect(plan.lines.map((l) => l.productId)).toEqual(['kb', 'lgt'])
+    expect(plan.bundled).toEqual([{ platform: 'shopee', sku: 'KB5A02-VAB-P1', quantity: 1, items: [{ productId: 'kb', quantity: 1 }, { productId: 'lgt', quantity: 1 }] }])
+  })
+
+  it('เรียงสินค้าที่มาจากชุดขึ้นก่อน (สินค้าหลักของชุดก่อนชิ้นส่วน) และติดธง fromBundle', () => {
+    const file = { platform: 'shopee', rows: [
+      { sku: 'KB5A02-VAB', quantity: 1, orders: ['S0'] },
+      { sku: 'GL-203R-P1', quantity: 1, orders: ['S1'] },
+    ] }
+    const plan = planPdfIssue([file], parts, new Set(), bundles)
+    expect(plan.lines.map((l) => [l.productId, l.fromBundle])).toEqual([
+      ['gl', true],
+      ['lgt', true],
+      ['vlp', true],
+      ['kb', false],
+    ])
   })
 
   it('รหัส -P1 ที่ยังไม่ได้ตั้งเป็นชุด แจ้งเหตุผลต่างจากรหัสไม่ตรง', () => {

@@ -2616,6 +2616,38 @@ tbody tr.flash {
   gap: 8px;
 }
 
+.pdf-bundles {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--accent-bg);
+}
+
+.pdf-bundles ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.issue-table tr.row-bundle td {
+  background: var(--accent-bg);
+}
+
+.issue-table tr.row-bundle td:first-child {
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.bundle-tag {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--primary);
+  color: var(--primary-text);
+  font-size: 0.75em;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
 .pdf-pick {
   cursor: pointer;
 }
