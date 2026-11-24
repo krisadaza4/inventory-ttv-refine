@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bundleSummary, checkBundleDraft } from './bundles.js'
+import { bundleSummary, checkBundleDraft, sortBundleItems } from './bundles.js'
 
 const bundles = [{ sku: 'GL-203R-P1', items: [] }]
 
@@ -31,6 +31,14 @@ describe('checkBundleDraft', () => {
       expect(bundle).toBeNull()
       expect(errors.a).toBeTruthy()
     }
+  })
+})
+
+describe('sortBundleItems', () => {
+  it('สินค้าหลักก่อน ที่เหลือเรียงตามรหัส', () => {
+    const byId = new Map([['k', { sku: 'KB5A02-VAB' }], ['v', { sku: 'VHP-103A' }], ['l', { sku: 'LGT001-P1' }], ['h', { sku: 'VHB001' }]])
+    const bundle = { sku: 'KB5A02-VAB-P1', items: ['v', 'h', 'k', 'l'].map((productId) => ({ productId, quantity: 1 })) }
+    expect(sortBundleItems(bundle, byId).map((i) => i.productId)).toEqual(['k', 'l', 'h', 'v'])
   })
 })
 

@@ -23,9 +23,19 @@ export function checkBundleDraft(draft, bundles, oldSku = null) {
   return { bundle: { sku, items }, errors }
 }
 
-// สรุปชิ้นส่วนเป็นข้อความสั้น เช่น "GL-203R, VLP-889A, LGT001-P1 ×2"
+// เรียงชิ้นส่วน: สินค้าหลัก (รหัสชุดขึ้นต้นด้วยรหัสสินค้านั้น เช่น GL-203R ใน GL-203R-P1) ก่อน ที่เหลือเรียงตามรหัส
+export function sortBundleItems(bundle, productsById) {
+  const skuOf = (item) => normalizeSku(productsById.get(item.productId)?.sku)
+  const main = (item) => {
+    const sku = skuOf(item)
+    return sku !== '' && normalizeSku(bundle.sku).startsWith(`${sku}-`) ? sku.length : 0
+  }
+  return bundle.items.toSorted((a, b) => main(b) - main(a) || skuOf(a).localeCompare(skuOf(b), 'th'))
+}
+
+// สรุปชิ้นส่วนเป็นข้อความสั้น เช่น "GL-203R, LGT001-P1 ×2, VLP-889A"
 export function bundleSummary(bundle, productsById) {
-  return bundle.items
+  return sortBundleItems(bundle, productsById)
     .map((item) => {
       const sku = productsById.get(item.productId)?.sku ?? '(ไม่พบสินค้า)'
       return item.quantity === 1 ? sku : `${sku} ×${item.quantity}`

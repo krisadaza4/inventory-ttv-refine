@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { bundleSummary, checkBundleDraft } from '../lib/bundles.js'
+import { bundleSummary, checkBundleDraft, sortBundleItems } from '../lib/bundles.js'
 import { normalizeSku } from '../lib/pdfIssue.js'
 import { searchProducts } from '../lib/stockRules.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
@@ -57,7 +57,7 @@ export default function BundleManager({ allProducts, repository, onClose }) {
   }
 
   const startEdit = (bundle) => {
-    setEditing({ oldSku: bundle.sku, sku: bundle.sku, items: bundle.items.map((i) => ({ productId: i.productId, quantity: String(i.quantity) })) })
+    setEditing({ oldSku: bundle.sku, sku: bundle.sku, items: sortBundleItems(bundle, byId).map((i) => ({ productId: i.productId, quantity: String(i.quantity) })) })
     setErrors({})
     setServerError(null)
     setNotice(null)
