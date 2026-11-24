@@ -9,7 +9,8 @@ import { APP_NAME, APP_RELEASE, APP_SUBTITLE, ThemeToggle } from './components/T
 import { readSeenVersion, saveSeenVersion, shouldShowChangelog } from './lib/changelog.js'
 import { toIsoDate } from './lib/dateFormat.js'
 import { PAGE, getMenu } from './lib/menu.js'
-import { LOGO_SIDE, checkImageFile, resizeImage } from './lib/productImages.js'
+import { planImageUrls, rememberImageUrls, sameUrls } from './lib/imageUrlCache.js'
+import { IMAGE_URL_TTL, LOGO_SIDE, checkImageFile, resizeImage } from './lib/productImages.js'
 import { createRepository } from './lib/repositories.js'
 import { SESSION_EXPIRED_MESSAGE, msUntilRelogin, reloginTimeout } from './lib/sessionLimit.js'
 import { canManageProducts } from './lib/roles.js'
@@ -286,6 +287,9 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
   const [moveIntent, setMoveIntent] = useState(null)
   // { [imagePath]: signed URL } ขอใหม่ทุกครั้งที่โหลดสินค้า (ลิงก์ใช้ได้ 1 ชั่วโมง)
   const [imageUrls, setImageUrls] = useState({})
+  // signed URL ที่ขอไว้แล้ว ใช้ซ้ำจนใกล้หมดอายุ (lib/imageUrlCache.js) imageTick = ตรวจอายุ URL ซ้ำทุก 5 นาทีตอนเปิดหน้าค้างไว้
+  const imageUrlCache = useRef(new Map())
+  const [imageTick, setImageTick] = useState(0)
   // โลโก้ร้าน (null = ยังไม่ตั้ง)
   const [logoUrl, setLogoUrl] = useState(null)
   const [logoBusy, setLogoBusy] = useState(false)
@@ -330,16 +334,31 @@ function Workspace({ profile, repository, theme, onToggleTheme, signingOut, sign
   }
 
   useEffect(() => {
+    const timer = setInterval(() => setImageTick((n) => n + 1), 5 * 60 * 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
     const paths = allProducts.map((p) => p.imagePath).filter(Boolean)
     if (paths.length === 0) return undefined
     let active = true
-    repository.signImageUrls(paths).then(({ urls }) => {
-      if (active) setImageUrls(urls)
+    const cache = imageUrlCache.current
+    const { urls: reused, toSign } = planImageUrls(cache, paths)
+    const publish = (urls) => setImageUrls((current) => (sameUrls(current, urls) ? current : urls))
+    if (toSign.length === 0) {
+      rememberImageUrls(cache, {}, paths, IMAGE_URL_TTL)
+      publish(reused)
+      return undefined
+    }
+    repository.signImageUrls(toSign).then(({ urls: signed }) => {
+      if (!active) return
+      rememberImageUrls(cache, signed, paths, IMAGE_URL_TTL)
+      publish({ ...reused, ...signed })
     })
     return () => {
       active = false
     }
-  }, [repository, allProducts])
+  }, [repository, allProducts, imageTick])
 
   useEffect(() => {
     let active = true
