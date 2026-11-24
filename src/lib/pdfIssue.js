@@ -1,21 +1,35 @@
-import { planBulkIssue } from './bulkIssue.js'
+import { ISSUE_NOTE_MAX, planBulkIssue } from './bulkIssue.js'
 
-// เบิกออกจาก PDF ของเว็บ seller (ผู้ใช้กำหนด 2026-11-19): หมายเหตุ "ออนไลน์" ทุกรายการ, SKU ชุด (เช่น KB8A-VAB) เป็นสินค้าชุดเดียว,
+// เบิกออกจาก PDF ของเว็บ seller (ผู้ใช้กำหนด 2026-11-19): หมายเหตุ "ออนไลน์" ทุกรายการ,
 // กันเบิกซ้ำด้วยเลขคำสั่งซื้อ (แพลตฟอร์ม + เลขคำสั่งซื้อ + SKU), รหัสที่ไม่ตรงกับในระบบไม่เบิก แต่แจ้งให้ผู้ใช้ไปแก้รหัส
+// ชุดสินค้า (2026-11-24): รหัสชุดใน PDF (เช่น GL-203R-P1) แตกเป็นชิ้นส่วนตามตารางชุดสินค้า ร้านหยิบชิ้นส่วนมาจัดตอนแพ็ก
+//   ถ้ารหัสตรงทั้งชุดและสินค้า ถือว่าเป็นชุด
 export const PDF_ISSUE_NOTE = 'ออนไลน์'
 
 export const normalizeSku = (sku) => String(sku ?? '').replace(/\s+/g, ' ').trim().toUpperCase()
 export const orderKey = (platform, orderNo, sku) => `${platform}|${orderNo}|${normalizeSku(sku)}`
 
+// รหัสที่ดูเหมือนชุดของ seller (ลงท้าย -P1, -P2-…) ใช้บอกผู้ใช้ว่าอาจยังไม่ได้ตั้งค่าชุด
+export const looksLikeBundle = (sku) => /-P\d+(-|$)/i.test(String(sku ?? '').trim())
+
+export const UNMATCHED_REASON = {
+  NO_PRODUCT: 'no_product',
+  BUNDLE_NOT_SET: 'bundle_not_set',
+  BUNDLE_INACTIVE: 'bundle_inactive',
+}
+
 // files = [{ name, platform, rows: [{ sku, quantity, orders }] }] จาก parsePicklist
 // products = สินค้าที่เปิดใช้งาน issuedKeys = Set ของ orderKey ที่เคยเบิกแล้ว
+// bundles = [{ sku, items: [{ productId, quantity }] }] ตารางชุดสินค้า
 // คืน
-//   lines     = [{ productId, quantity, sources: [{ platform, sku, quantity, orders }], partial }] รวมต่อสินค้า เรียงตาม SKU
-//   orders    = [{ platform, order_no, sku }] คำสั่งซื้อที่จะบันทึกว่าเบิกแล้ว (เฉพาะรายการที่จับคู่สินค้าได้)
-//   unmatched = แถวที่รหัสไม่ตรงกับสินค้าในระบบ [{ platform, sku, quantity, orders }]
+//   lines     = [{ productId, quantity, sources, partial }] รวมต่อสินค้า เรียงตาม SKU
+//               sources = [{ platform, sku: รหัสใน PDF, bundle: รหัสชุด | null, bundleQty: จำนวนชุด, quantity: จำนวนสินค้านี้, orders }]
+//   orders    = [{ platform, order_no, sku }] คำสั่งซื้อที่จะบันทึกว่าเบิกแล้ว (เฉพาะแถวที่เบิกได้)
+//   unmatched = แถวที่เบิกไม่ได้ [{ platform, sku, quantity, orders, reason }]
 //   skipped   = แถวที่ทุกคำสั่งซื้อเคยเบิกแล้ว (หรือซ้ำกับไฟล์อื่นที่เลือกมาพร้อมกัน)
 // partial = บางคำสั่งซื้อในแถวเคยเบิกแล้ว (Shopee รวมจำนวนหลายคำสั่งซื้อไว้แถวเดียว แยกจำนวนไม่ได้ ให้ผู้ใช้ตรวจจำนวนเอง)
-export function planPdfIssue(files, products, issuedKeys = new Set()) {
+export function planPdfIssue(files, products, issuedKeys = new Set(), bundles = []) {
+  const byId = new Map(products.map((p) => [p.id, p]))
   const bySku = new Map()
   for (const product of products) {
     bySku.set(normalizeSku(product.sku), product)
@@ -24,6 +38,7 @@ export function planPdfIssue(files, products, issuedKeys = new Set()) {
     const legacy = normalizeSku(product.legacySku)
     if (legacy && !bySku.has(legacy)) bySku.set(legacy, product)
   }
+  const bundleBySku = new Map(bundles.map((b) => [normalizeSku(b.sku), b]))
 
   const seen = new Set(issuedKeys)
   const lineByProduct = new Map()
@@ -34,9 +49,16 @@ export function planPdfIssue(files, products, issuedKeys = new Set()) {
   for (const file of files) {
     for (const row of file.rows) {
       const source = { platform: file.platform, sku: row.sku, quantity: row.quantity, orders: row.orders }
-      const product = bySku.get(normalizeSku(row.sku))
-      if (!product) {
-        unmatched.push(source)
+      const bundle = bundleBySku.get(normalizeSku(row.sku))
+      const product = bundle ? null : bySku.get(normalizeSku(row.sku))
+      if (!bundle && !product) {
+        const reason = looksLikeBundle(row.sku) ? UNMATCHED_REASON.BUNDLE_NOT_SET : UNMATCHED_REASON.NO_PRODUCT
+        unmatched.push({ ...source, reason })
+        continue
+      }
+      // ชุดที่มีชิ้นส่วนถูกปิดใช้งาน เบิกไม่ได้ทั้งชุด (กันเบิกไม่ครบชุด)
+      if (bundle && (bundle.items.length === 0 || bundle.items.some((item) => !byId.has(item.productId)))) {
+        unmatched.push({ ...source, reason: UNMATCHED_REASON.BUNDLE_INACTIVE })
         continue
       }
       const keys = row.orders.map((orderNo) => orderKey(file.platform, orderNo, row.sku))
@@ -48,17 +70,54 @@ export function planPdfIssue(files, products, issuedKeys = new Set()) {
       keys.forEach((key) => seen.add(key))
       for (const orderNo of fresh) orders.push({ platform: file.platform, order_no: orderNo, sku: row.sku })
 
-      const line = lineByProduct.get(product.id) ?? { productId: product.id, quantity: 0, sources: [], partial: false }
-      line.quantity += row.quantity
-      line.sources.push({ ...source, orders: fresh })
-      if (fresh.length < row.orders.length) line.partial = true
-      lineByProduct.set(product.id, line)
+      const parts = bundle
+        ? bundle.items.map((item) => ({ productId: item.productId, quantity: row.quantity * item.quantity }))
+        : [{ productId: product.id, quantity: row.quantity }]
+      for (const part of parts) {
+        const line = lineByProduct.get(part.productId) ?? { productId: part.productId, quantity: 0, sources: [], partial: false }
+        line.quantity += part.quantity
+        line.sources.push({
+          platform: file.platform,
+          sku: row.sku,
+          bundle: bundle ? bundle.sku : null,
+          bundleQty: row.quantity,
+          quantity: part.quantity,
+          orders: fresh,
+        })
+        if (fresh.length < row.orders.length) line.partial = true
+        lineByProduct.set(part.productId, line)
+      }
     }
   }
 
-  const skuOf = (line) => products.find((p) => p.id === line.productId)?.sku ?? ''
+  const skuOf = (line) => byId.get(line.productId)?.sku ?? ''
   const lines = [...lineByProduct.values()].toSorted((a, b) => skuOf(a).localeCompare(skuOf(b), 'th'))
   return { lines, orders, unmatched, skipped }
+}
+
+// หมายเหตุของแต่ละสินค้า: "ออนไลน์" หรือ "ออนไลน์ (ชุด GL-203R-P1, …)" เมื่อมาจากชุด (ไม่เกิน ISSUE_NOTE_MAX ตัวอักษร)
+export function lineNote(line) {
+  const names = [...new Set(line.sources.filter((s) => s.bundle).map((s) => s.bundle))]
+  if (names.length === 0) return PDF_ISSUE_NOTE
+  const note = `${PDF_ISSUE_NOTE} (ชุด ${names.join(', ')})`
+  return note.length <= ISSUE_NOTE_MAX ? note : `${note.slice(0, ISSUE_NOTE_MAX - 2)}…)`
+}
+
+// คำสั่งซื้อของสินค้าที่ยังอยู่ในใบ (ไม่ซ้ำ) แถวชุดที่เอาชิ้นส่วนออกบางตัว ยังนับคำสั่งซื้อจากชิ้นส่วนที่เหลือ
+export function ordersOfLines(lines) {
+  const seen = new Set()
+  const out = []
+  for (const line of lines) {
+    for (const s of line.sources) {
+      for (const orderNo of s.orders) {
+        const key = orderKey(s.platform, orderNo, s.sku)
+        if (seen.has(key)) continue
+        seen.add(key)
+        out.push({ platform: s.platform, order_no: orderNo, sku: s.sku })
+      }
+    }
+  }
+  return out
 }
 
 // ตรวจจำนวนก่อนส่ง (จำนวนแก้ได้ในหน้าต่าง quantities = { [productId]: ข้อความจำนวน })
@@ -67,7 +126,7 @@ export function checkPdfIssue(lines, quantities, products, role, today) {
   const rows = lines.map((line) => ({
     productId: line.productId,
     quantity: quantities[line.productId] ?? String(line.quantity),
-    note: PDF_ISSUE_NOTE,
+    note: lineNote(line),
   }))
   return planBulkIssue(rows, products, role, today)
 }

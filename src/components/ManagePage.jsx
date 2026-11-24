@@ -6,6 +6,7 @@ import { PAGE } from '../lib/menu.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { filterByCategory, listCategories, searchProducts } from '../lib/stockRules.js'
 import BackupButton from './BackupButton.jsx'
+import BundleManager from './BundleManager.jsx'
 import BulkCategoryBar from './BulkCategoryBar.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ImageSheetUpdate from './ImageSheetUpdate.jsx'
@@ -223,6 +224,9 @@ export default function ManagePage({
             <button type="button" className="btn btn-reorder" onClick={() => setImporting('reorder')} disabled={importing !== null}>
               ตั้งจุดสั่งซื้อ
             </button>
+            <button type="button" className="btn btn-reorder" onClick={() => setImporting('bundles')} disabled={importing !== null}>
+              ชุดสินค้า (Bundle)
+            </button>
             <BackupButton
               repository={repository}
               onBackedUp={(date) => {
@@ -247,6 +251,10 @@ export default function ManagePage({
         <p className="notice" role="status">
           {notice}
         </p>
+      )}
+
+      {importing === 'bundles' && (
+        <BundleManager allProducts={allProducts} repository={repository} onClose={() => setImporting(null)} />
       )}
 
       {importing === 'stock' && (

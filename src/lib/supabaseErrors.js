@@ -14,6 +14,9 @@ export const ERROR_MESSAGE = {
   PDF_ISSUE_FORBIDDEN: 'เบิกออกจาก PDF ได้เฉพาะเจ้าของร้านและ Store/QC',
   EMPTY_ORDERS: 'ไม่มีเลขคำสั่งซื้อ',
   DUPLICATE_ORDER: 'มีคำสั่งซื้อที่เบิกไปแล้ว กรุณาอ่านไฟล์ใหม่อีกครั้ง',
+  BUNDLE_FORBIDDEN: 'จัดการชุดสินค้าได้เฉพาะเจ้าของร้านและ Store/QC',
+  BUNDLE_INVALID: 'ข้อมูลชุดสินค้าไม่ครบ',
+  BUNDLE_DUPLICATE: 'รหัสชุดนี้มีอยู่แล้ว',
   READ_ONLY_ROLE: 'บัญชีนี้ดูข้อมูลได้อย่างเดียว บันทึกรายการไม่ได้',
   ADJUST_ADMIN_ONLY: 'ปรับยอดได้เฉพาะเจ้าของร้านและ Store/QC',
   WRITE_OFF_ADMIN_ONLY: 'ตัดจำหน่ายได้เฉพาะเจ้าของร้านและ Store/QC',
@@ -45,6 +48,9 @@ const BY_HINT = {
   pdf_issue_forbidden: ERROR_MESSAGE.PDF_ISSUE_FORBIDDEN,
   empty_orders: ERROR_MESSAGE.EMPTY_ORDERS,
   duplicate_order: ERROR_MESSAGE.DUPLICATE_ORDER,
+  bundle_forbidden: ERROR_MESSAGE.BUNDLE_FORBIDDEN,
+  bundle_invalid: ERROR_MESSAGE.BUNDLE_INVALID,
+  bundle_duplicate: ERROR_MESSAGE.BUNDLE_DUPLICATE,
   invalid_type: ERROR_MESSAGE.INVALID_TYPE,
   adjust_admin_only: ERROR_MESSAGE.ADJUST_ADMIN_ONLY,
   write_off_admin_only: ERROR_MESSAGE.WRITE_OFF_ADMIN_ONLY,
@@ -85,6 +91,7 @@ function duplicateMessage(error) {
   if (text.includes('products_sku_unique')) return ERROR_MESSAGE.DUPLICATE_SKU
   if (text.includes('products_barcode_unique')) return ERROR_MESSAGE.DUPLICATE_BARCODE
   if (text.includes('online_issued_orders_pkey')) return ERROR_MESSAGE.DUPLICATE_ORDER
+  if (text.includes('product_bundles_pkey')) return ERROR_MESSAGE.BUNDLE_DUPLICATE
   return ERROR_MESSAGE.DUPLICATE
 }
 

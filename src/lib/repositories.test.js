@@ -80,6 +80,7 @@ describe('createRepository', () => {
       'getMyProfile',
       'insertProducts',
       'listAllMovements',
+      'listBundles',
       'listIssuedOrders',
       'listMonthlySales',
       'listMovements',
@@ -87,7 +88,9 @@ describe('createRepository', () => {
       'recordMovement',
       'recordMovements',
       'recordOnlineIssue',
+      'removeBundle',
       'removeProductImage',
+      'saveBundle',
       'saveProduct',
       'setProductActive',
       'setProductsActive',
@@ -342,6 +345,33 @@ describe('เบิกออกจาก PDF', () => {
     const client = fakeClient({ data: null, error })
     const result = await createRepository(client).recordOnlineIssue({ items: [], orders: [], movementDate: null })
     expect(result.error).toBe(ERROR_MESSAGE.DUPLICATE_ORDER)
+  })
+})
+
+describe('ชุดสินค้า', () => {
+  it('listBundles: ดึงชุดพร้อมชิ้นส่วน แปลงจำนวนเป็นตัวเลข', async () => {
+    const client = fakeClient({ data: [{ sku: 'GL-203R-P1', updated_at: 't', product_bundle_items: [{ product_id: 'p1', quantity: '1.00' }] }], error: null })
+    expect(await createRepository(client).listBundles()).toEqual({
+      bundles: [{ sku: 'GL-203R-P1', updatedAt: 't', items: [{ productId: 'p1', quantity: 1 }] }],
+      error: null,
+    })
+    expect(client.calls[0]).toEqual(['from', 'product_bundles'])
+  })
+
+  it('saveBundle / removeBundle เรียก rpc ไม่ลบตารางตรง', async () => {
+    const client = fakeClient({ data: 'GL-203R-P1', error: null })
+    const repo = createRepository(client)
+    await repo.saveBundle({ sku: 'GL-203R-P1', items: [{ productId: 'p1', quantity: '2' }], oldSku: null })
+    await repo.removeBundle('GL-203R-P1')
+    expect(client.calls).toEqual([
+      ['rpc', 'save_product_bundle', { p_sku: 'GL-203R-P1', p_items: [{ product_id: 'p1', quantity: 2 }], p_old_sku: null }],
+      ['rpc', 'delete_product_bundle', { p_sku: 'GL-203R-P1' }],
+    ])
+  })
+
+  it('รหัสชุดซ้ำได้ข้อความไทย', async () => {
+    const client = fakeClient({ data: null, error: { code: 'P0001', message: 'รหัสชุด X มีอยู่แล้ว', hint: 'bundle_duplicate' } })
+    expect((await createRepository(client).saveBundle({ sku: 'X', items: [] })).error).toBe('รหัสชุด X มีอยู่แล้ว')
   })
 })
 

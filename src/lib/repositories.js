@@ -254,6 +254,38 @@ export function createRepository(client) {
       return { saved: error ? 0 : Number(data), error }
     },
 
+    // ชุดสินค้า (Bundle) ทั้งหมดพร้อมชิ้นส่วน คืน { bundles: [{ sku, updatedAt, items: [{ productId, quantity }] }], error }
+    async listBundles() {
+      const { data, error } = await run(() =>
+        client.from('product_bundles').select('sku, updated_at, product_bundle_items(product_id, quantity)').order('sku', { ascending: true }),
+      )
+      if (error) return { bundles: [], error }
+      const bundles = (data ?? []).map((b) => ({
+        sku: b.sku,
+        updatedAt: b.updated_at,
+        items: (b.product_bundle_items ?? []).map((i) => ({ productId: i.product_id, quantity: Number(i.quantity) })),
+      }))
+      return { bundles, error: null }
+    },
+
+    // บันทึกชุด (เพิ่มใหม่ oldSku = null หรือแก้ไข/เปลี่ยนรหัส) แทนที่ชิ้นส่วนทั้งหมด
+    async saveBundle({ sku, items, oldSku = null }) {
+      const { error } = await run(() =>
+        client.rpc('save_product_bundle', {
+          p_sku: sku,
+          p_items: items.map((i) => ({ product_id: i.productId, quantity: Number(i.quantity) })),
+          p_old_sku: oldSku,
+        }),
+      )
+      return { error }
+    },
+
+    // ลบการตั้งค่าชุด (ไม่กระทบสต็อกหรือประวัติ)
+    async removeBundle(sku) {
+      const { error } = await run(() => client.rpc('delete_product_bundle', { p_sku: sku }))
+      return { error }
+    },
+
     // ยอดขายรายเดือนทั้งหมด (สินค้า ~ร้อยรายการ × 12 เดือนต่อปี) ดึงทีละ EXPORT_PAGE_SIZE
     async listMonthlySales() {
       const all = []

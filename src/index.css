@@ -2602,6 +2602,20 @@ tbody tr.flash {
   min-width: 160px;
 }
 
+.bundle-intro {
+  margin: 0 0 12px;
+}
+
+.bundle-search {
+  flex: 1;
+  min-width: 220px;
+}
+
+.bundle-editor {
+  display: grid;
+  gap: 8px;
+}
+
 .pdf-pick {
   cursor: pointer;
 }

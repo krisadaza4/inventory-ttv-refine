@@ -1,19 +1,35 @@
 import { useState } from 'react'
 import { formatQuantity } from '../lib/numberFormat.js'
-import { PDF_ISSUE_NOTE, checkPdfIssue, orderKey, planPdfIssue } from '../lib/pdfIssue.js'
+import { PDF_ISSUE_NOTE, UNMATCHED_REASON, checkPdfIssue, orderKey, ordersOfLines, planPdfIssue } from '../lib/pdfIssue.js'
 import { readPdfPages } from '../lib/pdfText.js'
 import { PLATFORM_LABEL, parsePicklist } from '../lib/picklist.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ProductDialog from './ProductDialog.jsx'
 import ThaiDateInput from './ThaiDateInput.jsx'
 
-const ordersOf = (lines) =>
-  lines.flatMap((line) => line.sources.flatMap((s) => s.orders.map((orderNo) => ({ platform: s.platform, order_no: orderNo, sku: s.sku }))))
-
+// ที่มาของจำนวน เช่น "Shopee 3 · TikTok 1 · Shopee ชุด GL-203R-P1 ×2"
 const sourceSummary = (sources) => {
-  const byPlatform = new Map()
-  for (const s of sources) byPlatform.set(s.platform, (byPlatform.get(s.platform) ?? 0) + s.quantity)
-  return [...byPlatform].map(([platform, qty]) => `${PLATFORM_LABEL[platform]} ${formatQuantity(qty)}`).join(' · ')
+  const parts = new Map()
+  for (const s of sources) {
+    const key = s.bundle ? `${s.platform}|${s.bundle}` : s.platform
+    const current = parts.get(key) ?? { ...s, quantity: 0, bundleQty: 0 }
+    current.quantity += s.quantity
+    current.bundleQty += s.bundleQty ?? 0
+    parts.set(key, current)
+  }
+  return [...parts.values()]
+    .map((s) =>
+      s.bundle
+        ? `${PLATFORM_LABEL[s.platform]} ชุด ${s.bundle} ×${formatQuantity(s.bundleQty)}`
+        : `${PLATFORM_LABEL[s.platform]} ${formatQuantity(s.quantity)}`,
+    )
+    .join(' · ')
+}
+
+const REASON_TEXT = {
+  [UNMATCHED_REASON.NO_PRODUCT]: 'ไม่มีรหัสนี้ในระบบ',
+  [UNMATCHED_REASON.BUNDLE_NOT_SET]: 'ยังไม่ได้ตั้งเป็นชุดสินค้า',
+  [UNMATCHED_REASON.BUNDLE_INACTIVE]: 'ชุดมีสินค้าที่ปิดใช้งาน',
 }
 
 // หน้าต่าง "เบิกออกจาก PDF": เลือกไฟล์รายการหยิบสินค้าจากเว็บ seller (Shopee / Lazada / TikTok) หลายไฟล์พร้อมกัน
@@ -32,7 +48,7 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
 
   const byId = new Map(products.map((p) => [p.id, p]))
   const lines = plan ? plan.lines.filter((line) => !removed.has(line.productId)) : []
-  const orders = ordersOf(lines)
+  const orders = ordersOfLines(lines)
   const busy = reading || saving
 
   const handleFiles = async (fileList) => {
@@ -57,14 +73,18 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
     setFiles(results)
     const readable = results.filter((r) => !r.error)
     const orderNos = readable.flatMap((r) => r.rows.flatMap((row) => row.orders))
-    const { rows, error } = await repository.listIssuedOrders(orderNos)
+    const [issuedResult, bundleResult] = await Promise.all([repository.listIssuedOrders(orderNos), repository.listBundles()])
     setReading(false)
-    if (error) {
-      setServerError(`ตรวจคำสั่งซื้อที่เคยเบิกไม่ได้: ${error}`)
+    if (issuedResult.error) {
+      setServerError(`ตรวจคำสั่งซื้อที่เคยเบิกไม่ได้: ${issuedResult.error}`)
       return
     }
-    const issued = new Set(rows.map((r) => orderKey(r.platform, r.orderNo, r.sku)))
-    setPlan(planPdfIssue(readable, products, issued))
+    if (bundleResult.error) {
+      setServerError(`โหลดชุดสินค้าไม่ได้: ${bundleResult.error}`)
+      return
+    }
+    const issued = new Set(issuedResult.rows.map((r) => orderKey(r.platform, r.orderNo, r.sku)))
+    setPlan(planPdfIssue(readable, products, issued, bundleResult.bundles))
   }
 
   const setQuantity = (productId, value) => {
@@ -137,7 +157,7 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
                 />
                 เลือกไฟล์ PDF
               </label>
-              <span className="dim pdf-hint">เลือกได้หลายไฟล์พร้อมกัน หมายเหตุทุกรายการเป็น "{PDF_ISSUE_NOTE}"</span>
+              <span className="dim pdf-hint">เลือกได้หลายไฟล์พร้อมกัน หมายเหตุ "{PDF_ISSUE_NOTE}" รหัสชุดแตกเป็นชิ้นส่วนให้อัตโนมัติ</span>
             </div>
 
             {reading && (
@@ -172,14 +192,17 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
 
             {plan && plan.unmatched.length > 0 && (
               <div className="pdf-warn" role="alert">
-                <strong>รหัสไม่ตรงกับสินค้าในระบบ {plan.unmatched.length} รายการ (ไม่ถูกเบิก)</strong>
-                <div className="dim">แก้รหัสใน Excel หรือบนเว็บ seller ให้ตรงกัน แล้วเลือกไฟล์ใหม่อีกครั้ง</div>
+                <strong>เบิกไม่ได้ {plan.unmatched.length} รายการ (ไม่ถูกเบิก)</strong>
+                <div className="dim">
+                  แก้รหัสใน Excel หรือบนเว็บ seller ให้ตรงกัน หรือถ้าเป็นชุด ตั้งค่าที่หน้า จัดการสินค้า → ชุดสินค้า (Bundle) แล้วเลือกไฟล์ใหม่อีกครั้ง
+                </div>
                 <table className="issue-table">
                   <thead>
                     <tr>
                       <th>แพลตฟอร์ม</th>
                       <th>รหัสใน PDF</th>
                       <th className="num">จำนวน</th>
+                      <th>สาเหตุ</th>
                       <th>เลขคำสั่งซื้อ</th>
                     </tr>
                   </thead>
@@ -189,6 +212,7 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
                         <td>{PLATFORM_LABEL[u.platform]}</td>
                         <td className="mono">{u.sku}</td>
                         <td className="num">{formatQuantity(u.quantity)}</td>
+                        <td>{REASON_TEXT[u.reason]}</td>
                         <td className="mono dim">{u.orders.join(', ')}</td>
                       </tr>
                     ))}
