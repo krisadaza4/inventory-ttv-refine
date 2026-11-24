@@ -22,6 +22,7 @@ import StockBadge from './StockBadge.jsx'
 import ThaiDateInput from './ThaiDateInput.jsx'
 
 const TYPE_LABEL = MOVEMENT_LABEL
+const MAX_PICKS = 8
 
 const NOTE_PLACEHOLDER = {
   [MOVEMENT_TYPE.ADJUST]: 'การปรับยอดต้องระบุเหตุผล',
@@ -69,8 +70,18 @@ export default function MovementPage({
   const types = allowedMovementTypes(role)
   const product = products.find((p) => p.id === productId) ?? null
   // สินค้าที่เลือกอยู่แสดงเสมอ แม้ไม่ตรงคำค้น
-  const options = searchProducts(products, productQuery)
-  const shownOptions = product && !options.includes(product) ? [product, ...options] : options
+  // ค้นหาแล้วกดเลือกจากรายการที่ขึ้นใต้ช่อง (แบบเดียวกับเบิกออกหลายรายการ) แสดงไม่เกิน MAX_PICKS รายการ
+  const matches = productQuery.trim() === '' ? [] : searchProducts(products, productQuery).toSorted((a, b) => a.sku.localeCompare(b.sku, 'th'))
+  const picks = matches.slice(0, MAX_PICKS)
+  const pickProduct = (picked) => {
+    setProductId(picked.id)
+    setProductQuery('')
+    setErrors((current) => {
+      if (!current.productId) return current
+      const { productId: _removed, ...rest } = current
+      return rest
+    })
+  }
   const after = product ? stockAfter(product, type, quantity) : null
   const noteRequired = NOTE_REQUIRED_TYPES.includes(type)
   const isRepairType = REPAIR_TYPES.includes(type)
@@ -177,32 +188,61 @@ export default function MovementPage({
           <label className="req" htmlFor="move-product">
             สินค้า
           </label>
-          <div className="stack">
+          <div className="stack issue-search">
             <input
+              id="move-product"
               type="search"
-              placeholder="ค้นหาชื่อ / รหัส / บาร์โค้ด"
+              autoComplete="off"
+              placeholder={
+                loadState === 'loading' ? 'กำลังโหลดรายการสินค้า…' : 'พิมพ์ชื่อ / รหัส / บาร์โค้ด แล้วกดเลือกสินค้า (Enter = เลือกรายการแรก)'
+              }
               aria-label="ค้นหาสินค้า"
               value={productQuery}
               onChange={(e) => setProductQuery(e.target.value)}
-            />
-            <select
-              id="move-product"
-              value={productId}
-              onChange={(e) => setProductId(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  if (picks[0]) pickProduct(picks[0])
+                } else if (e.key === 'Escape' && productQuery !== '') {
+                  e.preventDefault()
+                  setProductQuery('')
+                }
+              }}
               disabled={loadState !== 'ready'}
               aria-invalid={Boolean(productError)}
               aria-describedby={productError ? 'move-product-err' : undefined}
-            >
-              <option value="">
-                {loadState === 'loading' ? 'กำลังโหลดรายการสินค้า…' : `— เลือกสินค้า (${shownOptions.length} รายการ) —`}
-              </option>
-              {shownOptions.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.sku} · {p.name} (คงเหลือ {formatQuantity(p.onHand)}
-                  {p.repairQty > 0 ? ` รอซ่อม ${formatQuantity(p.repairQty)}` : ''} {p.unit})
-                </option>
-              ))}
-            </select>
+            />
+            {productQuery.trim() !== '' && (
+              <ul className="pick-list" aria-label="ผลการค้นหา">
+                {picks.length === 0 && <li className="dim pick-empty">ไม่พบสินค้า</li>}
+                {picks.map((p) => (
+                  <li key={p.id}>
+                    <button type="button" className="pick-item" onClick={() => pickProduct(p)}>
+                      <span className="mono">{p.sku}</span>
+                      <span className="pick-name">{p.name !== p.sku ? p.name : ''}</span>
+                      <span className="dim">
+                        {p.onHand > 0 ? `คงเหลือ ${formatQuantity(p.onHand)} ${p.unit}` : 'หมด'}
+                        {p.repairQty > 0 ? ` · รอซ่อม ${formatQuantity(p.repairQty)}` : ''}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+                {matches.length > MAX_PICKS && <li className="dim pick-empty">มีอีก {matches.length - MAX_PICKS} รายการ พิมพ์เพิ่มเพื่อกรอง</li>}
+              </ul>
+            )}
+            {product && productQuery.trim() === '' && (
+              <div className="picked-product">
+                <span className="mono">{product.sku}</span>
+                {product.name !== product.sku && <span>{product.name}</span>}
+                <span className="dim">
+                  คงเหลือ {formatQuantity(product.onHand)} {product.unit}
+                  {product.repairQty > 0 ? ` · รอซ่อม ${formatQuantity(product.repairQty)}` : ''}
+                </span>
+                <button type="button" className="btn sm" onClick={() => setProductId('')} aria-label="ล้างสินค้าที่เลือก">
+                  ✕
+                </button>
+              </div>
+            )}
             <FieldError id="move-product-err" message={productError} />
           </div>
 

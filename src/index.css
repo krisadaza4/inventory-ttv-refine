@@ -2648,6 +2648,21 @@ tbody tr.flash {
   vertical-align: middle;
 }
 
+.picked-product {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--accent-bg);
+}
+
+.picked-product .btn {
+  margin-left: auto;
+}
+
 .pdf-pick {
   cursor: pointer;
 }
