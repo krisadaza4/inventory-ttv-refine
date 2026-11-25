@@ -10,11 +10,11 @@ export default function ProductTable({ products, imageUrls, onMove, sort, onSort
   const head = { sort, onSort }
   return (
     <div className="table-wrap">
-      <table>
+      <table className="product-table">
         <thead>
           <tr>
             <th className="thumb-col">รูป</th>
-            <SortHead sortKey="sku" {...head}>
+            <SortHead sortKey="sku" className="hide-sm" {...head}>
               รหัส
             </SortHead>
             <SortHead sortKey="name" {...head}>
@@ -62,9 +62,10 @@ export default function ProductTable({ products, imageUrls, onMove, sort, onSort
               <td className="thumb-col">
                 <ProductThumb url={imageUrls[p.imagePath]} name={p.name} size="row" />
               </td>
-              <td className="mono">{p.sku}</td>
+              <td className="mono hide-sm">{p.sku}</td>
               <td>
                 {p.name}
+                {p.name !== p.sku && <div className="sub mono show-sm">{p.sku}</div>}
                 {p.barcode && <div className="sub mono">{p.barcode}</div>}
                 {p.location && <div className="sub">ที่เก็บ: {p.location}</div>}
               </td>

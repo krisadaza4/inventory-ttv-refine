@@ -2790,6 +2790,134 @@ td.col-stock.stock-out b {
   font-size: 13px;
 }
 
+/* แถบปุ่มล่างของหน้าต่าง: คำอธิบายซ้าย ปุ่มขวา (มือถือ: คำอธิบายบรรทัดบน ปุ่มเต็มความกว้าง) */
+.form-actions.spread {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form-actions.spread > .issue-hint {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .form-actions.spread {
+    flex-wrap: wrap;
+  }
+
+  .form-actions.spread > .issue-hint {
+    flex-basis: 100%;
+  }
+
+  .form-actions.spread > .issue-buttons {
+    flex: 1 1 100%;
+  }
+
+  .issue-buttons > .btn {
+    flex: 1;
+  }
+
+  /* ตาราง .cards-sm: แต่ละแถวเป็นการ์ด ไม่ต้องปัดซ้ายขวา
+     cell-main = ชื่อเต็มบรรทัด, cell-index / cell-hide-sm = ซ่อน, cell-remove = มุมขวาบน, cell-wide = เต็มบรรทัด
+     ช่องอื่นมีป้ายจาก data-label */
+  .table-wrap:has(> .cards-sm) {
+    overflow: visible;
+  }
+
+  .issue-table.cards-sm,
+  .issue-table.cards-sm tbody {
+    display: block;
+  }
+
+  .issue-table.cards-sm thead {
+    display: none;
+  }
+
+  .issue-table.cards-sm tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+  }
+
+  .issue-table.cards-sm td {
+    display: block;
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .issue-table.cards-sm tr.row-error,
+  .issue-table.cards-sm tr.row-bundle {
+    background: var(--accent-bg);
+  }
+
+  .issue-table.cards-sm tr.row-error {
+    background: var(--out-bg);
+  }
+
+  .issue-table.cards-sm tr.row-bundle td:first-child {
+    box-shadow: none;
+  }
+
+  .issue-table.cards-sm tr.row-bundle {
+    box-shadow: inset 3px 0 0 var(--primary);
+  }
+
+  .issue-table.cards-sm td.cell-main,
+  .issue-table.cards-sm td.cell-wide {
+    grid-column: 1 / -1;
+  }
+
+  .issue-table.cards-sm td.cell-main {
+    padding-right: 44px;
+    font-weight: 600;
+    color: var(--text-h);
+  }
+
+  .issue-table.cards-sm td.cell-index,
+  .issue-table.cards-sm td.cell-hide-sm {
+    display: none;
+  }
+
+  .issue-table.cards-sm td.cell-remove {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+
+  .issue-table.cards-sm td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+
+  .issue-table.cards-sm .qty-input {
+    width: 100%;
+    text-align: left;
+  }
+
+  /* ตารางสินค้าคงคลัง: รูปเล็กลง ให้เห็น คงเหลือ / สถานะ โดยไม่ต้องปัด */
+  .product-table .thumb.row {
+    width: 56px;
+    height: 56px;
+  }
+
+  .product-table td,
+  .product-table th {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+}
+
 .issue-buttons {
   display: inline-flex;
   gap: 8px;

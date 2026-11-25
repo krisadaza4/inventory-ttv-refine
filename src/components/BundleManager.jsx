@@ -177,7 +177,7 @@ export default function BundleManager({ allProducts, repository, onClose }) {
                 {editing.items.length === 0 ? (
                   <p className="empty dim">ยังไม่มีสินค้าในชุด</p>
                 ) : (
-                  <table className="issue-table">
+                  <table className="issue-table cards-sm">
                     <thead>
                       <tr>
                         <th>สินค้าในชุด</th>
@@ -192,12 +192,12 @@ export default function BundleManager({ allProducts, repository, onClose }) {
                         const p = byId.get(item.productId)
                         return (
                           <tr key={item.productId} className={errors[item.productId] ? 'row-error' : undefined}>
-                            <td>
+                            <td className="cell-main">
                               <span className="mono">{p?.sku ?? '(ไม่พบสินค้า)'}</span>
                               {p && p.name !== p.sku && <div className="sub">{p.name}</div>}
                               {p && p.active === false && <div className="pdf-warn-text">สินค้านี้ถูกปิดใช้งาน ชุดนี้จะเบิกไม่ได้</div>}
                             </td>
-                            <td className="num">
+                            <td className="num" data-label="จำนวนต่อ 1 ชุด">
                               <input
                                 className="qty-input"
                                 inputMode="decimal"
@@ -213,7 +213,7 @@ export default function BundleManager({ allProducts, repository, onClose }) {
                               />
                               {errors[item.productId] && <div className="err">{errors[item.productId]}</div>}
                             </td>
-                            <td>
+                            <td className="cell-remove">
                               <button
                                 type="button"
                                 className="btn sm"
@@ -259,7 +259,7 @@ export default function BundleManager({ allProducts, repository, onClose }) {
                 )}
                 {!loading && !loadError && (
                   <div className="table-wrap">
-                    <table className="issue-table">
+                    <table className="issue-table cards-sm">
                       <thead>
                         <tr>
                           <th>รหัสชุด</th>
@@ -272,16 +272,18 @@ export default function BundleManager({ allProducts, repository, onClose }) {
                       <tbody>
                         {shownBundles.length === 0 && (
                           <tr>
-                            <td colSpan={3} className="dim">
+                            <td colSpan={3} className="dim cell-main">
                               {bundles.length === 0 ? 'ยังไม่มีชุดสินค้า' : 'ไม่พบชุดที่ค้นหา'}
                             </td>
                           </tr>
                         )}
                         {shownBundles.map((b) => (
                           <tr key={b.sku}>
-                            <td className="mono nowrap">{b.sku}</td>
-                            <td>{bundleSummary(b, byId)}</td>
-                            <td className="nowrap">
+                            <td className="mono nowrap cell-main">{b.sku}</td>
+                            <td className="cell-wide" data-label="ชิ้นส่วนที่ตัดสต็อก (ต่อ 1 ชุด)">
+                              {bundleSummary(b, byId)}
+                            </td>
+                            <td className="nowrap cell-wide">
                               <button type="button" className="btn sm" onClick={() => startEdit(b)}>
                                 แก้ไข
                               </button>{' '}

@@ -196,7 +196,7 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
                 <div className="dim">
                   แก้รหัสใน Excel หรือบนเว็บ seller ให้ตรงกัน หรือถ้าเป็นชุด ตั้งค่าที่หน้า จัดการสินค้า → ชุดสินค้า (Bundle) แล้วเลือกไฟล์ใหม่อีกครั้ง
                 </div>
-                <table className="issue-table">
+                <table className="issue-table cards-sm">
                   <thead>
                     <tr>
                       <th>แพลตฟอร์ม</th>
@@ -209,11 +209,18 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
                   <tbody>
                     {plan.unmatched.map((u, i) => (
                       <tr key={`${u.platform}-${u.sku}-${i}`}>
-                        <td>{PLATFORM_LABEL[u.platform]}</td>
-                        <td className="mono">{u.sku}</td>
-                        <td className="num">{formatQuantity(u.quantity)}</td>
-                        <td>{REASON_TEXT[u.reason]}</td>
-                        <td className="mono dim">{u.orders.join(', ')}</td>
+                        <td className="cell-main">
+                          <span className="mono show-sm">{u.sku} · </span>
+                          {PLATFORM_LABEL[u.platform]}
+                        </td>
+                        <td className="cell-hide-sm mono">{u.sku}</td>
+                        <td className="num" data-label="จำนวน">
+                          {formatQuantity(u.quantity)}
+                        </td>
+                        <td data-label="สาเหตุ">{REASON_TEXT[u.reason]}</td>
+                        <td className="mono dim cell-wide" data-label="เลขคำสั่งซื้อ">
+                          {u.orders.join(', ')}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -260,7 +267,7 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
 
             {lines.length > 0 && (
               <div className="table-wrap">
-                <table className="issue-table">
+                <table className="issue-table cards-sm">
                   <thead>
                     <tr>
                       <th className="num">ลำดับ</th>
@@ -282,16 +289,16 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
                           key={line.productId}
                           className={[err.quantity && 'row-error', line.fromBundle && 'row-bundle'].filter(Boolean).join(' ') || undefined}
                         >
-                          <td className="num dim">{index + 1}</td>
-                          <td>
+                          <td className="num dim cell-index">{index + 1}</td>
+                          <td className="cell-main">
                             {line.fromBundle && <span className="bundle-tag">ชุด</span>} {p.name}
                             {p.name !== p.sku && <div className="sub mono">{p.sku}</div>}
                           </td>
-                          <td>
+                          <td className="cell-wide" data-label="ที่มา">
                             {sourceSummary(line.sources)}
                             {line.partial && <div className="pdf-warn-text">บางคำสั่งซื้อเคยเบิกแล้ว ตรวจจำนวนอีกครั้ง</div>}
                           </td>
-                          <td className="num">
+                          <td className="num" data-label="จำนวนที่เบิกออก">
                             <input
                               className="qty-input"
                               inputMode="decimal"
@@ -303,10 +310,10 @@ export default function PdfIssueDialog({ products, role, today, repository, onSa
                             />
                             {err.quantity && <div className="err">{err.quantity}</div>}
                           </td>
-                          <td className="num nowrap">
+                          <td className="num nowrap" data-label="คงเหลือ">
                             {formatQuantity(p.onHand)} {p.unit}
                           </td>
-                          <td>
+                          <td className="cell-remove">
                             <button
                               type="button"
                               className="btn sm"

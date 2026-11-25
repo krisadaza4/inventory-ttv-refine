@@ -164,7 +164,7 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
               <p className="empty dim">ยังไม่ได้เลือกสินค้า ค้นหาแล้วกดเลือกจากรายการด้านบน</p>
             ) : (
               <div className="table-wrap">
-                <table className="issue-table">
+                <table className="issue-table cards-sm">
                   <thead>
                     <tr>
                       <th className="num">ลำดับ</th>
@@ -184,13 +184,13 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
                       const err = errors[row.productId] ?? {}
                       return (
                         <tr key={row.productId} className={err.quantity || err.note ? 'row-error' : undefined}>
-                          <td className="num dim">{index + 1}</td>
-                          <td>
+                          <td className="num dim cell-index">{index + 1}</td>
+                          <td className="cell-main">
                             {p.name}
-                            <div className="sub mono">{p.sku}</div>
+                            {p.name !== p.sku && <div className="sub mono">{p.sku}</div>}
                           </td>
-                          <td>{p.unit}</td>
-                          <td className="num">
+                          <td className="cell-hide-sm">{p.unit}</td>
+                          <td className="num" data-label="จำนวนที่เบิกออก">
                             <input
                               className="qty-input"
                               inputMode="decimal"
@@ -202,8 +202,10 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
                             />
                             {err.quantity && <div className="err">{err.quantity}</div>}
                           </td>
-                          <td className="num">{formatQuantity(p.onHand)}</td>
-                          <td>
+                          <td className="num" data-label="คงเหลือ">
+                            {formatQuantity(p.onHand)} <span className="show-sm dim">{p.unit}</span>
+                          </td>
+                          <td className="cell-wide" data-label="หมายเหตุ">
                             <NoteCombo
                               options={ISSUE_NOTE_OPTIONS}
                               placeholder="ระบุหมายเหตุ…"
@@ -216,7 +218,7 @@ export default function BulkIssueDialog({ products, role, today, repository, onS
                             />
                             {err.note && <div className="err">{err.note}</div>}
                           </td>
-                          <td>
+                          <td className="cell-remove">
                             <button
                               type="button"
                               className="btn sm"
