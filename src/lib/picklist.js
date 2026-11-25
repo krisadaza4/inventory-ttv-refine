@@ -103,7 +103,7 @@ function parseShopee(pages) {
         const before = head[skuIndex - 1]
         // หัวคอลัมน์ "เลข SKU" ถูกแยกเป็น "เลข" + "SKU"
         const skuFrom = before !== parent && head[skuIndex].x - before.x < 30 ? before.x : head[skuIndex].x
-        cols = { skuFrom: skuFrom - 3, skuTo: head[skuIndex + 1].x - 3, qtyX: head.at(-2).x, orderX: head.at(-1).x }
+        cols = { indexX: head[0].x, skuFrom: skuFrom - 3, skuTo: head[skuIndex + 1].x - 3, qtyX: head.at(-2).x, orderX: head.at(-1).x }
       }
       headY = parent.y
     }
@@ -117,7 +117,13 @@ function parseShopee(pages) {
     if (carried.length && rows.length) rows.at(-1).orders.push(...carried)
     for (const band of pageBands) {
       const parts = page.filter((item) => within(item, band) && inColumn(item, cols.skuFrom, cols.skuTo)).toSorted(sortByLine).map(text)
-      const orders = page.filter((item) => isOrder(item) && within(item, band)).toSorted((a, b) => a.y - b.y).map(text)
+      let orders = page.filter((item) => isOrder(item) && within(item, band)).toSorted((a, b) => a.y - b.y).map(text)
+      // แถวย่อย (ตัวเลือกสินค้าอื่นของสินค้าเดียวกัน ไม่มีเลข # ของตัวเอง) ที่ไม่มีเลขคำสั่งซื้อ:
+      // Shopee พิมพ์เลขคำสั่งซื้อครั้งเดียวใต้ตัวเลือกแรก เมื่อคำสั่งซื้อเดียวมีหลายตัวเลือก → ใช้เลขคำสั่งซื้อของแถวก่อนหน้า
+      const hasIndex = page.some(
+        (item) => Math.abs(item.y - band.anchor.y) <= SAME_LINE && Math.abs(item.x - cols.indexX) <= 6 && /^\d+$/.test(text(item)),
+      )
+      if (orders.length === 0 && !hasIndex && rows.length > 0) orders = [...rows.at(-1).orders]
       rows.push({ sku: cleanSku(parts), quantity: Number(text(band.anchor)), orders })
     }
   }
