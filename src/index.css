@@ -2916,6 +2916,11 @@ td.col-stock.stock-out b {
     padding-left: 6px;
     padding-right: 6px;
   }
+
+  /* ชื่อสินค้าบางตัวมีคำยาวที่ตัดบรรทัดไม่ได้ ดันตารางให้กว้างเกินจอ */
+  .product-table td {
+    overflow-wrap: anywhere;
+  }
 }
 
 .issue-buttons {
