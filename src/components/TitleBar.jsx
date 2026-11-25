@@ -1,6 +1,9 @@
 import { ROLE_LABEL } from '../lib/roles.js'
 import { THEME } from '../lib/theme.js'
 
+// คู่มือการใช้งาน (public/manual.html เปิดได้โดยไม่ต้องเข้าสู่ระบบ)
+export const MANUAL_URL = '/manual.html'
+
 export const APP_NAME = 'Inventory TTV'
 export const APP_SUBTITLE = 'ระบบบริหารสต็อกสินค้า'
 // เลขเวอร์ชันจาก package.json (vite.config.js ฝังให้ตอน build)
@@ -73,6 +76,9 @@ export default function TitleBar({ profile, theme, onToggleTheme, signingOut, on
           <span aria-hidden="true">✦</span> <span className="tb-text">มีอะไรใหม่</span>
         </button>
       )}
+      <a className="tb-btn tb-manual" href={MANUAL_URL} target="_blank" rel="noopener" title="คู่มือการใช้งาน (เปิดแท็บใหม่)">
+        <span aria-hidden="true">📘</span> <span className="tb-text">คู่มือ</span>
+      </a>
       <ThemeToggle theme={theme} onToggle={onToggleTheme} />
       <button type="button" className="tb-btn tb-signout" onClick={onSignOut} disabled={signingOut}>
         {signingOut ? 'กำลังออก…' : 'ออกจากระบบ'}

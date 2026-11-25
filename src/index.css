@@ -1016,6 +1016,22 @@ label.btn.disabled {
   padding: 8px;
 }
 
+.gate-manual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  text-decoration: none;
+}
+
+a.tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+}
+
 .gate-note {
   font-size: 12px;
   text-align: center;

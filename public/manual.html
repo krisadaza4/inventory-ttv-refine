@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>คู่มือการใช้งาน · Inventory TTV</title>
+<link rel="icon" href="/favicon.svg" />
+<script>
+  // ใช้ธีมเดียวกับแอป (จำไว้ใน localStorage) ถ้าไม่มี ใช้ตามเครื่อง
+  try {
+    var saved = localStorage.getItem('inventory-ttv:theme')
+    var theme = saved === 'dark' || saved === 'light' ? saved : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    document.documentElement.dataset.theme = theme
+  } catch (e) {
+    document.documentElement.dataset.theme = 'light'
+  }
+</script>
+<style>
+  :root {
+    --text: #374151; --text-h: #111827; --muted: #6b7280; --bg: #f4f7f5; --surface: #fff; --surface-2: #f8faf9;
+    --border: #e3e9e5; --primary: #059669; --primary-text: #fff; --accent-bg: #e3f6ec; --solid: #047857; --solid-text: #fff;
+    --out: #b42318; --out-bg: #fef3f2; --out-border: #fda29b; --low: #b54708; --low-bg: #fffaeb; --low-border: #fec84b;
+    --ok: #067647; --ok-bg: #ecfdf3; --ok-border: #75e0a7; --in: #0369a1; --in-bg: #e0f2fe; --in-border: #7dd3fc;
+    --radius: 10px; --radius-lg: 14px;
+    --sans: 'IBM Plex Sans Thai', 'Segoe UI', 'Noto Sans Thai', system-ui, sans-serif;
+    color-scheme: light;
+  }
+  :root[data-theme='dark'] {
+    --text: #cbd5e1; --text-h: #f1f5f9; --muted: #94a3b8; --bg: #0b110f; --surface: #131a18; --surface-2: #18211e;
+    --border: #26302c; --primary: #10b981; --primary-text: #fff; --accent-bg: #12352a; --solid: #34d399; --solid-text: #052e1f;
+    --out: #fda29b; --out-bg: #3a1411; --out-border: #912018; --low: #fec84b; --low-bg: #3a2a0a; --low-border: #93370d;
+    --ok: #75e0a7; --ok-bg: #0b2a1c; --ok-border: #085d3a; --in: #7dd3fc; --in-bg: #0c2a3a; --in-border: #075985;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.7 var(--sans); }
+  a { color: var(--primary); }
+  h1, h2, h3 { color: var(--text-h); line-height: 1.3; }
+
+  .top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+    background: var(--surface); border-bottom: 1px solid var(--border); }
+  .top b { color: var(--text-h); font-size: 17px; }
+  .top .sp { flex: 1; }
+  .top button, .top a.btn { font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text-h); cursor: pointer; text-decoration: none; }
+
+  .wrap { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 28px; max-width: 1180px; margin: 0 auto; padding: 24px 20px 80px; }
+  nav.toc { position: sticky; top: 72px; align-self: start; max-height: calc(100vh - 90px); overflow: auto;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; font-size: 15px; }
+  nav.toc strong { display: block; color: var(--muted); font-size: 13px; margin: 10px 0 4px; }
+  nav.toc strong:first-child { margin-top: 0; }
+  nav.toc a { display: block; padding: 5px 8px; border-radius: 7px; color: var(--text); text-decoration: none; }
+  nav.toc a:hover { background: var(--accent-bg); color: var(--text-h); }
+
+  main { min-width: 0; }
+  .hero { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px 26px; margin-bottom: 24px; }
+  .hero h1 { margin: 0 0 6px; font-size: 28px; }
+  .hero p { margin: 0; color: var(--muted); }
+
+  section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px 26px; margin-bottom: 22px; scroll-margin-top: 80px; }
+  section h2 { margin: 0 0 4px; font-size: 22px; display: flex; align-items: center; gap: 10px; }
+  section h2 .ic { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--accent-bg); font-size: 18px; }
+  section > p.lead { margin: 0 0 14px; color: var(--muted); }
+  section h3 { margin: 20px 0 8px; font-size: 18px; }
+
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 8px 0; }
+  ol.steps > li { counter-increment: s; position: relative; padding: 8px 0 8px 46px; }
+  ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 7px; width: 32px; height: 32px; border-radius: 50%;
+    background: var(--solid); color: var(--solid-text); font-weight: 700; display: grid; place-items: center; }
+
+  .ui { display: inline-block; padding: 1px 9px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface-2);
+    color: var(--text-h); font-weight: 600; font-size: 0.92em; white-space: nowrap; }
+  .ui.green { background: var(--solid); border-color: var(--solid); color: var(--solid-text); }
+  .ui.in { background: var(--in-bg); border-color: var(--in-border); color: var(--in); }
+  .ui.out { background: var(--low-bg); border-color: var(--low-border); color: var(--low); }
+  .tag { display: inline-block; padding: 0 8px; border-radius: 999px; font-size: 0.85em; font-weight: 600; }
+  .tag.ok { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok-border); }
+  .tag.low { background: var(--low-bg); color: var(--low); border: 1px solid var(--low-border); }
+  .tag.out { background: var(--out-bg); color: var(--out); border: 1px solid var(--out-border); }
+
+  .tip, .warn, .good { border-radius: var(--radius); padding: 12px 14px; margin: 12px 0; border: 1px solid; }
+  .tip { background: var(--accent-bg); border-color: var(--ok-border); }
+  .warn { background: var(--low-bg); border-color: var(--low-border); }
+  .good { background: var(--ok-bg); border-color: var(--ok-border); }
+  .tip b:first-child, .warn b:first-child, .good b:first-child { color: var(--text-h); }
+
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 15px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--surface-2); color: var(--text-h); }
+  .yes { color: var(--ok); font-weight: 700; }
+  .no { color: var(--muted); }
+  .table-wrap { overflow-x: auto; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 10px 0; }
+  .card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; background: var(--surface-2); }
+  .card b { color: var(--text-h); display: block; margin-bottom: 2px; }
+
+  details { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin: 8px 0; background: var(--surface-2); }
+  details summary { cursor: pointer; font-weight: 600; color: var(--text-h); }
+  details p { margin: 8px 0 2px; }
+
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: 1fr; padding: 16px 16px 60px; }
+    nav.toc { position: static; max-height: none; }
+    section, .hero { padding: 18px 16px; }
+    .top { padding: 10px 16px; }
+  }
+  @media print {
+    .top, nav.toc { display: none; }
+    .wrap { display: block; }
+    section { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <b>📘 คู่มือการใช้งาน Inventory TTV</b>
+  <span class="sp"></span>
+  <button type="button" id="theme">โหมดมืด / สว่าง</button>
+  <button type="button" onclick="window.print()">พิมพ์</button>
+  <a class="btn" href="/">← กลับไปที่ระบบ</a>
+</header>
+
+<div class="wrap">
+  <nav class="toc" aria-label="สารบัญ">
+    <strong>เริ่มต้น</strong>
+    <a href="#login">1. เข้าสู่ระบบ</a>
+    <a href="#roles">2. ใครทำอะไรได้บ้าง</a>
+    <a href="#screen">3. หน้าจอหลัก</a>
+    <strong>งานประจำวัน</strong>
+    <a href="#stock">4. ดูสต็อกสินค้า</a>
+    <a href="#receive">5. รับเข้าสินค้า</a>
+    <a href="#issue">6. เบิกออกสินค้า</a>
+    <a href="#pdf">7. เบิกออกจาก PDF (ออนไลน์)</a>
+    <a href="#repair">8. ส่งซ่อม / ซ่อมเสร็จ / ปรับยอด</a>
+    <a href="#history">9. ประวัติ และส่งออก Excel</a>
+    <a href="#sales">10. ยอดขายรายเดือน</a>
+    <strong>ผู้ดูแล</strong>
+    <a href="#manage">11. จัดการสินค้า</a>
+    <a href="#bundle">12. ชุดสินค้า (Bundle)</a>
+    <a href="#backup">13. สำรองข้อมูล</a>
+    <strong>ช่วยเหลือ</strong>
+    <a href="#faq">14. ปัญหาที่พบบ่อย</a>
+  </nav>
+
+  <main>
+    <div class="hero">
+      <h1>คู่มือการใช้งาน แบบเข้าใจง่าย</h1>
+      <p>อ่านทีละหัวข้อ ทำตามตัวเลข 1 → 2 → 3 ได้เลย ไม่ต้องจำทั้งหมด เปิดคู่มือนี้ได้ตลอดจากปุ่ม <span class="ui">📘 คู่มือ</span> ที่แถบด้านบน</p>
+    </div>
+
+    <section id="login">
+      <h2><span class="ic">🔑</span>1. เข้าสู่ระบบ</h2>
+      <p class="lead">ใช้อีเมลและรหัสผ่านที่เจ้าของร้านสร้างให้ (สมัครเองไม่ได้)</p>
+      <ol class="steps">
+        <li>เปิดเว็บ <b>inventory-ttv-refine.vercel.app</b></li>
+        <li>พิมพ์ <b>อีเมล</b> และ <b>รหัสผ่าน</b></li>
+        <li>กด <span class="ui green">เข้าสู่ระบบ</span></li>
+      </ol>
+      <div class="tip"><b>รู้ไว้:</b> ระบบจะให้เข้าสู่ระบบใหม่ทุก <b>12 ชั่วโมง</b> เพื่อความปลอดภัย ถ้าเด้งกลับหน้าเข้าสู่ระบบ แค่เข้าสู่ระบบใหม่ ข้อมูลไม่หาย</div>
+      <div class="tip"><b>ลืมรหัสผ่าน?</b> ติดต่อเจ้าของร้าน (admin) ให้ตั้งรหัสใหม่ให้</div>
+    </section>
+
+    <section id="roles">
+      <h2><span class="ic">👥</span>2. ใครทำอะไรได้บ้าง</h2>
+      <p class="lead">เมนูที่เห็นจะต่างกันตามบทบาท ถ้าไม่เห็นปุ่มไหน แปลว่าบทบาทนั้นใช้ไม่ได้</p>
+      <div class="table-wrap">
+      <table>
+        <tr><th>งาน</th><th>Admin / Store/QC</th><th>พนักงาน (staff)</th><th>Manager / Marketing / บัญชี</th></tr>
+        <tr><td>ดูสต็อก ประวัติ ยอดขาย ส่งออก Excel</td><td class="yes">✔</td><td class="yes">✔</td><td class="yes">✔</td></tr>
+        <tr><td>รับเข้า / เบิกออก / ส่งซ่อม / ซ่อมเสร็จ</td><td class="yes">✔</td><td class="yes">✔</td><td class="no">✘ ดูอย่างเดียว</td></tr>
+        <tr><td>เบิกออกหลายรายการ</td><td class="yes">✔</td><td class="yes">✔</td><td class="no">✘</td></tr>
+        <tr><td>เบิกออกจาก PDF (ออนไลน์)</td><td class="yes">✔</td><td class="no">✘</td><td class="no">✘</td></tr>
+        <tr><td>ปรับยอด / ตัดจำหน่าย</td><td class="yes">✔</td><td class="no">✘</td><td class="no">✘</td></tr>
+        <tr><td>จัดการสินค้า / ชุดสินค้า / สำรองข้อมูล</td><td class="yes">✔</td><td class="no">✘</td><td class="no">✘</td></tr>
+      </table>
+      </div>
+    </section>
+
+    <section id="screen">
+      <h2><span class="ic">🖥️</span>3. หน้าจอหลัก</h2>
+      <div class="cards">
+        <div class="card"><b>แถบด้านบน</b>ชื่อผู้ใช้ · <span class="ui">⌂ หน้าแรก</span> · <span class="ui">✦ มีอะไรใหม่</span> · <span class="ui">📘 คู่มือ</span> · โหมดมืด/สว่าง · <span class="ui">ออกจากระบบ</span></div>
+        <div class="card"><b>เมนูซ้าย</b>สินค้าคงคลัง · รับเข้า / เบิกออก · ประวัติการเคลื่อนไหว · ยอดขายรายเดือน · จัดการสินค้า</div>
+        <div class="card"><b>บนมือถือ</b>เมนูย้ายไปอยู่แถบล่างของจอ ใช้งานได้เหมือนกัน</div>
+      </div>
+      <div class="tip"><b>หลงทาง?</b> กด <span class="ui">⌂ หน้าแรก</span> จะกลับไปหน้าสินค้าคงคลังเสมอ</div>
+    </section>
+
+    <section id="stock">
+      <h2><span class="ic">📦</span>4. ดูสต็อกสินค้า</h2>
+      <p class="lead">เมนู <b>สินค้าคงคลัง</b> (หน้าแรก)</p>
+      <h3>หาสินค้า</h3>
+      <ol class="steps">
+        <li>พิมพ์ชื่อ / รหัส / บาร์โค้ด ในช่อง <span class="ui">ค้นหา</span> ตารางจะกรองทันที</li>
+        <li>เลือกตัวกรองเพิ่มได้: หมวดหมู่ / สถานะ / ที่เก็บ / รอซ่อม</li>
+        <li>กดหัวคอลัมน์ (เช่น <b>คงเหลือ</b>) เพื่อเรียงน้อย → มาก หรือ มาก → น้อย</li>
+      </ol>
+      <h3>อ่านสถานะ</h3>
+      <p><span class="tag ok">ปกติ</span> มีของพอ &nbsp; <span class="tag low">ใกล้หมด</span> เหลือไม่เกินจุดสั่งซื้อ &nbsp; <span class="tag out">หมด</span> เหลือ 0</p>
+      <div class="tip"><b>ทางลัด:</b> กดกล่องตัวเลขด้านบน (<b>สินค้าทั้งหมด / ใกล้หมด / หมด</b>) เพื่อดูเฉพาะกลุ่มนั้น กดอีกครั้งเพื่อยกเลิก</div>
+      <div class="tip"><b>ดูรูปใหญ่:</b> กดที่รูปสินค้าในตาราง &nbsp;·&nbsp; <b>ข้อมูลไม่อัปเดต?</b> กด <span class="ui">รีเฟรช</span></div>
+    </section>
+
+    <section id="receive">
+      <h2><span class="ic">📥</span>5. รับเข้าสินค้า</h2>
+      <h3>รับทีละรายการ</h3>
+      <ol class="steps">
+        <li>เมนู <b>รับเข้า / เบิกออก</b></li>
+        <li>ช่อง <b>สินค้า</b>: พิมพ์ชื่อหรือรหัสสั้น ๆ เช่น <code>AP</code> → รายการขึ้นใต้ช่อง → <b>คลิกเลือก</b> (หรือกด Enter เลือกรายการแรก)</li>
+        <li>ประเภท: เลือก <b>รับเข้า</b></li>
+        <li>ใส่ <b>จำนวน</b> · วันที่ (ค่าเริ่มต้นคือวันนี้) · หมายเหตุ (ถ้ามี)</li>
+        <li>ดูช่อง <b>ผลลัพธ์</b> ว่าคงเหลือหลังบันทึกถูกต้อง แล้วกด <span class="ui green">บันทึกรายการ</span></li>
+      </ol>
+      <h3>รับหลายรายการพร้อมกัน</h3>
+      <ol class="steps">
+        <li>หน้า <b>สินค้าคงคลัง</b> → ปุ่ม <span class="ui in">＋ รับเข้าหลายรายการ</span></li>
+        <li>ใส่จำนวนรับเข้าที่สินค้าแต่ละตัว (ตัวที่ไม่ได้รับ เว้นว่างไว้)</li>
+        <li>กดบันทึกทีเดียว</li>
+      </ol>
+      <div class="tip"><b>ทางลัด:</b> ในตารางสินค้าคงคลัง กดปุ่ม <span class="ui in">+ รับเข้า</span> ท้ายแถว จะเปิดหน้ารับเข้าพร้อมเลือกสินค้าให้แล้ว</div>
+    </section>
+
+    <section id="issue">
+      <h2><span class="ic">📤</span>6. เบิกออกสินค้า</h2>
+      <h3>เบิกทีละรายการ</h3>
+      <p>เหมือนรับเข้าทุกอย่าง แต่เลือกประเภท <b>เบิกออก</b> (เบิกเกินคงเหลือไม่ได้ ระบบจะเตือนสีแดง)</p>
+      <h3>เบิกหลายรายการ (เช่น ใบสั่งขายส่ง)</h3>
+      <ol class="steps">
+        <li>หน้า <b>รับเข้า / เบิกออก</b> → ปุ่ม <span class="ui out">－ เบิกออกหลายรายการ</span></li>
+        <li>พิมพ์ค้นหา → คลิกสินค้าทีละตัว สินค้าจะลงตาราง (Enter = เลือกรายการแรก)</li>
+        <li>ใส่ <b>จำนวนที่เบิกออก</b> ของแต่ละแถว</li>
+        <li><b>หมายเหตุ</b>: พิมพ์เอง (เช่น ชื่อร้าน) หรือกดลูกศรเลือก <b>ขายส่ง</b> · ไม่ใส่ก็ได้ · ช่อง "ตั้งหมายเหตุทุกรายการ" ใส่ทีเดียวทุกแถว</li>
+        <li>กด <span class="ui green">ยืนยันการเบิกออก</span></li>
+      </ol>
+      <div class="good"><b>ปลอดภัย:</b> บันทึกทั้งใบพร้อมกัน ถ้ามีแถวไหนผิด (เช่น ของไม่พอ) จะ<b>ไม่บันทึกเลยสักแถว</b> แก้แถวสีแดงแล้วกดยืนยันใหม่</div>
+    </section>
+
+    <section id="pdf">
+      <h2><span class="ic">🧾</span>7. เบิกออกจาก PDF (ออเดอร์ออนไลน์)</h2>
+      <p class="lead">สำหรับ Admin และ Store/QC · ใช้ใบหยิบสินค้าจาก Shopee / Lazada / TikTok</p>
+      <h3>ขั้นที่ 1: เอาไฟล์ PDF จากเว็บ seller ให้ถูกวิธี</h3>
+      <ol class="steps">
+        <li>เปิดใบหยิบสินค้า (Picklist / Checklist / Picking List) ในเว็บ seller</li>
+        <li>กดปุ่ม <b>ดาวน์โหลด (↓)</b> หรือ Ctrl+P แล้วเลือกปลายทาง <b>"บันทึกเป็น PDF"</b></li>
+      </ol>
+      <div class="warn"><b>ห้ามเลือก "Microsoft Print to PDF"</b> เพราะจะได้ไฟล์ที่เป็นรูปภาพ ระบบอ่านไม่ได้ (จะขึ้นข้อความ "ไฟล์นี้เป็นรูปภาพ")</div>
+      <h3>ขั้นที่ 2: เบิกในระบบ</h3>
+      <ol class="steps">
+        <li>หน้า <b>รับเข้า / เบิกออก</b> → ปุ่ม <span class="ui out">－ เบิกออกจาก PDF</span></li>
+        <li>กด <span class="ui">เลือกไฟล์ PDF</span> เลือกได้หลายไฟล์พร้อมกัน (กด Ctrl ค้างแล้วคลิก)</li>
+        <li>ตรวจตาราง (ดูความหมายสีด้านล่าง) แก้จำนวน หรือกด ✕ เอาแถวออกได้</li>
+        <li>กด <span class="ui green">ยืนยันการเบิกออก</span> · หมายเหตุจะเป็น "ออนไลน์" ให้เอง</li>
+      </ol>
+      <h3>ความหมายของสีในหน้าต่าง</h3>
+      <div class="cards">
+        <div class="card" style="border-color:var(--primary);background:var(--accent-bg)"><b>🟩 กล่อง / แถวสีเขียว + ป้าย "ชุด"</b>สินค้าที่มาจาก<b>ชุดสุดคุ้ม (-P1)</b> ระบบแตกเป็นชิ้นส่วนให้แล้ว เช่น เตา + หัวปรับ + สายแก๊ส</div>
+        <div class="card" style="border-color:var(--low-border);background:var(--low-bg)"><b>🟨 กล่องสีเหลือง = เบิกไม่ได้</b>รหัสใน PDF ไม่ตรงกับระบบ หรือชุดยังไม่ได้ตั้งค่า → แจ้ง Admin ให้แก้รหัส แล้วเลือกไฟล์ใหม่</div>
+        <div class="card"><b>⏭️ "ข้าม … รายการ"</b>คำสั่งซื้อนี้<b>เคยเบิกไปแล้ว</b> ระบบไม่ตัดซ้ำให้ (อัปโหลดไฟล์เดิมซ้ำได้ ไม่ต้องกลัว)</div>
+        <div class="card"><b>⚠️ "บางคำสั่งซื้อเคยเบิกแล้ว"</b>เกิดกับ Shopee ที่รวมหลายออเดอร์ในแถวเดียว → <b>ตรวจและแก้จำนวนเอง</b>ก่อนกดยืนยัน</div>
+      </div>
+    </section>
+
+    <section id="repair">
+      <h2><span class="ic">🔧</span>8. ส่งซ่อม / ซ่อมเสร็จ / ปรับยอด / ตัดจำหน่าย</h2>
+      <p class="lead">อยู่ในหน้า <b>รับเข้า / เบิกออก</b> เลือกจาก <b>ประเภท</b></p>
+      <div class="table-wrap">
+      <table>
+        <tr><th>ประเภท</th><th>ใช้เมื่อ</th><th>ผลต่อสต็อก</th></tr>
+        <tr><td><b>ส่งซ่อม</b></td><td>ของเสีย ต้องซ่อม</td><td>คงเหลือ − / รอซ่อม +</td></tr>
+        <tr><td><b>ซ่อมเสร็จ</b></td><td>ซ่อมแล้วกลับมาขายได้</td><td>รอซ่อม − / คงเหลือ +</td></tr>
+        <tr><td><b>ตัดจำหน่าย</b> (Admin, Store/QC)</td><td>ซ่อมไม่ได้ ทิ้ง</td><td>รอซ่อม −</td></tr>
+        <tr><td><b>ปรับยอด</b> (Admin, Store/QC)</td><td>นับของจริงแล้วไม่ตรงระบบ</td><td>+ หรือ − ตามที่ใส่ <b>ต้องใส่หมายเหตุ</b></td></tr>
+      </table>
+      </div>
+      <div class="tip"><b>ส่งซ่อม / ซ่อมเสร็จ / ตัดจำหน่าย</b> ต้องใส่เหตุผลในหมายเหตุ เช่น "สปาร์คเสีย"</div>
+    </section>
+
+    <section id="history">
+      <h2><span class="ic">📜</span>9. ประวัติ และส่งออก Excel</h2>
+      <p class="lead">เมนู <b>ประวัติการเคลื่อนไหว</b> · ดูได้ว่าใคร ทำอะไร เมื่อไร</p>
+      <ol class="steps">
+        <li>เลือกช่วงวันที่ หรือกดปุ่มลัด <span class="ui">วันนี้</span> <span class="ui">เดือนนี้</span> <span class="ui">เดือนที่แล้ว</span></li>
+        <li>กรองสินค้า / ประเภท / ช่วงเช้า-บ่าย ได้</li>
+        <li>กด <span class="ui">ส่งออก Excel</span> ได้ไฟล์ตามตัวกรองที่เลือก</li>
+      </ol>
+      <h3>สรุปการเบิก เช้า-บ่าย</h3>
+      <p>แท็บ <b>สรุปการเบิก</b> รวมยอดเบิกออกต่อสินค้า แยก <b>เช้า</b> (ก่อน 12:00) / <b>บ่าย</b> (12:00 เป็นต้นไป) · ติ๊ก <b>แยกตามผู้บันทึก</b> เพื่อดูว่าใครเบิกเท่าไร · ส่งออก Excel ได้</p>
+      <div class="tip"><b>บันทึกผิด?</b> ระบบไม่ให้ลบประวัติ ให้บันทึกรายการกลับ เช่น เบิกเกินมา 2 → รับเข้า 2 พร้อมหมายเหตุ "แก้ไขรายการ…" (หรือให้ Admin ปรับยอด)</div>
+    </section>
+
+    <section id="sales">
+      <h2><span class="ic">📊</span>10. ยอดขายรายเดือน</h2>
+      <p>เมนู <b>ยอดขายรายเดือน</b> ดูยอดขายแต่ละเดือนของสินค้าแต่ละตัว และยอดขายเฉลี่ยต่อเดือน (ใช้ช่วยตัดสินใจสั่งของ)</p>
+    </section>
+
+    <section id="manage">
+      <h2><span class="ic">✏️</span>11. จัดการสินค้า (Admin, Store/QC)</h2>
+      <div class="cards">
+        <div class="card"><b>+ เพิ่มสินค้าใหม่</b>กรอกรหัส ชื่อ หมวดหมู่ หน่วย จุดสั่งซื้อ แล้วเพิ่มรูปได้</div>
+        <div class="card"><b>✎ แก้ไข</b>กดปุ่มแก้ไขท้ายแถว แก้แล้วบันทึก</div>
+        <div class="card"><b>ปิดใช้งาน</b>สินค้าเลิกขาย ติ๊กเลือก → แถบล่าง "ปิดใช้งาน" (ข้อมูลเก่ายังอยู่ เปิดกลับได้ที่แท็บ "ปิดใช้งาน")</div>
+        <div class="card"><b>ตั้งหมวดหมู่หลายตัว</b>ติ๊กเลือกหลายสินค้า → แถบล่างเลือกหมวดหมู่</div>
+        <div class="card"><b>ตั้งจุดสั่งซื้อ</b>ค่าที่ทำให้ขึ้น "ใกล้หมด" ตั้งเองหรือให้ระบบคำนวณจากยอดขายเฉลี่ย</div>
+        <div class="card"><b>นำเข้าไฟล์สต็อก / อัปเดตรูป</b>ใช้กับไฟล์ Excel สต็อกของร้าน (ใช้ไม่บ่อย)</div>
+      </div>
+    </section>
+
+    <section id="bundle">
+      <h2><span class="ic">🎁</span>12. ชุดสินค้า (Bundle)</h2>
+      <p class="lead">หน้า <b>จัดการสินค้า</b> → ปุ่ม <span class="ui">ชุดสินค้า (Bundle)</span></p>
+      <p>ใช้บอกระบบว่า <b>รหัสชุดสุดคุ้ม</b> บนเว็บ seller (ลงท้าย <code>-P1</code>) ประกอบด้วยอะไร ตอนเบิกจาก PDF ระบบจะตัดชิ้นส่วนให้เอง</p>
+      <div class="table-wrap">
+      <table>
+        <tr><th>ตัวอย่างรหัสชุด</th><th>ระบบตัดสต็อก (ต่อ 1 ชุด)</th></tr>
+        <tr><td><code>GL-203R-P1</code> (เตา GL)</td><td>เตา + VLP-889A + LGT001-P1</td></tr>
+        <tr><td><code>KB8A-VAB-P1</code> (เตา KB)</td><td>เตา + VHP-103A + LGT001-P1 + VHB-001</td></tr>
+        <tr><td><code>WX-106-P1</code> (SK / WX / ZL / GH)</td><td>เตา + VLP-889A + LGT001-P1</td></tr>
+        <tr><td><code>VLP-889A-P1</code> (หัวปรับ)</td><td>VLP-889A + LGT001-P1</td></tr>
+      </table>
+      </div>
+      <ol class="steps">
+        <li>กด <span class="ui green">+ เพิ่มชุดใหม่</span> → ใส่รหัสชุดให้ <b>ตรงกับในเว็บ seller</b></li>
+        <li>ค้นหาแล้วคลิกสินค้าที่อยู่ในชุดทีละตัว ใส่จำนวนต่อ 1 ชุด</li>
+        <li>กด <span class="ui green">บันทึกชุด</span></li>
+      </ol>
+      <div class="tip"><b>ชุดที่แพ็กไว้แล้วเป็นกล่อง</b> (มีสต็อกเป็นสินค้า เช่น KB5A02-VAB-P1) ระบบจะตัดกล่องนั้นตรง ๆ จนหมด แล้วค่อยแตกเป็นชิ้นส่วน</div>
+    </section>
+
+    <section id="backup">
+      <h2><span class="ic">💾</span>13. สำรองข้อมูล (Admin, Store/QC)</h2>
+      <ol class="steps">
+        <li>หน้า <b>จัดการสินค้า</b> → ปุ่ม <span class="ui">⭳ สำรองข้อมูล</span></li>
+        <li>ได้ไฟล์ Excel (สินค้า / ประวัติ / ยอดขาย) เก็บไว้ในคอมหรือไดรฟ์</li>
+      </ol>
+      <div class="warn"><b>ควรทำอย่างน้อยสัปดาห์ละครั้ง</b> ระบบจะเตือนเมื่อไม่ได้สำรองเกิน 7 วัน</div>
+    </section>
+
+    <section id="faq">
+      <h2><span class="ic">❓</span>14. ปัญหาที่พบบ่อย</h2>
+      <details><summary>เด้งออกให้เข้าสู่ระบบใหม่</summary><p>ปกติ ระบบให้เข้าใหม่ทุก 12 ชั่วโมง เข้าสู่ระบบใหม่ได้เลย ข้อมูลไม่หาย</p></details>
+      <details><summary>ไม่เห็นปุ่ม รับเข้า / เบิกออก</summary><p>บัญชี Manager / Marketing / บัญชี ดูได้อย่างเดียว ถ้าต้องบันทึก ติดต่อ Admin</p></details>
+      <details><summary>เบิกไม่ได้ ขึ้น "คงเหลือไม่พอ"</summary><p>ของในระบบน้อยกว่าที่จะเบิก ตรวจของจริง ถ้าระบบผิดให้ Admin / Store/QC <b>ปรับยอด</b> ก่อน</p></details>
+      <details><summary>PDF ขึ้น "ไฟล์นี้เป็นรูปภาพ"</summary><p>ไฟล์ถูกบันทึกด้วย "Microsoft Print to PDF" ให้ดาวน์โหลดใหม่จากเว็บ seller หรือเลือก "บันทึกเป็น PDF" (ดูหัวข้อ 7)</p></details>
+      <details><summary>PDF มีรายการในกล่องสีเหลือง</summary><p>รหัสใน PDF ไม่ตรงกับระบบ หรือเป็นชุด -P1 ที่ยังไม่ได้ตั้ง แจ้ง Admin ให้แก้รหัสหรือเพิ่มชุด (หัวข้อ 12) แล้วเลือกไฟล์ใหม่ รายการอื่นเบิกไปก่อนได้</p></details>
+      <details><summary>บันทึกผิด อยากลบ</summary><p>ลบไม่ได้ (เพื่อให้ตรวจย้อนหลังได้) ให้บันทึกรายการกลับ หรือให้ Admin ปรับยอด พร้อมหมายเหตุ</p></details>
+      <details><summary>ตัวเลขไม่อัปเดต / มีคนอื่นบันทึกพร้อมกัน</summary><p>กด <span class="ui">รีเฟรช</span> ในหน้าสินค้าคงคลัง หรือรีเฟรชหน้าเว็บ (F5)</p></details>
+      <details><summary>ขึ้นแถบ "มีเวอร์ชันใหม่"</summary><p>กดรีเฟรชตามที่แถบบอก เพื่อใช้ระบบเวอร์ชันล่าสุด</p></details>
+    </section>
+  </main>
+</div>
+
+<script>
+  document.getElementById('theme').addEventListener('click', function () {
+    var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
+    document.documentElement.dataset.theme = next
+    try { localStorage.setItem('inventory-ttv:theme', next) } catch (e) {}
+  })
+</script>
+</body>
+</html>

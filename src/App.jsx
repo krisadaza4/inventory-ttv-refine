@@ -5,7 +5,7 @@ import LoginForm from './components/LoginForm.jsx'
 import ProductsPage from './components/ProductsPage.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import { lazyPage } from './components/lazyPage.js'
-import { APP_NAME, APP_RELEASE, APP_SUBTITLE, ThemeToggle } from './components/TitleBar.jsx'
+import { APP_NAME, APP_RELEASE, APP_SUBTITLE, MANUAL_URL, ThemeToggle } from './components/TitleBar.jsx'
 import { readSeenVersion, saveSeenVersion, shouldShowChangelog } from './lib/changelog.js'
 import { toIsoDate } from './lib/dateFormat.js'
 import { PAGE, getMenu } from './lib/menu.js'
@@ -34,6 +34,9 @@ function Gate({ children, theme, onToggleTheme }) {
           <p>{APP_SUBTITLE}</p>
         </div>
         {children}
+        <a className="btn gate-manual" href={MANUAL_URL} target="_blank" rel="noopener">
+          <span aria-hidden="true">📘</span> คู่มือการใช้งาน
+        </a>
         <p className="gate-note">
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         </p>
