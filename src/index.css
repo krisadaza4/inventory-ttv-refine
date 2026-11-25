@@ -2648,6 +2648,27 @@ tbody tr.flash {
   vertical-align: middle;
 }
 
+.col-stock {
+  background: var(--accent-bg);
+}
+
+th.col-stock .sort-head {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+td.col-stock b {
+  font-size: 1.2em;
+}
+
+td.col-stock.stock-low b {
+  color: var(--low);
+}
+
+td.col-stock.stock-out b {
+  color: var(--out);
+}
+
 .picked-product {
   display: flex;
   flex-wrap: wrap;

@@ -23,7 +23,7 @@ export default function ProductTable({ products, imageUrls, onMove, sort, onSort
             <SortHead sortKey="category" className="hide-sm" {...head}>
               หมวดหมู่
             </SortHead>
-            <SortHead sortKey="onHand" className="num" title="ของดีพร้อมขาย (ไม่รวมรอซ่อม)" {...head}>
+            <SortHead sortKey="onHand" className="num col-stock" title="ของดีพร้อมขาย (ไม่รวมรอซ่อม)" {...head}>
               คงเหลือ
             </SortHead>
             <SortHead
@@ -69,7 +69,8 @@ export default function ProductTable({ products, imageUrls, onMove, sort, onSort
                 {p.location && <div className="sub">ที่เก็บ: {p.location}</div>}
               </td>
               <td className="hide-sm dim">{p.category}</td>
-              <td className="num">
+              {/* คอลัมน์คงเหลือไฮไลท์ให้นำสายตา ตัวเลขใช้สีตามสถานะ (ใกล้หมด / หมด) */}
+              <td className={`num col-stock stock-${getStockStatus(p.onHand, p.reorderPoint)}`}>
                 <b>{formatQuantity(p.onHand)}</b>
                 <span className="show-sm dim"> {p.unit}</span>
               </td>
