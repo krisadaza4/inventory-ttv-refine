@@ -128,6 +128,15 @@ const PARSERS = { [PLATFORM.SHOPEE]: parseShopee, [PLATFORM.LAZADA]: parseLazada
 
 // คืน { platform, rows: [{ sku, quantity, orders }], warnings: [ข้อความ] } หรือ { platform: null, error }
 export function parsePicklist(pages) {
+  // ไฟล์ที่ไม่มีข้อความเลย = ไฟล์รูปภาพ (เช่น สั่งพิมพ์ผ่าน "Microsoft Print to PDF" ซึ่งแปลงทั้งหน้าเป็นรูป) อ่านไม่ได้
+  if (pages.every((page) => page.length === 0)) {
+    return {
+      platform: null,
+      rows: [],
+      warnings: [],
+      error: 'ไฟล์นี้เป็นรูปภาพ ไม่มีข้อความให้อ่าน (มักเกิดจากสั่งพิมพ์ผ่าน "Microsoft Print to PDF") กรุณาดาวน์โหลด PDF จากเว็บ seller โดยตรง',
+    }
+  }
   const platform = detectPlatform(pages)
   if (!platform) return { platform: null, rows: [], warnings: [], error: 'ไม่รู้จักรูปแบบไฟล์ (รองรับ Shopee Picklist / Lazada Checklist / TikTok Picking List)' }
   const { rows, expectedTotal } = PARSERS[platform](pages)

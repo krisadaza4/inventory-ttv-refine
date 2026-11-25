@@ -13,6 +13,12 @@ describe('detectPlatform', () => {
     expect(detectPlatform(tiktok)).toBe(PLATFORM.TIKTOK)
   })
 
+  it('ไฟล์รูปภาพ (ไม่มีข้อความ) แจ้งให้ดาวน์โหลด PDF จากเว็บ seller', () => {
+    const result = parsePicklist([[]])
+    expect(result.platform).toBeNull()
+    expect(result.error).toContain('ไฟล์นี้เป็นรูปภาพ')
+  })
+
   it('ไฟล์อื่นคืน null และ parsePicklist แจ้งว่าไม่รู้จัก', () => {
     const pages = [[{ s: 'ใบเสร็จ', x: 10, y: 10, w: 20 }]]
     expect(detectPlatform(pages)).toBeNull()
