@@ -15,6 +15,7 @@ import {
   validateMovement,
 } from '../lib/stockRules.js'
 import BulkIssueDialog from './BulkIssueDialog.jsx'
+import BulkReceivePanel from './BulkReceivePanel.jsx'
 import PageHead from './PageHead.jsx'
 import PdfIssueDialog from './PdfIssueDialog.jsx'
 import ProductThumb from './ProductThumb.jsx'
@@ -66,6 +67,8 @@ export default function MovementPage({
   const [bulkOpen, setBulkOpen] = useState(false)
   // หน้าต่างเบิกออกจาก PDF (admin / Store/QC)
   const [pdfOpen, setPdfOpen] = useState(false)
+  // แผงรับเข้าหลายรายการ (เหมือนในหน้าสินค้าคงคลัง)
+  const [receiveOpen, setReceiveOpen] = useState(false)
 
   const types = allowedMovementTypes(role)
   const product = products.find((p) => p.id === productId) ?? null
@@ -133,6 +136,17 @@ export default function MovementPage({
                 <span aria-hidden="true">－</span> เบิกออกจาก PDF
               </button>
             )}
+            <button
+              type="button"
+              className="btn btn-in"
+              onClick={() => {
+                setReceiveOpen(true)
+                setNotice(null)
+              }}
+              disabled={receiveOpen || loadState !== 'ready'}
+            >
+              <span aria-hidden="true">＋</span> รับเข้าหลายรายการ
+            </button>
             <button type="button" className="btn btn-out" onClick={() => setBulkOpen(true)} disabled={loadState !== 'ready'}>
               <span aria-hidden="true">－</span> เบิกออกหลายรายการ
             </button>
@@ -152,6 +166,25 @@ export default function MovementPage({
             setNotice(message)
             onSaved()
           }}
+        />
+      )}
+
+      {receiveOpen && (
+        <BulkReceivePanel
+          products={products}
+          imageUrls={imageUrls}
+          role={role}
+          today={today}
+          repository={repository}
+          onSaved={(message) => {
+            // message = null คือบันทึกได้บางส่วน (ข้อความผิดพลาดแสดงในแผง) แผงยังเปิดอยู่
+            if (message) {
+              setNotice(message)
+              setReceiveOpen(false)
+            }
+            onSaved()
+          }}
+          onClose={() => setReceiveOpen(false)}
         />
       )}
 
