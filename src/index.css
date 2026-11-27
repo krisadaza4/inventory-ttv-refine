@@ -2790,28 +2790,6 @@ td.col-stock.stock-out b {
   background: var(--out);
 }
 
-.low-bar {
-  width: 100%;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--border);
-  overflow: hidden;
-}
-
-.low-bar > span {
-  display: block;
-  height: 100%;
-  background: var(--low);
-}
-
-.low-card.out .low-bar > span {
-  background: var(--out);
-}
-
-.low-card small {
-  font-size: 12px;
-}
-
 @media (max-width: 760px) {
   .low-summary {
     grid-template-columns: repeat(3, minmax(0, 1fr));

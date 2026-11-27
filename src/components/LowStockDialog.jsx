@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { formatThaiDate } from '../lib/dateFormat.js'
-import { lowStockFileName, selectLowStock, stockRatio } from '../lib/lowStock.js'
+import { lowStockFileName, selectLowStock } from '../lib/lowStock.js'
 import { renderLowStockImage } from '../lib/lowStockImage.js'
 import { formatQuantity } from '../lib/numberFormat.js'
 import { productSheet } from '../lib/spreadsheet.js'
@@ -97,13 +97,6 @@ export default function LowStockDialog({ products, imageUrls, today, onClose }) 
                   <b className="mono">{p.sku}</b>
                   {p.name !== p.sku && <span className="low-name">{p.name}</span>}
                   <span className="low-badge">{p.status === 'out' ? 'หมด' : `คงเหลือ ${formatQuantity(p.onHand)} ${p.unit}`}</span>
-                  <span className="low-bar" aria-hidden="true">
-                    <span style={{ width: `${Math.round(stockRatio(p) * 100)}%` }} />
-                  </span>
-                  <small className="dim">
-                    จุดสั่งซื้อ {formatQuantity(p.reorderPoint)} · ขายเฉลี่ย{' '}
-                    {p.avgMonthlySales === null ? '–' : formatQuantity(p.avgMonthlySales)}/เดือน
-                  </small>
                 </li>
               ))}
             </ul>

@@ -1,5 +1,4 @@
 import { formatQuantity } from './numberFormat.js'
-import { stockRatio } from './lowStock.js'
 
 // วาดสรุปสินค้าใกล้หมดเป็นรูป PNG ด้วย canvas (คมเท่ากันทุกเครื่อง ได้ครบทุกการ์ดแม้รายการยาวเกินจอ)
 // ใช้พื้นขาวเสมอ (ไม่ตามโหมดมืด) ส่งต่อใน LINE แล้วอ่านง่าย
@@ -17,12 +16,11 @@ const COLORS = {
   out: '#b42318',
   outBg: '#fef3f2',
   outBorder: '#fda29b',
-  track: '#e5e7eb',
 }
 
 const COLS = 4
 const CARD_W = 270
-const CARD_H = 318
+const CARD_H = 262
 const GAP = 16
 const PAD = 28
 const HEAD_H = 96
@@ -163,30 +161,13 @@ export async function renderLowStockImage(items, imageUrls, meta) {
     const label = out ? 'หมด' : `คงเหลือ ${formatQuantity(p.onHand)} ${p.unit ?? ''}`.trim()
     ctx.font = `700 15px ${FONT}`
     const bw = ctx.measureText(label).width + 28
-    const by = y + CARD_H - 82
+    const by = y + CARD_H - 46
     roundRect(ctx, cx - bw / 2, by, bw, 30, 15)
     ctx.fillStyle = tone
     ctx.fill()
     ctx.fillStyle = '#ffffff'
     ctx.fillText(label, cx, by + 20)
 
-    // แถบ คงเหลือ / จุดสั่งซื้อ
-    const barX = x + 20
-    const barW = CARD_W - 40
-    const barY = y + CARD_H - 40
-    roundRect(ctx, barX, barY, barW, 6, 3)
-    ctx.fillStyle = COLORS.track
-    ctx.fill()
-    const ratio = stockRatio(p)
-    if (ratio > 0) {
-      roundRect(ctx, barX, barY, Math.max(6, barW * ratio), 6, 3)
-      ctx.fillStyle = tone
-      ctx.fill()
-    }
-    ctx.fillStyle = COLORS.muted
-    ctx.font = `500 12px ${FONT}`
-    const avg = p.avgMonthlySales === null || p.avgMonthlySales === undefined ? '–' : formatQuantity(p.avgMonthlySales)
-    ctx.fillText(`จุดสั่งซื้อ ${formatQuantity(p.reorderPoint)} · ขายเฉลี่ย ${avg}/เดือน`, cx, barY + 24)
     ctx.textAlign = 'left'
   })
 
