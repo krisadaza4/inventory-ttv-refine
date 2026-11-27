@@ -2685,6 +2685,157 @@ td.col-stock.stock-out b {
   color: var(--out);
 }
 
+/* สรุปสินค้าใกล้หมด (การ์ด) */
+.btn.btn-low {
+  color: var(--low);
+  background: var(--low-bg);
+  border-color: var(--low-border);
+}
+
+.product-dialog.low-stock-dialog {
+  width: min(1180px, calc(100vw - 32px));
+}
+
+.low-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.low-stat {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.low-stat span,
+.low-stat small {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.low-stat b {
+  font-size: 24px;
+  color: var(--text-h);
+}
+
+.low-stat.low b {
+  color: var(--low);
+}
+
+.low-stat.out b {
+  color: var(--out);
+}
+
+.low-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.low-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 12px;
+  text-align: center;
+  border: 1px solid var(--low-border);
+  border-radius: var(--radius-lg);
+  background: var(--low-bg);
+}
+
+.low-card.out {
+  border-color: var(--out-border);
+  background: var(--out-bg);
+}
+
+.low-card .thumb {
+  width: 130px;
+  height: 130px;
+  background: #fff;
+}
+
+.low-card .thumb img {
+  object-fit: contain;
+}
+
+.low-card > b {
+  color: var(--text-h);
+  font-size: 16px;
+}
+
+.low-name {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.low-badge {
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--low);
+  color: var(--surface);
+  font-weight: 700;
+}
+
+.low-card.out .low-badge {
+  background: var(--out);
+}
+
+.low-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.low-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--low);
+}
+
+.low-card.out .low-bar > span {
+  background: var(--out);
+}
+
+.low-card small {
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .low-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .low-stat {
+    padding: 8px;
+  }
+
+  .low-stat b {
+    font-size: 18px;
+  }
+
+  .low-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .low-card .thumb {
+    width: 96px;
+    height: 96px;
+  }
+}
+
 .picked-product {
   display: flex;
   flex-wrap: wrap;

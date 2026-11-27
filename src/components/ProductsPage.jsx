@@ -16,6 +16,7 @@ import {
 import { exportFileName, productSheet } from '../lib/spreadsheet.js'
 import BulkReceivePanel from './BulkReceivePanel.jsx'
 import ExportButton from './ExportButton.jsx'
+import LowStockDialog from './LowStockDialog.jsx'
 import PageHead from './PageHead.jsx'
 import ProductTable from './ProductTable.jsx'
 import RefreshIcon from './RefreshIcon.jsx'
@@ -60,6 +61,8 @@ export default function ProductsPage({
   const [query, setQuery] = useState('')
   // แผงรับเข้าหลายรายการ
   const [bulkOpen, setBulkOpen] = useState(false)
+  // หน้าต่างสรุปสินค้าใกล้หมด (ทุกบทบาท)
+  const [lowOpen, setLowOpen] = useState(false)
   const [notice, setNotice] = useState(null)
   const [filters, setFilters] = useState(NO_FILTERS)
   const [sort, setSort] = useState(DEFAULT_SORT)
@@ -86,6 +89,9 @@ export default function ProductsPage({
         page={PAGE.PRODUCTS}
         actions={
           <div className="head-actions">
+            <button type="button" className="btn btn-low" onClick={() => setLowOpen(true)} disabled={loadState !== 'ready'}>
+              <span aria-hidden="true">⚠</span> สรุปใกล้หมด
+            </button>
             {repository && canRecord && (
               <button
                 type="button"
@@ -112,6 +118,8 @@ export default function ProductsPage({
           </div>
         }
       />
+
+      {lowOpen && <LowStockDialog products={products} imageUrls={imageUrls} today={today} onClose={() => setLowOpen(false)} />}
 
       {notice && (
         <p className="notice" role="status">
