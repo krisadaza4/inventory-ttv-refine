@@ -46,7 +46,9 @@ export default function LowStockDialog({ products, imageUrls, today, onClose }) 
     <ProductDialog open label="สรุปสินค้าใกล้หมด" onRequestClose={onClose} className="product-dialog low-stock-dialog">
       <div className="panel">
         <div className="panel-head">
-          <span aria-hidden="true">⚠</span> สรุปสินค้าใกล้หมด ({items.length} รายการ)
+          <span>
+            <span aria-hidden="true">⚠</span> สรุปสินค้าใกล้หมด ({items.length} รายการ)
+          </span>
         </div>
         <div className="panel-body">
           <div className="low-summary">
