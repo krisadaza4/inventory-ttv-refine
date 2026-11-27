@@ -2757,9 +2757,10 @@ td.col-stock.stock-out b {
   background: var(--out-bg);
 }
 
-.low-card .thumb {
+.low-card .thumb.lg {
   width: 130px;
   height: 130px;
+  max-width: 100%;
   background: #fff;
 }
 
@@ -2830,7 +2831,7 @@ td.col-stock.stock-out b {
     gap: 8px;
   }
 
-  .low-card .thumb {
+  .low-card .thumb.lg {
     width: 96px;
     height: 96px;
   }
