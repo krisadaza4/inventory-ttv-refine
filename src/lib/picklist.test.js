@@ -50,6 +50,29 @@ describe('TikTok', () => {
     ])
   })
 
+  it('สินค้าเดียวหลายคำสั่งซื้อ: เลขคำสั่งซื้อซ้อนใต้แถว เป็นของแถวนั้น (ไฟล์จริง 26 พ.ย.)', () => {
+    const head = tiktok[0].filter((item) => item.y < 160 && !/^(Order|Product|Item) quantity/.test(item.s))
+    const at = (s, x, y) => ({ s, x, y, w: 10 })
+    const page = [
+      ...head,
+      at('Order quantity: 5', 24.4, 107.6), at('Item quantity: 6', 253.5, 107.6),
+      at('1', 24.4, 183.5), at('ZL-71', 270.6, 182.7), at('ZL-71', 341.7, 182.7), at('2', 408.9, 182.7), at('587378720796083631', 455.8, 182.7),
+      at('2', 24.4, 242.2), at('GL-702I-502', 270.6, 241.4), at('GL-702I', 341.7, 241.4), at('4', 408.9, 241.4), at('587382390005860279', 455.8, 241.4),
+      at('587383335843104396', 455.8, 254.3), at('587385343689393601', 455.8, 267.3), at('587386883887367451', 455.8, 280.2),
+    ]
+    const { rows, warnings } = parsePicklist([page])
+    expect(warnings).toEqual([])
+    expect(rows).toEqual([
+      { sku: 'ZL-71', quantity: 2, orders: ['587378720796083631'] },
+      { sku: 'GL-702I', quantity: 4, orders: ['587382390005860279', '587383335843104396', '587385343689393601', '587386883887367451'] },
+    ])
+  })
+
+  it('จำนวนคำสั่งซื้อไม่ตรงหัวไฟล์ (Order quantity) เตือน', () => {
+    const changed = tiktok.map((page) => page.map((item) => (item.s === 'Order quantity: 3' ? { ...item, s: 'Order quantity: 4' } : item)))
+    expect(parsePicklist(changed).warnings.join(' ')).toContain('จำนวนคำสั่งซื้อที่อ่านได้ (3)')
+  })
+
   it('ยอดรวมไม่ตรงหัวไฟล์ เตือน', () => {
     const changed = tiktok.map((page) => page.map((item) => (item.s === 'Item quantity: 3' ? { ...item, s: 'Item quantity: 5' } : item)))
     expect(parsePicklist(changed).warnings.join(' ')).toContain('ไม่ตรงกับหัวไฟล์')

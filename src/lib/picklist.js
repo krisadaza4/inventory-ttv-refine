@@ -33,6 +33,23 @@ function bands(anchors) {
 
 const within = (item, band) => item.y >= band.top && item.y < band.bottom
 
+// Lazada / TikTok: สินค้าเดียวกันจากหลายคำสั่งซื้อ อาจพิมพ์เป็นแถวเดียว (จำนวนรวม) แล้วเรียงเลขคำสั่งซื้อซ้อนลงมา
+// แถวหลัก = เลขคำสั่งซื้อที่มีจำนวนอยู่บรรทัดเดียวกัน เลขที่ไม่มีจำนวนบนบรรทัด = เป็นของแถวด้านบน
+function splitOrderItems(page, orderItems, qtyX) {
+  const hasQty = (order) =>
+    page.some((item) => Math.abs(item.y - order.y) <= SAME_LINE && Math.abs(item.x - qtyX) <= 8 && NUMBER.test(text(item)))
+  return { anchors: orderItems.filter(hasQty), stacked: orderItems.filter((order) => !hasQty(order)) }
+}
+
+// ใส่เลขคำสั่งซื้อที่ซ้อนอยู่ให้แถวที่มันอยู่ใต้ (ก่อนแถวแรกของหน้า = แถวสุดท้ายของหน้าก่อน)
+function attachStacked(stacked, pageBands, pageRows, rows) {
+  for (const order of stacked.toSorted((a, b) => a.y - b.y)) {
+    const index = pageBands.findIndex((band) => within(order, band))
+    const target = index >= 0 ? pageRows[index] : pageBands.length === 0 || order.y < pageBands[0].top ? rows.at(-pageRows.length - 1) : null
+    if (target && !target.orders.includes(text(order))) target.orders.push(text(order))
+  }
+}
+
 function quantityAt(page, band, x) {
   const found = page.find((item) => Math.abs(item.y - band.anchor.y) <= SAME_LINE && Math.abs(item.x - x) <= 8 && NUMBER.test(text(item)))
   return found ? Number(text(found)) : null
@@ -50,24 +67,34 @@ function parseLazada(pages) {
     if (sku && order && qty) cols = { skuFrom: sku.x - 3, skuTo: (image ?? order).x - 3, orderX: order.x, qtyX: qty.x, headY: sku.y }
     if (!cols) continue
     const headY = sku ? cols.headY : -Infinity
-    const anchors = page.filter((item) => item.y > headY + SAME_LINE && Math.abs(item.x - cols.orderX) <= 8 && /^\d{6,}$/.test(text(item)))
-    for (const band of bands(anchors)) {
+    const orderItems = page.filter((item) => item.y > headY + SAME_LINE && Math.abs(item.x - cols.orderX) <= 8 && /^\d{6,}$/.test(text(item)))
+    const { anchors, stacked } = splitOrderItems(page, orderItems, cols.qtyX)
+    const pageBands = bands(anchors)
+    const pageRows = []
+    for (const band of pageBands) {
       const parts = page.filter((item) => within(item, band) && inColumn(item, cols.skuFrom, cols.skuTo)).toSorted(sortByLine).map(text)
-      rows.push({ sku: cleanSku(parts), quantity: quantityAt(page, band, cols.qtyX), orders: [text(band.anchor)] })
+      const row = { sku: cleanSku(parts), quantity: quantityAt(page, band, cols.qtyX), orders: [text(band.anchor)] }
+      rows.push(row)
+      pageRows.push(row)
     }
+    attachStacked(stacked, pageBands, pageRows, rows)
   }
   return { rows, expectedTotal: null }
 }
 
-// TikTok: หนึ่งแถวต่อหนึ่งคำสั่งซื้อ ใช้ Seller SKU (ถ้าว่างใช้ SKU) หัวกระดาษมี "Item quantity: N" ไว้ตรวจยอดรวม
+// TikTok: ใช้ Seller SKU (ถ้าว่างใช้ SKU) สินค้าเดียวกันหลายคำสั่งซื้ออาจรวมเป็นแถวเดียว เลขคำสั่งซื้อซ้อนลงมา
+// หัวกระดาษมี "Item quantity: N" (ตรวจยอดรวม) และ "Order quantity: N" (ตรวจจำนวนคำสั่งซื้อ)
 function parseTiktok(pages) {
   const rows = []
   let cols = null
   let expectedTotal = null
+  let expectedOrders = null
   for (const page of pages) {
     for (const item of page) {
       const m = /^Item quantity:\s*(\d+)/i.exec(text(item))
       if (m) expectedTotal = Number(m[1])
+      const o = /^Order quantity:\s*(\d+)/i.exec(text(item))
+      if (o) expectedOrders = Number(o[1])
     }
     const seller = findLabel(page, /^Seller SKU$/i)
     const sku = page.find((item) => text(item) === 'SKU')
@@ -78,15 +105,21 @@ function parseTiktok(pages) {
     }
     if (!cols) continue
     const headY = seller ? cols.headY : -Infinity
-    const anchors = page.filter((item) => item.y > headY + SAME_LINE && Math.abs(item.x - cols.orderX) <= 8 && /^\d{6,}$/.test(text(item)))
-    for (const band of bands(anchors)) {
+    const orderItems = page.filter((item) => item.y > headY + SAME_LINE && Math.abs(item.x - cols.orderX) <= 8 && /^\d{6,}$/.test(text(item)))
+    const { anchors, stacked } = splitOrderItems(page, orderItems, cols.qtyX)
+    const pageBands = bands(anchors)
+    const pageRows = []
+    for (const band of pageBands) {
       const pick = (from, to) => page.filter((item) => within(item, band) && inColumn(item, from, to)).toSorted(sortByLine).map(text)
       const sellerSku = cleanSku(pick(cols.sellerFrom, cols.qtyX - 3))
       const platformSku = cleanSku(pick(cols.skuFrom, cols.sellerFrom))
-      rows.push({ sku: sellerSku || platformSku, quantity: quantityAt(page, band, cols.qtyX), orders: [text(band.anchor)] })
+      const row = { sku: sellerSku || platformSku, quantity: quantityAt(page, band, cols.qtyX), orders: [text(band.anchor)] }
+      rows.push(row)
+      pageRows.push(row)
     }
+    attachStacked(stacked, pageBands, pageRows, rows)
   }
-  return { rows, expectedTotal }
+  return { rows, expectedTotal, expectedOrders }
 }
 
 // Shopee: หนึ่งแถวต่อหนึ่ง SKU จำนวน = รวมทุกคำสั่งซื้อ เลขคำสั่งซื้อเรียงลงมาใต้แถว (ต่อไปหน้าถัดไปได้)
@@ -145,7 +178,7 @@ export function parsePicklist(pages) {
   }
   const platform = detectPlatform(pages)
   if (!platform) return { platform: null, rows: [], warnings: [], error: 'ไม่รู้จักรูปแบบไฟล์ (รองรับ Shopee Picklist / Lazada Checklist / TikTok Picking List)' }
-  const { rows, expectedTotal } = PARSERS[platform](pages)
+  const { rows, expectedTotal, expectedOrders = null } = PARSERS[platform](pages)
   const warnings = []
   rows.forEach((row, i) => {
     if (!row.sku) warnings.push(`แถวที่ ${i + 1}: อ่านรหัสสินค้าไม่ได้`)
@@ -155,6 +188,10 @@ export function parsePicklist(pages) {
   const total = rows.reduce((sum, row) => sum + (row.quantity || 0), 0)
   if (expectedTotal !== null && expectedTotal !== total) {
     warnings.push(`จำนวนรวมที่อ่านได้ (${total}) ไม่ตรงกับหัวไฟล์ (${expectedTotal}) กรุณาตรวจกับไฟล์`)
+  }
+  const orderCount = new Set(rows.flatMap((row) => row.orders)).size
+  if (expectedOrders !== null && expectedOrders !== orderCount) {
+    warnings.push(`จำนวนคำสั่งซื้อที่อ่านได้ (${orderCount}) ไม่ตรงกับหัวไฟล์ (${expectedOrders}) กรุณาตรวจกับไฟล์`)
   }
   if (rows.length === 0) return { platform, rows, warnings, error: 'ไม่พบรายการสินค้าในไฟล์' }
   return { platform, rows: rows.filter((row) => row.sku && row.quantity > 0), warnings, error: null }
